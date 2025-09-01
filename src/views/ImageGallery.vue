@@ -26,7 +26,24 @@
             :src="img.objectUrl || img.url"
             :alt="img.name"
             @click="goToDetail(img)"
+            @contextmenu.prevent="showContextMenu($event, img)"
           />
+        </div>
+      </div>
+
+      <!-- 右键菜单 -->
+      <div
+        v-show="contextMenuVisible"
+        class="context-menu"
+        :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
+        @click="hideContextMenu"
+      >
+        <div
+          class="context-menu-item"
+          @click="deleteImageFromContext(contextMenuImage)"
+        >
+          <el-icon><icon-delete /></el-icon>
+          <span>删除</span>
         </div>
       </div>
     </div>
@@ -77,6 +94,7 @@ import {
 import {
   Upload as IconUpload,
   Setting as IconSetting,
+  Delete as IconDelete,
 } from "@element-plus/icons-vue";
 import { putImage, getAllImages, deleteImage } from "@/utils/idb.js";
 
@@ -86,6 +104,12 @@ const viewerVisible = ref(false);
 const current = ref(null);
 const showUploadDialog = ref(false);
 const showSettings = ref(false);
+
+// 右键菜单相关
+const contextMenuVisible = ref(false);
+const contextMenuX = ref(0);
+const contextMenuY = ref(0);
+const contextMenuImage = ref(null);
 
 function revokeObjectUrls(list) {
   list?.forEach((it) => {
@@ -105,8 +129,16 @@ async function load() {
   }));
 }
 
-onMounted(load);
-onBeforeUnmount(() => revokeObjectUrls(images.value));
+onMounted(() => {
+  load();
+  // 添加全局点击事件监听，点击其他地方隐藏右键菜单
+  document.addEventListener("click", hideContextMenu);
+});
+
+onBeforeUnmount(() => {
+  revokeObjectUrls(images.value);
+  document.removeEventListener("click", hideContextMenu);
+});
 
 async function onFileChange(file) {
   try {
@@ -141,6 +173,33 @@ function openViewer(img) {
 
 function goToDetail(img) {
   router.push(`/image/${img.id}`);
+}
+
+// 右键菜单相关函数
+function showContextMenu(event, img) {
+  event.preventDefault();
+  contextMenuImage.value = img;
+  contextMenuX.value = event.clientX;
+  contextMenuY.value = event.clientY;
+  contextMenuVisible.value = true;
+}
+
+function hideContextMenu() {
+  contextMenuVisible.value = false;
+  contextMenuImage.value = null;
+}
+
+async function deleteImageFromContext(img) {
+  if (!img) return;
+
+  try {
+    await deleteImage(img.id);
+    ElMessage.success("删除成功");
+    await load();
+    hideContextMenu();
+  } catch (error) {
+    ElMessage.error("删除失败");
+  }
 }
 </script>
 
@@ -234,5 +293,36 @@ function goToDetail(img) {
   max-width: 100%;
   max-height: 80vh;
   object-fit: contain;
+}
+
+/* 右键菜单样式 */
+.context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 120px;
+  padding: 4px 0;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  color: #333;
+}
+
+.context-menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.context-menu-item .el-icon {
+  font-size: 16px;
+  color: #666;
 }
 </style>
