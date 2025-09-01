@@ -1,0 +1,47 @@
+// 错误页面
+const errorPageRouter = [
+  {
+    path: "/not-found",
+    name: "NotFound",
+    component: () => import("@/views/system/not-found.vue"),
+    meta: {
+      title: "页面未找到",
+    },
+  },
+  {
+    path: "/error-page",
+    name: "ErrorPage",
+    component: () => import("@/views/system/error.vue"),
+    meta: {
+      title: "系统异常",
+    },
+  },
+];
+
+// 开发与正式环境下都有路由
+export const productionRouter = [
+  {
+    path: "/",
+    redirect: "/gallery",
+  },
+  {
+    path: "/gallery",
+    name: "ImageGallery",
+    component: () => import("@/views/ImageGallery.vue"),
+    meta: { title: "图片画廊" },
+  },
+  {
+    path: "/image/:id",
+    name: "ImageDetail",
+    component: () => import("@/views/ImageDetail.vue"),
+    meta: { title: "图片详情" },
+  },
+
+  // 404
+  { path: "/:catchAll(.*)", redirect: { name: "NotFound" } },
+];
+
+// 所有的路由
+const allRouter = [];
+allRouter.push(...productionRouter, ...errorPageRouter);
+export default allRouter;

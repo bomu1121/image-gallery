@@ -1,0 +1,66 @@
+/* CSS Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.flex-row {
+  display: flex;
+}
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+.row-center {
+  justify-content: center;
+}
+.row-end {
+  justify-content: flex-end;
+}
+.row-bt {
+  justify-content: space-between;
+}
+.col-start {
+  align-items: flex-start;
+}
+.col-end {
+  align-items: flex-end;
+}
+.col-center {
+  align-items: center;
+}
+.flex(@num) {
+  flex: @num;
+  min-width: 0;
+  min-height: 0;
+}
+.omit(@num) {
+  display: -webkit-box;
+  display: -moz-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: @num;
+  word-break: break-all;
+  overflow: hidden;
+}
+
+/*清除浮动*/
+.clearfix:after {
+  content: "";
+  display: block;
+  height: 0;
+  clear: both;
+  visibility: hidden;
+  font-size: 0;
+}
+.clearfix {
+  zoom: 1;
+}
