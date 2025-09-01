@@ -1,5 +1,7 @@
 <template>
   <el-config-provider :locale="locale">
+    <!-- 全局背景组件 -->
+    <GlobalBackground />
     <router-view></router-view>
   </el-config-provider>
 </template>
@@ -11,6 +13,8 @@ import zhCn from "element-plus/es/locale/lang/zh-cn";
 import en from "element-plus/es/locale/lang/en";
 import { useSystemLang } from "@/store/system/lang.js";
 import { computed } from "vue";
+import { storeToRefs } from "pinia";
+import GlobalBackground from "@/components/GlobalBackground.vue";
 const systemLang = useSystemLang();
 const { currentLang } = storeToRefs(systemLang);
 

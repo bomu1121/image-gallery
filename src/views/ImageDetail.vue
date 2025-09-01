@@ -194,6 +194,8 @@ async function saveNotes() {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  position: relative;
+  z-index: 2;
 }
 
 .header {
@@ -207,6 +209,7 @@ async function saveNotes() {
   box-shadow: 0 8px 32px rgba(102, 126, 234, 0.15);
   flex-shrink: 0;
   position: relative;
+  z-index: 3;
   overflow: hidden;
 }
 
@@ -281,6 +284,8 @@ async function saveNotes() {
   background: #f8f9fa;
   border: 2px solid #e9ecef;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 3;
 }
 
 .image-container img {
@@ -310,6 +315,8 @@ async function saveNotes() {
   padding: 20px;
   border: 1px solid #e9ecef;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 3;
 }
 
 .info-card h3 {
@@ -366,7 +373,7 @@ async function saveNotes() {
 /* 头部按钮特殊样式 */
 .header .el-button {
   position: relative;
-  z-index: 1;
+  z-index: 4;
   border: 2px solid rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
