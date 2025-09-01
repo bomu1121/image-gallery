@@ -196,6 +196,7 @@ async function saveNotes() {
   overflow-y: auto;
   position: relative;
   z-index: 2;
+  margin-left: 60px; /* 为左侧菜单留出空间 */
 }
 
 .header {
