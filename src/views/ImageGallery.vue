@@ -33,6 +33,10 @@
         <el-icon><icon-download /></el-icon>
         <span>下载</span>
       </div>
+      <div class="context-menu-item" @click="showGroupMenu(contextMenuImage)">
+        <el-icon><icon-folder /></el-icon>
+        <span>分组</span>
+      </div>
       <div class="context-menu-divider"></div>
       <div
         class="context-menu-item"
@@ -75,6 +79,7 @@ import {
   Delete as IconDelete,
   CopyDocument as IconCopy,
   Download as IconDownload,
+  Folder as IconFolder,
 } from "@element-plus/icons-vue";
 import { getAllImages, deleteImage } from "@/utils/idb.js";
 
@@ -388,6 +393,16 @@ async function deleteImageFromContext(img) {
   } catch (error) {
     ElMessage.error("删除失败");
   }
+}
+
+function showGroupMenu(img) {
+  // 触发全局事件，显示分组选择对话框
+  window.dispatchEvent(
+    new CustomEvent("showImageGroupDialog", {
+      detail: { image: img },
+    })
+  );
+  hideContextMenu();
 }
 </script>
 
