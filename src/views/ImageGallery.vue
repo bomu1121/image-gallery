@@ -40,6 +40,18 @@
       >
         <div
           class="context-menu-item"
+          @click="copyImageToClipboard(contextMenuImage)"
+        >
+          <el-icon><icon-copy /></el-icon>
+          <span>复制</span>
+        </div>
+        <div class="context-menu-item" @click="downloadImage(contextMenuImage)">
+          <el-icon><icon-download /></el-icon>
+          <span>下载</span>
+        </div>
+        <div class="context-menu-divider"></div>
+        <div
+          class="context-menu-item"
           @click="deleteImageFromContext(contextMenuImage)"
         >
           <el-icon><icon-delete /></el-icon>
@@ -90,11 +102,14 @@ import {
   ElMessage,
   ElEmpty,
   ElDialog,
+  ElMessageBox,
 } from "element-plus";
 import {
   Upload as IconUpload,
   Setting as IconSetting,
   Delete as IconDelete,
+  CopyDocument as IconCopy,
+  Download as IconDownload,
 } from "@element-plus/icons-vue";
 import { putImage, getAllImages, deleteImage } from "@/utils/idb.js";
 
@@ -187,6 +202,237 @@ function showContextMenu(event, img) {
 function hideContextMenu() {
   contextMenuVisible.value = false;
   contextMenuImage.value = null;
+}
+
+async function copyImageToClipboard(img) {
+  if (!img) return;
+
+  try {
+    // 获取图片的blob数据
+    let imageBlob;
+    if (img.blob) {
+      imageBlob = img.blob;
+    } else if (img.objectUrl) {
+      // 如果只有objectUrl，需要先获取blob
+      const response = await fetch(img.objectUrl);
+      imageBlob = await response.blob();
+    } else {
+      ElMessage.error("无法获取图片数据");
+      return;
+    }
+
+    // 创建一个临时的隐藏图片元素用于复制
+    const tempImg = document.createElement("img");
+    tempImg.style.position = "absolute";
+    tempImg.style.left = "-9999px";
+    tempImg.style.top = "-9999px";
+    tempImg.style.width = "1px";
+    tempImg.style.height = "1px";
+    tempImg.src = URL.createObjectURL(imageBlob);
+
+    document.body.appendChild(tempImg);
+
+    // 等待图片加载完成
+    await new Promise((resolve, reject) => {
+      tempImg.onload = resolve;
+      tempImg.onerror = reject;
+      // 设置超时
+      setTimeout(() => reject(new Error("图片加载超时")), 5000);
+    });
+
+    try {
+      // 方法1：尝试使用现代剪贴板API
+      if (navigator.clipboard && window.ClipboardItem) {
+        try {
+          const clipboardItem = new ClipboardItem({
+            [imageBlob.type]: imageBlob,
+          });
+          await navigator.clipboard.write([clipboardItem]);
+
+          // 验证是否真的复制成功
+          try {
+            const clipboardItems = await navigator.clipboard.read();
+            if (clipboardItems.length > 0) {
+              ElMessage.success("图片已复制到剪贴板");
+              hideContextMenu();
+              return;
+            } else {
+              throw new Error("剪贴板验证失败");
+            }
+          } catch (verifyError) {
+            console.warn("剪贴板验证失败:", verifyError);
+            // 继续尝试其他方法
+          }
+        } catch (clipboardError) {
+          console.warn("现代剪贴板API失败:", clipboardError);
+          // 继续尝试其他方法
+        }
+      }
+
+      // 方法2：尝试使用Canvas + 现代剪贴板API
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      canvas.width = tempImg.naturalWidth;
+      canvas.height = tempImg.naturalHeight;
+      ctx.drawImage(tempImg, 0, 0);
+
+      try {
+        canvas.toBlob(async (blob) => {
+          if (navigator.clipboard && navigator.clipboard.write) {
+            try {
+              await navigator.clipboard.write([
+                new ClipboardItem({ [blob.type]: blob }),
+              ]);
+
+              // 验证是否真的复制成功
+              try {
+                const clipboardItems = await navigator.clipboard.read();
+                if (clipboardItems.length > 0) {
+                  ElMessage.success("图片已复制到剪贴板");
+                  hideContextMenu();
+                  return;
+                } else {
+                  throw new Error("Canvas剪贴板验证失败");
+                }
+              } catch (verifyError) {
+                console.warn("Canvas剪贴板验证失败:", verifyError);
+                // 继续尝试其他方法
+              }
+            } catch (error) {
+              console.warn("Canvas剪贴板API失败:", error);
+              // 继续尝试其他方法
+            }
+          }
+
+          // 方法3：尝试使用execCommand（兼容性最好）
+          try {
+            // 将canvas添加到DOM中
+            canvas.style.position = "absolute";
+            canvas.style.left = "-9999px";
+            canvas.style.top = "-9999px";
+            document.body.appendChild(canvas);
+
+            // 尝试使用execCommand复制
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(canvas);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            const success = document.execCommand("copy");
+            if (success) {
+              // 对于execCommand，我们无法直接验证，但可以提示用户测试
+              ElMessage.success("图片已复制到剪贴板，请在目标应用中粘贴测试");
+            } else {
+              // 如果execCommand也失败了，提供下载选项
+              ElMessage({
+                message: "复制失败，是否要下载图片？",
+                type: "warning",
+                duration: 5000,
+                showClose: true,
+                onClose: () => {
+                  // 询问用户是否要下载
+                  ElMessageBox.confirm(
+                    "复制失败，是否要下载图片？",
+                    "操作提示",
+                    {
+                      confirmButtonText: "下载",
+                      cancelButtonText: "取消",
+                      type: "info",
+                    }
+                  )
+                    .then(() => {
+                      downloadImage(img);
+                    })
+                    .catch(() => {
+                      // 用户取消
+                    });
+                },
+              });
+            }
+
+            // 清理
+            document.body.removeChild(canvas);
+            selection.removeAllRanges();
+            hideContextMenu();
+          } catch (execError) {
+            console.warn("execCommand失败:", execError);
+            // 如果execCommand也失败了，提供下载选项
+            ElMessage({
+              message: "复制失败，是否要下载图片？",
+              type: "warning",
+              duration: 5000,
+              showClose: true,
+              onClose: () => {
+                // 询问用户是否要下载
+                ElMessageBox.confirm("复制失败，是否要下载图片？", "操作提示", {
+                  confirmButtonText: "下载",
+                  cancelButtonText: "取消",
+                  type: "info",
+                })
+                  .then(() => {
+                    downloadImage(img);
+                  })
+                  .catch(() => {
+                    // 用户取消
+                  });
+              },
+            });
+            hideContextMenu();
+          }
+        }, imageBlob.type);
+      } catch (canvasError) {
+        console.warn("Canvas处理失败:", canvasError);
+        ElMessage.info("复制失败，请使用下载功能");
+        hideContextMenu();
+      }
+    } finally {
+      // 清理临时元素
+      document.body.removeChild(tempImg);
+      URL.revokeObjectURL(tempImg.src);
+    }
+  } catch (error) {
+    console.error("复制失败:", error);
+    ElMessage.info("复制失败，请使用下载功能");
+    hideContextMenu();
+  }
+}
+
+async function downloadImage(img) {
+  if (!img) return;
+
+  try {
+    // 获取图片的blob数据
+    let imageBlob;
+    if (img.blob) {
+      imageBlob = img.blob;
+    } else if (img.objectUrl) {
+      // 如果只有objectUrl，需要先获取blob
+      const response = await fetch(img.objectUrl);
+      imageBlob = await response.blob();
+    } else {
+      ElMessage.error("无法获取图片数据");
+      return;
+    }
+
+    // 创建下载链接
+    const url = URL.createObjectURL(imageBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = img.name || "image";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    ElMessage.success("图片已下载到本地");
+    hideContextMenu();
+  } catch (error) {
+    console.error("下载失败:", error);
+    ElMessage.error("下载失败，请重试");
+    hideContextMenu();
+  }
 }
 
 async function deleteImageFromContext(img) {
@@ -324,5 +570,11 @@ async function deleteImageFromContext(img) {
 .context-menu-item .el-icon {
   font-size: 16px;
   color: #666;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 4px 0;
 }
 </style>
