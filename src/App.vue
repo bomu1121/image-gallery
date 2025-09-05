@@ -6,6 +6,7 @@
     <!-- 左侧工具栏 - 全局显示 -->
     <div class="app-layout">
       <Sidebar
+        :active="activeKey"
         @show-upload="showUploadDialog = true"
         @go-home="goToHome"
         @show-groups="showGroupsPage = true"
@@ -81,7 +82,7 @@ import { ElConfigProvider } from "element-plus";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import en from "element-plus/es/locale/lang/en";
 import { useSystemLang } from "@/store/system/lang.js";
-import { computed, ref, onMounted } from "vue";
+import { computed, ref, onMounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
 
@@ -152,6 +153,13 @@ const {
   onFileChange,
 } = useGroups();
 
+// 计算当前侧边栏激活项
+const activeKey = computed(() => {
+  if (showSettingsPage.value) return "settings";
+  if (showGroupsPage.value) return "groups";
+  return "home";
+});
+
 // 导航到主页
 function goToHome() {
   showSettingsPage.value = false;
@@ -200,6 +208,16 @@ onMounted(() => {
     selectedImageGroupId.value = event.detail.image.groupId || 0;
     showImageGroupDialog.value = true;
   });
+});
+
+// 当进入分组页时，主动加载未分组图片
+watch(showGroupsPage, (isShown) => {
+  if (isShown) {
+    // 延后到下一个事件循环，避免阻塞选中态渲染
+    setTimeout(() => {
+      selectGroup(0);
+    }, 0);
+  }
 });
 </script>
 

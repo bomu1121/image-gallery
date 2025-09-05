@@ -73,21 +73,6 @@
         </div>
       </div>
     </div>
-
-    <el-dialog
-      v-model="viewerVisible"
-      :title="image?.name || '预览'"
-      width="90%"
-      :close-on-click-modal="false"
-    >
-      <div class="viewer">
-        <img
-          v-if="image"
-          :src="image.objectUrl || image.url"
-          :alt="image.name"
-        />
-      </div>
-    </el-dialog>
   </div>
 </template>
 
@@ -100,7 +85,6 @@ import {
   ElDescriptions,
   ElDescriptionsItem,
   ElMessage,
-  ElDialog,
 } from "element-plus";
 import { ArrowLeft, View as IconView } from "@element-plus/icons-vue";
 import { getImageById, deleteImage, updateImage } from "@/utils/idb.js";
@@ -108,7 +92,6 @@ import { getImageById, deleteImage, updateImage } from "@/utils/idb.js";
 const route = useRoute();
 const router = useRouter();
 const image = ref(null);
-const viewerVisible = ref(false);
 
 function revokeObjectUrl(img) {
   if (img && img.objectUrl) {
@@ -160,7 +143,11 @@ async function removeImage() {
 }
 
 function openViewer() {
-  viewerVisible.value = true;
+  if (!image.value) return;
+  const src = image.value.objectUrl || image.value.url;
+  if (src) {
+    window.open(src, "_blank");
+  }
 }
 
 function formatFileSize(bytes) {
@@ -189,87 +176,47 @@ async function saveNotes() {
 
 <style scoped>
 .detail-wrapper {
-  padding: 20px;
+  padding: 16px;
   height: 100vh;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  position: relative;
-  z-index: 2;
-  margin-left: 60px; /* 为左侧菜单留出空间 */
+  margin-left: 60px;
 }
 
 .header {
   display: flex;
   align-items: center;
-  gap: 20px;
-  margin-bottom: 32px;
-  padding: 24px 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.15);
-  flex-shrink: 0;
-  position: relative;
-  z-index: 3;
-  overflow: hidden;
-}
-
-.header::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0.05) 100%
-  );
-  pointer-events: none;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .header h2 {
   margin: 0;
   flex: 1;
-  font-size: 28px;
-  color: white;
-  font-weight: 600;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  letter-spacing: 0.5px;
+  font-size: 20px;
+  color: #333;
+  font-weight: 500;
 }
 
-/* 自定义滚动条样式 */
-.detail-wrapper::-webkit-scrollbar {
-  width: 8px;
-}
-
-.detail-wrapper::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.detail-wrapper::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-
-.detail-wrapper::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+.header .el-button {
+  border: 1px solid #dcdfe6;
+  background: #fff;
+  color: #606266;
 }
 
 .content {
   display: flex;
-  gap: 24px;
-  margin-top: 20px;
+  flex-direction: column;
+  gap: 16px;
   flex: 1;
   min-height: 0;
 }
 
 /* 左侧图片区域 */
 .image-section {
-  width: 600px;
-  flex-shrink: 0;
+  width: 100%;
+  min-width: 0;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -277,16 +224,13 @@ async function saveNotes() {
 
 .image-container {
   width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
-  background: #f8f9fa;
-  border: 2px solid #e9ecef;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  position: relative;
-  z-index: 3;
 }
 
 .image-container img {
@@ -294,47 +238,38 @@ async function saveNotes() {
   height: auto;
   object-fit: contain;
   cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.image-container img:hover {
-  transform: scale(1.05);
 }
 
 /* 右侧信息区域 */
 .info-section {
-  width: 380px;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  flex-shrink: 0;
+  gap: 12px;
 }
 
 .info-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  border: 1px solid #e9ecef;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  position: relative;
-  z-index: 3;
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #ebeef5;
 }
 
 .info-card h3 {
-  margin: 0 0 16px 0;
-  font-size: 18px;
-  color: #333;
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #303133;
   font-weight: 600;
-  border-bottom: 2px solid #007bff;
-  padding-bottom: 8px;
+  border-bottom: 1px solid #f2f6fc;
+  padding-bottom: 6px;
 }
 
 .info-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 8px 0;
+  border-bottom: 1px solid #f5f7fa;
 }
 
 .info-item:last-child {
@@ -343,22 +278,22 @@ async function saveNotes() {
 
 .info-item .label {
   font-weight: 500;
-  color: #666;
-  min-width: 80px;
+  color: #606266;
+  min-width: 72px;
 }
 
 .info-item .value {
-  color: #333;
+  color: #303133;
   font-weight: 400;
   text-align: right;
   flex: 1;
-  margin-left: 16px;
+  margin-left: 12px;
 }
 
 .notes-tip {
   font-size: 12px;
-  color: #999;
-  margin-top: 8px;
+  color: #909399;
+  margin-top: 6px;
   text-align: center;
 }
 
@@ -367,48 +302,8 @@ async function saveNotes() {
 }
 
 .action-buttons .el-button {
-  height: 48px;
-  font-size: 16px;
-}
-
-/* 头部按钮特殊样式 */
-.header .el-button {
-  position: relative;
-  z-index: 4;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  color: white;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-}
-
-.header .el-button:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-}
-
-.header .el-button:active {
-  transform: translateY(0);
-}
-
-/* 返回按钮特殊样式 */
-.header .el-button:first-child {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-/* 删除按钮特殊样式 */
-.header .el-button[type="danger"] {
-  background: rgba(220, 53, 69, 0.8);
-  border-color: rgba(220, 53, 69, 0.6);
-}
-
-.header .el-button[type="danger"]:hover {
-  background: rgba(220, 53, 69, 0.9);
-  border-color: rgba(220, 53, 69, 0.8);
+  height: 40px;
+  font-size: 14px;
 }
 
 .empty {
@@ -432,7 +327,7 @@ async function saveNotes() {
   object-fit: contain;
 }
 
-/* 响应式设计 */
+/* 响应式 */
 @media (max-width: 1200px) {
   .content {
     flex-direction: column;
@@ -441,34 +336,26 @@ async function saveNotes() {
   .info-section {
     width: 100%;
   }
-
-  .image-section {
-    width: 100%;
-    max-width: 600px;
-  }
 }
 
 @media (max-width: 768px) {
   .detail-wrapper {
-    padding: 16px;
-    height: 100vh;
-    overflow-y: auto;
+    padding: 12px;
   }
 
   .header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 16px;
-    padding: 20px 24px;
-    margin-bottom: 24px;
+    gap: 8px;
+    margin-bottom: 12px;
   }
 
   .header h2 {
-    font-size: 22px;
+    font-size: 18px;
   }
 
   .info-card {
-    padding: 16px;
+    padding: 10px;
   }
 }
 </style>

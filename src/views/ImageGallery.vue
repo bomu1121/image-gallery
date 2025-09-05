@@ -5,13 +5,21 @@
     </div>
 
     <div class="grid" v-else>
-      <div v-for="img in images" :key="img.id" class="card">
+      <div
+        v-for="img in images"
+        :key="img.id"
+        class="card"
+        :class="{ 'is-deleting': isDeleting(img.id) }"
+      >
         <img
           :src="img.objectUrl || img.url"
           :alt="img.name"
-          @click="goToDetail(img)"
-          @contextmenu.prevent="showContextMenu($event, img)"
+          @click="onCardClick(img)"
+          @contextmenu.prevent="onCardContextMenu($event, img)"
         />
+        <div v-if="isDeleting(img.id)" class="deleting-overlay">
+          <div class="spinner" />
+        </div>
       </div>
     </div>
 
@@ -87,6 +95,32 @@ const router = useRouter();
 const images = ref([]);
 const viewerVisible = ref(false);
 const current = ref(null);
+const deletingIds = ref([]);
+const MIN_DELETE_MS = 800; // 调试用最小展示时长
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withMinDuration(taskPromise, minMs) {
+  const startedAt = Date.now();
+  const result = await taskPromise;
+  const elapsed = Date.now() - startedAt;
+  if (elapsed < minMs) await sleep(minMs - elapsed);
+  return result;
+}
+
+function isDeleting(id) {
+  return deletingIds.value.includes(id);
+}
+
+function startDeleting(id) {
+  if (!isDeleting(id)) deletingIds.value.push(id);
+}
+
+function stopDeleting(id) {
+  deletingIds.value = deletingIds.value.filter((x) => x !== id);
+}
 
 // 右键菜单相关
 const contextMenuVisible = ref(false);
@@ -113,19 +147,33 @@ async function load() {
 }
 
 onMounted(() => {
-  load();
+  // 让出一次渲染时机，优先绘制侧边栏选中态，再开始加载
+  setTimeout(() => {
+    load();
+  }, 0);
   // 添加全局点击事件监听，点击其他地方隐藏右键菜单
   document.addEventListener("click", hideContextMenu);
+  // 监听上传完成事件，刷新列表
+  window.addEventListener("imageAdded", load);
 });
 
 onBeforeUnmount(() => {
   revokeObjectUrls(images.value);
   document.removeEventListener("click", hideContextMenu);
+  window.removeEventListener("imageAdded", load);
 });
 
 async function remove(id) {
-  await deleteImage(id);
-  await load();
+  if (isDeleting(id)) return;
+  startDeleting(id);
+  try {
+    console.time(`delete-image-${id}`);
+    await withMinDuration(deleteImage(id), MIN_DELETE_MS);
+    console.timeEnd(`delete-image-${id}`);
+    await load();
+  } finally {
+    stopDeleting(id);
+  }
 }
 
 function openViewer(img) {
@@ -137,6 +185,11 @@ function goToDetail(img) {
   router.push(`/image/${img.id}`);
 }
 
+function onCardClick(img) {
+  if (isDeleting(img.id)) return;
+  goToDetail(img);
+}
+
 // 右键菜单相关函数
 function showContextMenu(event, img) {
   event.preventDefault();
@@ -144,6 +197,11 @@ function showContextMenu(event, img) {
   contextMenuX.value = event.clientX;
   contextMenuY.value = event.clientY;
   contextMenuVisible.value = true;
+}
+
+function onCardContextMenu(event, img) {
+  if (isDeleting(img.id)) return;
+  showContextMenu(event, img);
 }
 
 function hideContextMenu() {
@@ -386,12 +444,19 @@ async function deleteImageFromContext(img) {
   if (!img) return;
 
   try {
-    await deleteImage(img.id);
+    if (isDeleting(img.id)) return;
+    // 关闭菜单后展示删除中的遮罩
+    hideContextMenu();
+    startDeleting(img.id);
+    console.time(`delete-image-${img.id}`);
+    await withMinDuration(deleteImage(img.id), MIN_DELETE_MS);
+    console.timeEnd(`delete-image-${img.id}`);
     ElMessage.success("删除成功");
     await load();
-    hideContextMenu();
   } catch (error) {
     ElMessage.error("删除失败");
+  } finally {
+    stopDeleting(img.id);
   }
 }
 
@@ -423,6 +488,7 @@ function showGroupMenu(img) {
   width: 100%;
   break-inside: avoid;
   margin-bottom: 12px;
+  position: relative;
 }
 .card img {
   display: block;
@@ -432,8 +498,30 @@ function showGroupMenu(img) {
   cursor: pointer;
   transition: transform 0.2s ease;
 }
-.card img:hover {
-  /* transform: scale(1.05); */
+.card.is-deleting img {
+  filter: blur(4px);
+  pointer-events: none;
+}
+.deleting-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.4);
+}
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(0, 0, 0, 0.15);
+  border-top-color: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .empty {
   color: #888;

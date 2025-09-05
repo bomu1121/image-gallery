@@ -2,19 +2,25 @@
   <div class="sidebar">
     <div class="sidebar-top">
       <div
-        class="sidebar-item"
+        class="sidebar-item upload"
         @click="$emit('showUpload')"
         title="上传图片"
       >
         <el-icon><icon-upload /></el-icon>
       </div>
 
-      <div class="sidebar-item" @click="$emit('goHome')" title="回到主页">
+      <div
+        class="sidebar-item"
+        :class="{ active: active === 'home' }"
+        @click="$emit('goHome')"
+        title="回到主页"
+      >
         <el-icon><icon-home /></el-icon>
       </div>
 
       <div
         class="sidebar-item"
+        :class="{ active: active === 'groups' }"
         @click="$emit('showGroups')"
         title="分组管理"
       >
@@ -25,6 +31,7 @@
     <div class="sidebar-bottom">
       <div
         class="sidebar-item"
+        :class="{ active: active === 'settings' }"
         @click="$emit('showSettings')"
         title="设置"
       >
@@ -42,7 +49,14 @@ import {
   Folder as IconFolder,
 } from "@element-plus/icons-vue";
 
-defineEmits(['showUpload', 'goHome', 'showGroups', 'showSettings']);
+defineProps({
+  active: {
+    type: String,
+    default: "home",
+  },
+});
+
+defineEmits(["showUpload", "goHome", "showGroups", "showSettings"]);
 </script>
 
 <style scoped>
@@ -87,6 +101,22 @@ defineEmits(['showUpload', 'goHome', 'showGroups', 'showSettings']);
 }
 
 .sidebar-item:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+/* 区分上传按钮的样式（始终突出） */
+.sidebar-item.upload {
+  background: #f0f0f0;
+  color: #666;
+}
+.sidebar-item.upload:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+/* 其他按钮的选中态样式 */
+.sidebar-item.active {
   background: #e0e0e0;
   color: #333;
 }
