@@ -35,7 +35,7 @@
             @batch-delete="handleBatchDelete"
             @show-upload-dialog="showUploadDialog = true"
             @start-batch-delete="startBatchDelete"
-            @show-group-selector="showGroupSelector = true"
+            @show-group-selector="showGroupSelector = !showGroupSelector"
             @select-group="handleSelectGroup"
             @show-create-group="showCreateGroupDialog = true"
           ></router-view>
@@ -184,9 +184,15 @@ function goToHome() {
 // 开始批量删除模式
 function startBatchDelete() {
   showSettingsPage.value = false;
-  batchDeleteMode.value = true;
-  selectedImages.value.clear();
-  router.push("/gallery");
+  // 切换开关：再次点击则退出批量模式并清空
+  if (batchDeleteMode.value) {
+    selectedImages.value.clear();
+    batchDeleteMode.value = false;
+  } else {
+    batchDeleteMode.value = true;
+    selectedImages.value.clear();
+    router.push("/gallery");
+  }
 }
 
 // 切换图片选中状态
@@ -234,7 +240,7 @@ async function handleBatchDelete() {
 
     ElMessage.success(`成功删除 ${selectedImages.value.size} 张图片`);
     selectedImages.value.clear();
-    batchDeleteMode.value = false;
+    // 保持批量模式开启，不自动关闭
 
     // 刷新图片列表
     window.dispatchEvent(new CustomEvent("imageAdded"));
@@ -249,7 +255,6 @@ async function handleBatchDelete() {
 // 处理分组选择
 function handleSelectGroup(groupId) {
   selectedGroupId.value = groupId;
-  showGroupSelector.value = false; // 选择后隐藏分组选择器
 }
 
 // 跳转到详情页

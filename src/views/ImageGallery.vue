@@ -17,15 +17,15 @@
             <el-icon><icon-refresh /></el-icon>
             刷新
           </el-button>
-          <el-button @click="showUploadDialog" size="small" type="primary">
+          <el-button @click="showUploadDialog" size="small">
             <el-icon><icon-upload /></el-icon>
             上传图片
           </el-button>
-          <el-button @click="startBatchDelete" size="small" type="warning">
+          <el-button @click="startBatchDelete" size="small">
             <el-icon><icon-delete /></el-icon>
             批量删除
           </el-button>
-          <el-button @click="showGroupSelector" size="small">
+          <el-button @click="onToggleGroupSelector" size="small">
             <el-icon><icon-folder /></el-icon>
             选择分组
           </el-button>
@@ -52,32 +52,31 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- 批量删除状态条 -->
-    <div v-if="batchDeleteMode" class="batch-delete-bar">
-      <div class="batch-info">
-        <span class="selected-count"
-          >已选择 {{ selectedImages.size }} 张图片</span
-        >
-      </div>
-      <div class="batch-actions">
-        <el-button
-          @click="selectAll"
-          :disabled="selectedImages.size === images.length"
-          >全选</el-button
-        >
-        <el-button @click="clearAll" :disabled="selectedImages.size === 0"
-          >清空</el-button
-        >
-        <el-button
-          type="danger"
-          @click="confirmBatchDelete"
-          :disabled="selectedImages.size === 0"
-          >删除选中</el-button
-        >
-        <el-button @click="exitBatchMode">退出</el-button>
+        <!-- 批量删除操作（集成到折叠区域） -->
+        <div v-if="batchDeleteMode" class="menu-batch-bar">
+          <div class="batch-info">
+            <span class="selected-count"
+              >已选择 {{ selectedImages.size }} 张图片</span
+            >
+          </div>
+          <div class="batch-actions">
+            <el-button
+              @click="selectAll"
+              :disabled="selectedImages.size === images.length"
+              >全选</el-button
+            >
+            <el-button @click="clearAll" :disabled="selectedImages.size === 0"
+              >清空</el-button
+            >
+            <el-button
+              type="danger"
+              @click="confirmBatchDelete"
+              :disabled="selectedImages.size === 0"
+              >删除选中</el-button
+            >
+          </div>
+        </div>
       </div>
     </div>
 
@@ -689,7 +688,7 @@ function startBatchDelete() {
   emit("startBatchDelete");
 }
 
-function showGroupSelector() {
+function onToggleGroupSelector() {
   emit("showGroupSelector");
 }
 
@@ -856,6 +855,15 @@ function showCreateGroup() {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* 折叠区域内的批量操作条复用样式 */
+.menu-batch-bar {
+  padding: 12px 16px;
+  border-top: 1px dashed #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .batch-info {
   display: flex;
   align-items: center;
@@ -975,15 +983,27 @@ function showCreateGroup() {
 }
 
 .menu-actions .el-button {
-  font-size: 12px;
-  padding: 8px 16px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   border-radius: 6px;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  color: #666;
+  font-size: 0; /* 隐藏文字，仅显示图标 */
 }
 
 .menu-actions .el-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background: #e0e0e0;
+  color: #333;
+}
+
+/* 隐藏按钮文字，仅保留图标，保持与侧栏风格一致 */
+.menu-actions .el-button .el-icon {
+  font-size: 16px; /* 恢复图标大小 */
 }
 
 /* 分组选择器样式 */

@@ -21,14 +21,6 @@
 
     <div class="sidebar-bottom">
       <div
-        class="sidebar-item batch-delete"
-        @click="$emit('startBatchDelete')"
-        title="批量删除"
-      >
-        <el-icon><icon-delete /></el-icon>
-      </div>
-
-      <div
         class="sidebar-item"
         :class="{ active: active === 'settings' }"
         @click="$emit('showSettings')"
@@ -45,7 +37,6 @@ import {
   Upload as IconUpload,
   Setting as IconSetting,
   Grid as IconHome,
-  Delete as IconDelete,
 } from "@element-plus/icons-vue";
 
 defineProps({
@@ -55,7 +46,7 @@ defineProps({
   },
 });
 
-defineEmits(["showUpload", "goHome", "showSettings", "startBatchDelete"]);
+defineEmits(["showUpload", "goHome", "showSettings"]);
 </script>
 
 <style scoped>
