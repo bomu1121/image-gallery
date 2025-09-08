@@ -33,7 +33,6 @@
 
         <!-- 分组选择区域 -->
         <div v-if="showGroupSelector" class="group-selector">
-          <div class="group-selector-title">选择分组：</div>
           <div class="group-tabs">
             <!-- 新建分组按钮 -->
             <div class="group-tab create-group-tab" @click="showCreateGroup">
@@ -82,43 +81,45 @@
       </div>
     </div>
 
-    <div v-if="!images.length" class="empty">
-      <div class="empty-content">
-        <div class="empty-icon">📷</div>
-        <div class="empty-text">暂无图片，请先上传</div>
-        <div class="empty-tip">支持拖拽上传、点击上传或 Ctrl+V 粘贴图片</div>
-      </div>
-    </div>
-
-    <div class="grid" v-else>
-      <div
-        v-for="img in images"
-        :key="img.id"
-        class="card"
-        :class="{
-          'is-deleting': isDeleting(img.id),
-          'is-selected': batchDeleteMode && selectedImages.has(img.id),
-        }"
-      >
-        <img
-          :src="img.objectUrl || img.url"
-          :alt="img.name"
-          @click="onCardClick(img)"
-          @contextmenu.prevent="
-            !batchDeleteMode && onCardContextMenu($event, img)
-          "
-        />
-        <div v-if="isDeleting(img.id)" class="deleting-overlay">
-          <div class="spinner" />
+    <div class="gallery-scroll">
+      <div v-if="!images.length" class="empty">
+        <div class="empty-content">
+          <div class="empty-icon">📷</div>
+          <div class="empty-text">暂无图片，请先上传</div>
+          <div class="empty-tip">支持拖拽上传、点击上传或 Ctrl+V 粘贴图片</div>
         </div>
-        <!-- 选中状态遮罩 -->
+      </div>
+
+      <div class="grid" v-else>
         <div
-          v-if="batchDeleteMode && selectedImages.has(img.id)"
-          class="selection-overlay"
-          @click="onCardClick(img)"
+          v-for="img in images"
+          :key="img.id"
+          class="card"
+          :class="{
+            'is-deleting': isDeleting(img.id),
+            'is-selected': batchDeleteMode && selectedImages.has(img.id),
+          }"
         >
-          <div class="check-icon">
-            <el-icon><icon-check /></el-icon>
+          <img
+            :src="img.objectUrl || img.url"
+            :alt="img.name"
+            @click="onCardClick(img)"
+            @contextmenu.prevent="
+              !batchDeleteMode && onCardContextMenu($event, img)
+            "
+          />
+          <div v-if="isDeleting(img.id)" class="deleting-overlay">
+            <div class="spinner" />
+          </div>
+          <!-- 选中状态遮罩 -->
+          <div
+            v-if="batchDeleteMode && selectedImages.has(img.id)"
+            class="selection-overlay"
+            @click="onCardClick(img)"
+          >
+            <div class="check-icon">
+              <el-icon><icon-check /></el-icon>
+            </div>
           </div>
         </div>
       </div>
@@ -704,11 +705,21 @@ function showCreateGroup() {
 <style scoped>
 .gallery-page {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 .grid {
   column-count: 3;
   column-gap: 12px;
   padding: 16px;
+}
+
+/* 仅图片区域滚动 */
+.gallery-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 .card {
   border: 1px solid #eee;

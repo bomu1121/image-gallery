@@ -23,7 +23,7 @@
         />
 
         <!-- 其他页面内容 -->
-        <div v-else>
+        <div v-else class="content-scroll">
           <router-view
             :batch-delete-mode="batchDeleteMode"
             :selected-images="selectedImages"
@@ -358,9 +358,18 @@ onMounted(() => {
 
 .main-content {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: hidden; /* 右侧整体不滚动，交给内部列表滚动 */
   min-height: 0;
   position: relative;
   z-index: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-scroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 </style>
