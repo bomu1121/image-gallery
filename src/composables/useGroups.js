@@ -229,6 +229,34 @@ export function useGroups() {
     }
   }
 
+  // 处理粘贴的图片（与上传类似，但不需要文件对象）
+  async function onPasteImages(processedImages) {
+    try {
+      for (const imageRecord of processedImages) {
+        await putImage(imageRecord);
+      }
+
+      // 更新未分组的图片数量
+      const ungroupedGroup = groups.value.find((g) => g.id === 0);
+      if (ungroupedGroup) {
+        ungroupedGroup.imageCount += processedImages.length;
+      }
+
+      // 如果当前在分组页面且显示的是未分组，刷新图片显示
+      if (currentGroupId.value === 0) {
+        await loadGroupImages(0);
+      }
+
+      // 触发图片库刷新事件
+      window.dispatchEvent(new CustomEvent("imageAdded"));
+
+      ElMessage.success(`成功粘贴 ${processedImages.length} 张图片`);
+    } catch (e) {
+      console.error("粘贴失败:", e);
+      ElMessage.error("粘贴失败，请重试");
+    }
+  }
+
   return {
     groups,
     currentGroupId,
@@ -247,6 +275,7 @@ export function useGroups() {
     showImageContextMenu,
     selectImageGroup,
     moveImageToGroup,
-    onFileChange
+    onFileChange,
+    onPasteImages
   };
 }

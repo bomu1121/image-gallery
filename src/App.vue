@@ -46,6 +46,7 @@
     <UploadDialog
       v-model:visible="showUploadDialog"
       @file-change="onFileChange"
+      @paste-images="onPasteImages"
     />
 
     <!-- 背景设置对话框 -->
@@ -78,7 +79,7 @@
 
 <script setup>
 // #region --- element语言
-import { ElConfigProvider } from "element-plus";
+import { ElConfigProvider, ElMessage } from "element-plus";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import en from "element-plus/es/locale/lang/en";
 import { useSystemLang } from "@/store/system/lang.js";
@@ -98,6 +99,11 @@ import GroupDialogs from "@/components/GroupDialogs.vue";
 // 组合式函数导入
 import { useBackground } from "@/composables/useBackground.js";
 import { useGroups } from "@/composables/useGroups.js";
+import {
+  handlePasteEvent,
+  processPastedImages,
+} from "@/utils/modules/paste.js";
+import { putImage } from "@/utils/idb.js";
 
 const router = useRouter();
 const systemLang = useSystemLang();
@@ -151,6 +157,7 @@ const {
   selectImageGroup,
   moveImageToGroup,
   onFileChange,
+  onPasteImages,
 } = useGroups();
 
 // 计算当前侧边栏激活项
@@ -198,6 +205,40 @@ async function handleUpdateGroup() {
   showEditGroupDialog.value = false; // 关闭对话框
 }
 
+// 全局粘贴功能
+async function handleGlobalPaste(event) {
+  try {
+    console.log("全局粘贴监听器被触发");
+    const imageFiles = await handlePasteEvent(event);
+    if (imageFiles.length > 0) {
+      console.log(`检测到 ${imageFiles.length} 个图片文件`);
+      const processedImages = await processPastedImages(imageFiles);
+
+      if (processedImages.length > 0) {
+        console.log(`处理了 ${processedImages.length} 张图片`);
+        // 检查是否在上传弹窗中
+        if (showUploadDialog.value) {
+          console.log("在弹窗中，通过事件系统处理");
+          // 在弹窗中，通过emit传递给弹窗处理
+          // 这里我们需要通过事件系统通知弹窗
+          window.dispatchEvent(
+            new CustomEvent("pasteImagesInDialog", {
+              detail: { processedImages },
+            })
+          );
+        } else {
+          console.log("不在弹窗中，直接处理");
+          // 不在弹窗中，直接处理
+          await onPasteImages(processedImages);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("处理全局粘贴事件时出错:", error);
+    ElMessage.error("粘贴失败，请重试");
+  }
+}
+
 onMounted(() => {
   loadBackgroundSettings();
   initializeGroups();
@@ -208,6 +249,9 @@ onMounted(() => {
     selectedImageGroupId.value = event.detail.image.groupId || 0;
     showImageGroupDialog.value = true;
   });
+
+  // 添加全局粘贴事件监听器，使用 capture 模式
+  document.addEventListener("paste", handleGlobalPaste, true);
 });
 
 // 当进入分组页时，主动加载未分组图片

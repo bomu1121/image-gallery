@@ -1,7 +1,11 @@
 <template>
   <div class="gallery-page">
     <div v-if="!images.length" class="empty">
-      <!-- <el-empty description="暂无图片，请先上传" /> -->
+      <div class="empty-content">
+        <div class="empty-icon">📷</div>
+        <div class="empty-text">暂无图片，请先上传</div>
+        <div class="empty-tip">支持拖拽上传、点击上传或 Ctrl+V 粘贴图片</div>
+      </div>
     </div>
 
     <div class="grid" v-else>
@@ -524,7 +528,32 @@ function showGroupMenu(img) {
   }
 }
 .empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
   color: #888;
+}
+
+.empty-content {
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.empty-text {
+  font-size: 16px;
+  margin-bottom: 8px;
+  color: #666;
+}
+
+.empty-tip {
+  font-size: 12px;
+  color: #999;
 }
 .viewer {
   width: 100%;
