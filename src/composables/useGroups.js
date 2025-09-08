@@ -319,9 +319,9 @@ export function useGroups() {
         targetGroupId !== null ? targetGroupId : currentGroupId.value;
 
       for (const imageRecord of processedImages) {
-        // 设置图片的分组ID
-        imageRecord.groupId = groupId;
-        await putImage(imageRecord);
+        // 使用克隆对象，避免后续复用同一引用导致分组串写
+        const toInsert = { ...imageRecord, groupId };
+        await putImage(toInsert);
       }
 
       // 更新对应分组的图片数量

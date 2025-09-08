@@ -13,10 +13,6 @@
 
       <div class="menu-content" :class="{ 'is-collapsed': isMenuCollapsed }">
         <div class="menu-actions">
-          <el-button @click="refreshImages" size="small">
-            <el-icon><icon-refresh /></el-icon>
-            刷新
-          </el-button>
           <el-button @click="showUploadDialog" size="small">
             <el-icon><icon-upload /></el-icon>
             上传图片
@@ -192,7 +188,6 @@ import {
   Check as IconCheck,
   Menu as IconMenu,
   ArrowDown as IconArrowDown,
-  Refresh as IconRefresh,
   Upload as IconUpload,
   Plus as IconPlus,
 } from "@element-plus/icons-vue";
@@ -337,6 +332,8 @@ async function remove(id) {
     await withMinDuration(deleteImage(id), MIN_DELETE_MS);
     console.timeEnd(`delete-image-${id}`);
     await load();
+    // 通知上层同步分组计数等派生数据
+    window.dispatchEvent(new CustomEvent("imageAdded"));
   } finally {
     stopDeleting(id);
   }
@@ -675,10 +672,7 @@ function toggleMenu() {
   isMenuCollapsed.value = !isMenuCollapsed.value;
 }
 
-function refreshImages() {
-  load();
-  ElMessage.success("图片列表已刷新");
-}
+// 顶部刷新按钮已移除
 
 function showUploadDialog() {
   emit("showUploadDialog");

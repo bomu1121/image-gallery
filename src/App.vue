@@ -238,6 +238,9 @@ async function handleBatchDelete() {
 
     await Promise.all(deletePromises);
 
+    // 重新统计分组图片数量
+    await initializeGroups();
+
     ElMessage.success(`成功删除 ${selectedImages.value.size} 张图片`);
     selectedImages.value.clear();
     // 保持批量模式开启，不自动关闭
