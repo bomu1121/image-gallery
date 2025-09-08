@@ -17,15 +17,6 @@
       >
         <el-icon><icon-home /></el-icon>
       </div>
-
-      <div
-        class="sidebar-item"
-        :class="{ active: active === 'groups' }"
-        @click="$emit('showGroups')"
-        title="分组管理"
-      >
-        <el-icon><icon-folder /></el-icon>
-      </div>
     </div>
 
     <div class="sidebar-bottom">
@@ -36,7 +27,7 @@
       >
         <el-icon><icon-delete /></el-icon>
       </div>
-      
+
       <div
         class="sidebar-item"
         :class="{ active: active === 'settings' }"
@@ -54,7 +45,6 @@ import {
   Upload as IconUpload,
   Setting as IconSetting,
   Grid as IconHome,
-  Folder as IconFolder,
   Delete as IconDelete,
 } from "@element-plus/icons-vue";
 
@@ -65,7 +55,7 @@ defineProps({
   },
 });
 
-defineEmits(["showUpload", "goHome", "showGroups", "showSettings", "startBatchDelete"]);
+defineEmits(["showUpload", "goHome", "showSettings", "startBatchDelete"]);
 </script>
 
 <style scoped>

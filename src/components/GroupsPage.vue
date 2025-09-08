@@ -24,28 +24,24 @@
       </div>
     </div>
 
-    <!-- 图片展示区域 -->
+    <!-- 图片展示区域 - 使用ImageGallery组件 -->
     <div class="groups-content">
-      <div v-if="!currentGroupImages.length" class="empty">
-        <el-empty description="该分组暂无图片" />
-      </div>
-
-      <div class="grid" v-else>
-        <div v-for="img in currentGroupImages" :key="img.id" class="card">
-          <img
-            :src="img.objectUrl || img.url"
-            :alt="img.name"
-            @click="$emit('goToDetail', img)"
-            @contextmenu.prevent="$emit('showImageContextMenu', $event, img)"
-          />
-        </div>
-      </div>
+      <ImageGallery
+        :groups="groups"
+        :selected-group-id="currentGroupId"
+        :show-group-selector="false"
+        :batch-delete-mode="false"
+        :selected-images="new Set()"
+        @go-to-detail="$emit('goToDetail', $event)"
+        @show-image-context-menu="$emit('showImageContextMenu', $event, $event)"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
 import { Plus as IconPlus } from "@element-plus/icons-vue";
+import ImageGallery from "@/views/ImageGallery.vue";
 
 defineProps({
   groups: {
@@ -54,10 +50,6 @@ defineProps({
   },
   currentGroupId: {
     type: Number,
-    required: true
-  },
-  currentGroupImages: {
-    type: Array,
     required: true
   }
 });
@@ -132,40 +124,6 @@ defineEmits([
 
 .groups-content {
   flex: 1;
-  padding: 16px;
-}
-
-/* 图片展示样式 - 复用主页面的瀑布流布局 */
-.grid {
-  column-count: 3;
-  column-gap: 12px;
-  padding: 16px 0;
-}
-
-.card {
-  border: 1px solid #eee;
-  border-radius: 6px;
-  overflow: hidden;
-  background: #fff;
-  width: 100%;
-  break-inside: avoid;
-  margin-bottom: 12px;
-}
-
-.card img {
-  display: block;
-  width: 100%;
-  height: auto;
-  object-fit: cover;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-
-.empty {
-  color: #888;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 200px;
+  padding: 0;
 }
 </style>

@@ -25,10 +25,33 @@
             <el-icon><icon-delete /></el-icon>
             批量删除
           </el-button>
-          <el-button @click="showGroupsPage" size="small">
+          <el-button @click="showGroupSelector" size="small">
             <el-icon><icon-folder /></el-icon>
-            分组管理
+            选择分组
           </el-button>
+        </div>
+
+        <!-- 分组选择区域 -->
+        <div v-if="showGroupSelector" class="group-selector">
+          <div class="group-selector-title">选择分组：</div>
+          <div class="group-tabs">
+            <!-- 新建分组按钮 -->
+            <div class="group-tab create-group-tab" @click="showCreateGroup">
+              <el-icon><icon-plus /></el-icon>
+            </div>
+
+            <!-- 分组标签 -->
+            <div
+              v-for="group in groups"
+              :key="group.id"
+              class="group-tab"
+              :class="{ active: selectedGroupId === group.id }"
+              @click="selectGroup(group.id)"
+            >
+              <span class="group-name">{{ group.name }}</span>
+              <span class="group-count">({{ group.imageCount }})</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -171,6 +194,7 @@ import {
   ArrowDown as IconArrowDown,
   Refresh as IconRefresh,
   Upload as IconUpload,
+  Plus as IconPlus,
 } from "@element-plus/icons-vue";
 import { getAllImages, deleteImage } from "@/utils/idb.js";
 
@@ -184,6 +208,18 @@ const props = defineProps({
     type: Set,
     default: () => new Set(),
   },
+  groups: {
+    type: Array,
+    default: () => [],
+  },
+  selectedGroupId: {
+    type: Number,
+    default: 0,
+  },
+  showGroupSelector: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Emits
@@ -193,7 +229,9 @@ const emit = defineEmits([
   "batchDelete",
   "showUploadDialog",
   "startBatchDelete",
-  "showGroupsPage",
+  "showGroupSelector",
+  "selectGroup",
+  "showCreateGroup",
 ]);
 
 const router = useRouter();
@@ -248,7 +286,16 @@ async function load() {
   const prev = images.value;
   const data = await getAllImages();
   revokeObjectUrls(prev);
-  images.value = data.map((r) => ({
+
+  // 根据选中的分组筛选图片
+  let filteredData = data;
+  if (props.selectedGroupId !== null && props.selectedGroupId !== undefined) {
+    filteredData = data.filter(
+      (img) => (img.groupId || 0) === props.selectedGroupId
+    );
+  }
+
+  images.value = filteredData.map((r) => ({
     ...r,
     objectUrl: r.blob ? URL.createObjectURL(r.blob) : r.url,
   }));
@@ -266,6 +313,14 @@ onMounted(() => {
   // 监听上传完成事件，刷新列表
   window.addEventListener("imageAdded", load);
 });
+
+// 监听分组变化，重新加载图片
+watch(
+  () => props.selectedGroupId,
+  () => {
+    load();
+  }
+);
 
 onBeforeUnmount(() => {
   revokeObjectUrls(images.value);
@@ -633,8 +688,16 @@ function startBatchDelete() {
   emit("startBatchDelete");
 }
 
-function showGroupsPage() {
-  emit("showGroupsPage");
+function showGroupSelector() {
+  emit("showGroupSelector");
+}
+
+function selectGroup(groupId) {
+  emit("selectGroup", groupId);
+}
+
+function showCreateGroup() {
+  emit("showCreateGroup");
 }
 </script>
 
@@ -885,19 +948,19 @@ function showGroupsPage() {
   max-height: 200px;
   overflow: hidden;
   transition: max-height 0.3s ease, padding 0.3s ease;
-  padding: 16px;
+
   background: #fff;
 }
 
 .menu-content.is-collapsed {
   max-height: 0;
-  padding: 0 16px;
 }
 
 .menu-actions {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  padding: 16px;
 }
 
 .menu-actions .el-button {
@@ -910,5 +973,74 @@ function showGroupsPage() {
 .menu-actions .el-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 分组选择器样式 */
+.group-selector {
+  border-top: 1px solid #e0e0e0;
+  padding: 16px;
+}
+
+.group-selector-title {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.group-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.group-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  font-size: 12px;
+}
+
+.group-tab:hover {
+  background: #e8f4fd;
+  border-color: #409eff;
+}
+
+.group-tab.active {
+  background: #409eff;
+  border-color: #409eff;
+  color: white;
+}
+
+.group-tab.create-group-tab {
+  background: #67c23a;
+  border-color: #67c23a;
+  color: white;
+  min-width: 32px;
+  justify-content: center;
+  padding: 6px;
+}
+
+.group-tab.create-group-tab:hover {
+  background: #85ce61;
+  border-color: #85ce61;
+}
+
+.group-tab .group-name {
+  font-weight: 500;
+}
+
+.group-tab .group-count {
+  font-size: 11px;
+  opacity: 0.8;
 }
 </style>

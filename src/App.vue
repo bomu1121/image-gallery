@@ -9,7 +9,6 @@
         :active="activeKey"
         @show-upload="showUploadDialog = true"
         @go-home="goToHome"
-        @show-groups="showGroupsPage = true"
         @show-settings="showSettingsPage = true"
         @start-batch-delete="startBatchDelete"
       />
@@ -23,30 +22,22 @@
           @show-background-settings="showBackgroundSettings = true"
         />
 
-        <!-- 分组页面 -->
-        <GroupsPage
-          v-else-if="showGroupsPage"
-          :groups="groups"
-          :current-group-id="currentGroupId"
-          :current-group-images="currentGroupImages"
-          @show-create-group="showCreateGroupDialog = true"
-          @select-group="selectGroup"
-          @show-group-context-menu="handleGroupContextMenu"
-          @go-to-detail="goToDetail"
-          @show-image-context-menu="handleImageContextMenu"
-        />
-
         <!-- 其他页面内容 -->
         <div v-else>
           <router-view
             :batch-delete-mode="batchDeleteMode"
             :selected-images="selectedImages"
+            :groups="groups"
+            :selected-group-id="selectedGroupId"
+            :show-group-selector="showGroupSelector"
             @toggle-image-selection="toggleImageSelection"
             @clear-selection="clearSelection"
             @batch-delete="handleBatchDelete"
             @show-upload-dialog="showUploadDialog = true"
             @start-batch-delete="startBatchDelete"
-            @show-groups-page="showGroupsPage = true"
+            @show-group-selector="showGroupSelector = true"
+            @select-group="handleSelectGroup"
+            @show-create-group="showCreateGroupDialog = true"
           ></router-view>
         </div>
       </div>
@@ -55,8 +46,8 @@
     <!-- 上传对话框 -->
     <UploadDialog
       v-model:visible="showUploadDialog"
-      @file-change="onFileChange"
-      @paste-images="onPasteImages"
+      @file-change="(file) => onFileChange(file, selectedGroupId)"
+      @paste-images="(images) => onPasteImages(images, selectedGroupId)"
     />
 
     <!-- 背景设置对话框 -->
@@ -82,7 +73,7 @@
       @update-group="handleUpdateGroup"
       @delete-group="deleteGroup"
       @select-image-group="selectImageGroup"
-      @move-image-to-group="moveImageToGroup"
+      @move-image-to-group="handleMoveImageToGroup"
     />
   </el-config-provider>
 </template>
@@ -101,7 +92,6 @@ import { useRouter } from "vue-router";
 import GlobalBackground from "@/components/GlobalBackground.vue";
 import Sidebar from "@/components/Sidebar.vue";
 import SettingsPage from "@/components/SettingsPage.vue";
-import GroupsPage from "@/components/GroupsPage.vue";
 import UploadDialog from "@/components/UploadDialog.vue";
 import BackgroundSettings from "@/components/BackgroundSettings.vue";
 import GroupDialogs from "@/components/GroupDialogs.vue";
@@ -134,7 +124,7 @@ const locale = computed(() => {
 const showUploadDialog = ref(false);
 const showSettingsPage = ref(false);
 const showBackgroundSettings = ref(false);
-const showGroupsPage = ref(false);
+// 已移除独立分组页
 const showCreateGroupDialog = ref(false);
 const showEditGroupDialog = ref(false);
 const showImageGroupDialog = ref(false);
@@ -142,6 +132,10 @@ const showImageGroupDialog = ref(false);
 // 批量删除相关状态
 const batchDeleteMode = ref(false);
 const selectedImages = ref(new Set());
+
+// 分组相关状态
+const showGroupSelector = ref(false);
+const selectedGroupId = ref(0);
 
 // 使用组合式函数
 const {
@@ -156,7 +150,6 @@ const {
 const {
   groups,
   currentGroupId,
-  currentGroupImages,
   newGroup,
   editingGroup,
   selectedImageGroupId,
@@ -177,14 +170,12 @@ const {
 // 计算当前侧边栏激活项
 const activeKey = computed(() => {
   if (showSettingsPage.value) return "settings";
-  if (showGroupsPage.value) return "groups";
   return "home";
 });
 
 // 导航到主页
 function goToHome() {
   showSettingsPage.value = false;
-  showGroupsPage.value = false;
   batchDeleteMode.value = false;
   selectedImages.value.clear();
   router.push("/gallery");
@@ -193,7 +184,6 @@ function goToHome() {
 // 开始批量删除模式
 function startBatchDelete() {
   showSettingsPage.value = false;
-  showGroupsPage.value = false;
   batchDeleteMode.value = true;
   selectedImages.value.clear();
   router.push("/gallery");
@@ -256,6 +246,12 @@ async function handleBatchDelete() {
   }
 }
 
+// 处理分组选择
+function handleSelectGroup(groupId) {
+  selectedGroupId.value = groupId;
+  showGroupSelector.value = false; // 选择后隐藏分组选择器
+}
+
 // 跳转到详情页
 function goToDetail(img) {
   router.push(`/image/${img.id}`);
@@ -277,8 +273,21 @@ function handleImageContextMenu(event, img) {
 
 // 处理新建分组
 async function handleCreateGroup() {
-  await createGroup();
+  const newId = await createGroup();
   showCreateGroupDialog.value = false; // 关闭对话框
+  if (newId !== null && newId !== undefined) {
+    // 选中新建分组并关闭分组选择器
+    selectedGroupId.value = newId;
+    showGroupSelector.value = false;
+  }
+}
+
+// 移动图片到分组：成功后关闭弹窗并刷新当前列表
+async function handleMoveImageToGroup() {
+  await moveImageToGroup();
+  showImageGroupDialog.value = false;
+  // 通知图片列表刷新
+  window.dispatchEvent(new CustomEvent("imageAdded"));
 }
 
 // 处理更新分组
@@ -310,8 +319,8 @@ async function handleGlobalPaste(event) {
           );
         } else {
           console.log("不在弹窗中，直接处理");
-          // 不在弹窗中，直接处理
-          await onPasteImages(processedImages);
+          // 不在弹窗中，直接处理，使用当前选中的分组ID
+          await onPasteImages(processedImages, selectedGroupId.value);
         }
       }
     }
@@ -334,16 +343,6 @@ onMounted(() => {
 
   // 添加全局粘贴事件监听器，使用 capture 模式
   document.addEventListener("paste", handleGlobalPaste, true);
-});
-
-// 当进入分组页时，主动加载未分组图片
-watch(showGroupsPage, (isShown) => {
-  if (isShown) {
-    // 延后到下一个事件循环，避免阻塞选中态渲染
-    setTimeout(() => {
-      selectGroup(0);
-    }, 0);
-  }
 });
 </script>
 
