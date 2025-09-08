@@ -277,7 +277,7 @@ watch(showGroupsPage, (isShown) => {
 
 .main-content {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
   min-height: 0;
   position: relative;
   z-index: 2;

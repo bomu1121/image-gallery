@@ -157,6 +157,8 @@ onMounted(() => {
   }, 0);
   // 添加全局点击事件监听，点击其他地方隐藏右键菜单
   document.addEventListener("click", hideContextMenu);
+  // 添加滚动事件监听，滚动时隐藏右键菜单
+  document.addEventListener("scroll", hideContextMenu, true);
   // 监听上传完成事件，刷新列表
   window.addEventListener("imageAdded", load);
 });
@@ -164,6 +166,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   revokeObjectUrls(images.value);
   document.removeEventListener("click", hideContextMenu);
+  document.removeEventListener("scroll", hideContextMenu, true);
   window.removeEventListener("imageAdded", load);
 });
 
