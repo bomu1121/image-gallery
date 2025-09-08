@@ -11,6 +11,7 @@
         @go-home="goToHome"
         @show-groups="showGroupsPage = true"
         @show-settings="showSettingsPage = true"
+        @start-batch-delete="startBatchDelete"
       />
 
       <!-- 主内容区域 -->
@@ -37,7 +38,13 @@
 
         <!-- 其他页面内容 -->
         <div v-else>
-          <router-view></router-view>
+          <router-view
+            :batch-delete-mode="batchDeleteMode"
+            :selected-images="selectedImages"
+            @toggle-image-selection="toggleImageSelection"
+            @clear-selection="clearSelection"
+            @batch-delete="handleBatchDelete"
+          ></router-view>
         </div>
       </div>
     </div>
@@ -79,7 +86,7 @@
 
 <script setup>
 // #region --- element语言
-import { ElConfigProvider, ElMessage } from "element-plus";
+import { ElConfigProvider, ElMessage, ElMessageBox } from "element-plus";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import en from "element-plus/es/locale/lang/en";
 import { useSystemLang } from "@/store/system/lang.js";
@@ -129,6 +136,10 @@ const showCreateGroupDialog = ref(false);
 const showEditGroupDialog = ref(false);
 const showImageGroupDialog = ref(false);
 
+// 批量删除相关状态
+const batchDeleteMode = ref(false);
+const selectedImages = ref(new Set());
+
 // 使用组合式函数
 const {
   backgroundImage,
@@ -171,7 +182,75 @@ const activeKey = computed(() => {
 function goToHome() {
   showSettingsPage.value = false;
   showGroupsPage.value = false;
+  batchDeleteMode.value = false;
+  selectedImages.value.clear();
   router.push("/gallery");
+}
+
+// 开始批量删除模式
+function startBatchDelete() {
+  showSettingsPage.value = false;
+  showGroupsPage.value = false;
+  batchDeleteMode.value = true;
+  selectedImages.value.clear();
+  router.push("/gallery");
+}
+
+// 切换图片选中状态
+function toggleImageSelection(imageId) {
+  if (selectedImages.value.has(imageId)) {
+    selectedImages.value.delete(imageId);
+  } else {
+    selectedImages.value.add(imageId);
+  }
+}
+
+// 清空选择
+function clearSelection() {
+  selectedImages.value.clear();
+  batchDeleteMode.value = false;
+}
+
+// 处理批量删除
+async function handleBatchDelete() {
+  if (selectedImages.value.size === 0) {
+    ElMessage.warning("请先选择要删除的图片");
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedImages.value.size} 张图片吗？`,
+      "确认删除",
+      {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      }
+    );
+
+    // 导入删除函数
+    const { deleteImage } = await import("@/utils/idb.js");
+
+    // 批量删除选中的图片
+    const deletePromises = Array.from(selectedImages.value).map((imageId) =>
+      deleteImage(imageId)
+    );
+
+    await Promise.all(deletePromises);
+
+    ElMessage.success(`成功删除 ${selectedImages.value.size} 张图片`);
+    selectedImages.value.clear();
+    batchDeleteMode.value = false;
+
+    // 刷新图片列表
+    window.dispatchEvent(new CustomEvent("imageAdded"));
+  } catch (error) {
+    if (error !== "cancel") {
+      console.error("批量删除失败:", error);
+      ElMessage.error("删除失败，请重试");
+    }
+  }
 }
 
 // 跳转到详情页

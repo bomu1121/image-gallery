@@ -30,6 +30,14 @@
 
     <div class="sidebar-bottom">
       <div
+        class="sidebar-item batch-delete"
+        @click="$emit('startBatchDelete')"
+        title="批量删除"
+      >
+        <el-icon><icon-delete /></el-icon>
+      </div>
+      
+      <div
         class="sidebar-item"
         :class="{ active: active === 'settings' }"
         @click="$emit('showSettings')"
@@ -47,6 +55,7 @@ import {
   Setting as IconSetting,
   Grid as IconHome,
   Folder as IconFolder,
+  Delete as IconDelete,
 } from "@element-plus/icons-vue";
 
 defineProps({
@@ -56,7 +65,7 @@ defineProps({
   },
 });
 
-defineEmits(["showUpload", "goHome", "showGroups", "showSettings"]);
+defineEmits(["showUpload", "goHome", "showGroups", "showSettings", "startBatchDelete"]);
 </script>
 
 <style scoped>
@@ -113,6 +122,16 @@ defineEmits(["showUpload", "goHome", "showGroups", "showSettings"]);
 .sidebar-item.upload:hover {
   background: #e0e0e0;
   color: #333;
+}
+
+/* 批量删除按钮样式 */
+.sidebar-item.batch-delete {
+  background: #fef0f0;
+  color: #f56c6c;
+}
+.sidebar-item.batch-delete:hover {
+  background: #fde2e2;
+  color: #f56c6c;
 }
 
 /* 其他按钮的选中态样式 */

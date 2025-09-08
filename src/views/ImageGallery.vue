@@ -1,5 +1,65 @@
 <template>
   <div class="gallery-page">
+    <!-- 可折叠菜单栏 -->
+    <div class="collapsible-menu-bar">
+      <div class="menu-header" @click="toggleMenu">
+        <div class="menu-title">
+          <el-icon><icon-menu /></el-icon>
+          <span>快捷操作</span>
+        </div>
+        <div class="menu-toggle" :class="{ 'is-collapsed': isMenuCollapsed }">
+          <el-icon><icon-arrow-down /></el-icon>
+        </div>
+      </div>
+      
+      <div class="menu-content" :class="{ 'is-collapsed': isMenuCollapsed }">
+        <div class="menu-actions">
+          <el-button @click="refreshImages" size="small">
+            <el-icon><icon-refresh /></el-icon>
+            刷新
+          </el-button>
+          <el-button @click="showUploadDialog" size="small" type="primary">
+            <el-icon><icon-upload /></el-icon>
+            上传图片
+          </el-button>
+          <el-button @click="startBatchDelete" size="small" type="warning">
+            <el-icon><icon-delete /></el-icon>
+            批量删除
+          </el-button>
+          <el-button @click="showGroupsPage" size="small">
+            <el-icon><icon-folder /></el-icon>
+            分组管理
+          </el-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 批量删除状态条 -->
+    <div v-if="batchDeleteMode" class="batch-delete-bar">
+      <div class="batch-info">
+        <span class="selected-count"
+          >已选择 {{ selectedImages.size }} 张图片</span
+        >
+      </div>
+      <div class="batch-actions">
+        <el-button
+          @click="selectAll"
+          :disabled="selectedImages.size === images.length"
+          >全选</el-button
+        >
+        <el-button @click="clearAll" :disabled="selectedImages.size === 0"
+          >清空</el-button
+        >
+        <el-button
+          type="danger"
+          @click="confirmBatchDelete"
+          :disabled="selectedImages.size === 0"
+          >删除选中</el-button
+        >
+        <el-button @click="exitBatchMode">退出</el-button>
+      </div>
+    </div>
+
     <div v-if="!images.length" class="empty">
       <div class="empty-content">
         <div class="empty-icon">📷</div>
@@ -13,16 +73,31 @@
         v-for="img in images"
         :key="img.id"
         class="card"
-        :class="{ 'is-deleting': isDeleting(img.id) }"
+        :class="{
+          'is-deleting': isDeleting(img.id),
+          'is-selected': batchDeleteMode && selectedImages.has(img.id),
+        }"
       >
         <img
           :src="img.objectUrl || img.url"
           :alt="img.name"
           @click="onCardClick(img)"
-          @contextmenu.prevent="onCardContextMenu($event, img)"
+          @contextmenu.prevent="
+            !batchDeleteMode && onCardContextMenu($event, img)
+          "
         />
         <div v-if="isDeleting(img.id)" class="deleting-overlay">
           <div class="spinner" />
+        </div>
+        <!-- 选中状态遮罩 -->
+        <div
+          v-if="batchDeleteMode && selectedImages.has(img.id)"
+          class="selection-overlay"
+          @click="onCardClick(img)"
+        >
+          <div class="check-icon">
+            <el-icon><icon-check /></el-icon>
+          </div>
         </div>
       </div>
     </div>
@@ -92,8 +167,28 @@ import {
   CopyDocument as IconCopy,
   Download as IconDownload,
   Folder as IconFolder,
+  Check as IconCheck,
 } from "@element-plus/icons-vue";
 import { getAllImages, deleteImage } from "@/utils/idb.js";
+
+// Props
+const props = defineProps({
+  batchDeleteMode: {
+    type: Boolean,
+    default: false,
+  },
+  selectedImages: {
+    type: Set,
+    default: () => new Set(),
+  },
+});
+
+// Emits
+const emit = defineEmits([
+  "toggleImageSelection",
+  "clearSelection",
+  "batchDelete",
+]);
 
 const router = useRouter();
 const images = ref([]);
@@ -194,7 +289,14 @@ function goToDetail(img) {
 
 function onCardClick(img) {
   if (isDeleting(img.id)) return;
-  goToDetail(img);
+
+  if (props.batchDeleteMode) {
+    // 批量删除模式下，切换选中状态
+    emit("toggleImageSelection", img.id);
+  } else {
+    // 正常模式下，跳转到详情页
+    goToDetail(img);
+  }
 }
 
 // 右键菜单相关函数
@@ -476,6 +578,33 @@ function showGroupMenu(img) {
   );
   hideContextMenu();
 }
+
+// 批量删除相关函数
+function selectAll() {
+  images.value.forEach((img) => {
+    if (!props.selectedImages.has(img.id)) {
+      emit("toggleImageSelection", img.id);
+    }
+  });
+}
+
+function clearAll() {
+  emit("clearSelection");
+}
+
+function exitBatchMode() {
+  emit("clearSelection");
+}
+
+function confirmBatchDelete() {
+  if (props.selectedImages.size === 0) {
+    ElMessage.warning("请先选择要删除的图片");
+    return;
+  }
+
+  // 直接触发批量删除事件，让父组件处理确认逻辑
+  emit("batchDelete");
+}
 </script>
 
 <style scoped>
@@ -606,5 +735,70 @@ function showGroupMenu(img) {
   height: 1px;
   background-color: #e0e0e0;
   margin: 4px 0;
+}
+
+/* 批量删除状态条样式 */
+.batch-delete-bar {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.batch-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.selected-count {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.batch-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.batch-actions .el-button {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+/* 选中状态样式 */
+.card.is-selected {
+  border-color: #409eff;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+.selection-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(64, 158, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.check-icon {
+  width: 32px;
+  height: 32px;
+  background: #409eff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
 }
 </style>
