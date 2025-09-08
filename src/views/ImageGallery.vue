@@ -5,13 +5,12 @@
       <div class="menu-header" @click="toggleMenu">
         <div class="menu-title">
           <el-icon><icon-menu /></el-icon>
-          <span>快捷操作</span>
         </div>
         <div class="menu-toggle" :class="{ 'is-collapsed': isMenuCollapsed }">
           <el-icon><icon-arrow-down /></el-icon>
         </div>
       </div>
-      
+
       <div class="menu-content" :class="{ 'is-collapsed': isMenuCollapsed }">
         <div class="menu-actions">
           <el-button @click="refreshImages" size="small">
@@ -168,6 +167,10 @@ import {
   Download as IconDownload,
   Folder as IconFolder,
   Check as IconCheck,
+  Menu as IconMenu,
+  ArrowDown as IconArrowDown,
+  Refresh as IconRefresh,
+  Upload as IconUpload,
 } from "@element-plus/icons-vue";
 import { getAllImages, deleteImage } from "@/utils/idb.js";
 
@@ -188,6 +191,9 @@ const emit = defineEmits([
   "toggleImageSelection",
   "clearSelection",
   "batchDelete",
+  "showUploadDialog",
+  "startBatchDelete",
+  "showGroupsPage",
 ]);
 
 const router = useRouter();
@@ -196,6 +202,9 @@ const viewerVisible = ref(false);
 const current = ref(null);
 const deletingIds = ref([]);
 const MIN_DELETE_MS = 800; // 调试用最小展示时长
+
+// 菜单栏状态
+const isMenuCollapsed = ref(false);
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -605,16 +614,38 @@ function confirmBatchDelete() {
   // 直接触发批量删除事件，让父组件处理确认逻辑
   emit("batchDelete");
 }
+
+// 菜单栏相关函数
+function toggleMenu() {
+  isMenuCollapsed.value = !isMenuCollapsed.value;
+}
+
+function refreshImages() {
+  load();
+  ElMessage.success("图片列表已刷新");
+}
+
+function showUploadDialog() {
+  emit("showUploadDialog");
+}
+
+function startBatchDelete() {
+  emit("startBatchDelete");
+}
+
+function showGroupsPage() {
+  emit("showGroupsPage");
+}
 </script>
 
 <style scoped>
 .gallery-page {
   width: 100%;
-  padding: 16px;
 }
 .grid {
   column-count: 3;
   column-gap: 12px;
+  padding: 16px;
 }
 .card {
   border: 1px solid #eee;
@@ -800,5 +831,84 @@ function confirmBatchDelete() {
   color: white;
   font-size: 18px;
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+}
+
+/* 可折叠菜单栏样式 */
+.collapsible-menu-bar {
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  transition: background-color 0.2s ease;
+}
+
+.menu-header:hover {
+  background: #e9ecef;
+}
+
+.menu-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.menu-title .el-icon {
+  font-size: 16px;
+  color: #666;
+}
+
+.menu-toggle {
+  transition: transform 0.3s ease;
+  color: #666;
+}
+
+.menu-toggle.is-collapsed {
+  transform: rotate(-90deg);
+}
+
+.menu-content {
+  max-height: 200px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  padding: 16px;
+  background: #fff;
+}
+
+.menu-content.is-collapsed {
+  max-height: 0;
+  padding: 0 16px;
+}
+
+.menu-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.menu-actions .el-button {
+  font-size: 12px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.menu-actions .el-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 </style>

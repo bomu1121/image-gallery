@@ -44,6 +44,9 @@
             @toggle-image-selection="toggleImageSelection"
             @clear-selection="clearSelection"
             @batch-delete="handleBatchDelete"
+            @show-upload-dialog="showUploadDialog = true"
+            @start-batch-delete="startBatchDelete"
+            @show-groups-page="showGroupsPage = true"
           ></router-view>
         </div>
       </div>
