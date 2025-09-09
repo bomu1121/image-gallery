@@ -17,17 +17,6 @@
             placeholder="请输入分组名称"
           />
         </el-form-item>
-        <el-form-item label="分组描述">
-          <el-input
-            :model-value="newGroup.description"
-            @update:model-value="
-              $emit('update:newGroup', { ...newGroup, description: $event })
-            "
-            type="textarea"
-            :rows="3"
-            placeholder="请输入分组描述（可选）"
-          />
-        </el-form-item>
       </el-form>
       <div class="dialog-footer">
         <el-button @click="$emit('update:showCreateGroup', false)"
@@ -54,20 +43,6 @@
               $emit('update:editingGroup', { ...editingGroup, name: $event })
             "
             placeholder="请输入分组名称"
-          />
-        </el-form-item>
-        <el-form-item label="分组描述">
-          <el-input
-            :model-value="editingGroup.description"
-            @update:model-value="
-              $emit('update:editingGroup', {
-                ...editingGroup,
-                description: $event,
-              })
-            "
-            type="textarea"
-            :rows="3"
-            placeholder="请输入分组描述（可选）"
           />
         </el-form-item>
       </el-form>

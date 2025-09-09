@@ -928,10 +928,8 @@ function showGroupManage() {
 
 /* 可折叠菜单栏样式 */
 .collapsible-menu-bar {
-  background: #fff;
   border-bottom: 1px solid #e0e0e0;
 
-  border-radius: 8px 8px 0 0;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
@@ -942,7 +940,7 @@ function showGroupManage() {
   align-items: center;
   padding: 12px 16px;
   cursor: pointer;
-  background: #f8f9fa;
+  background: rgba(245, 245, 245, 0.9);
   border-bottom: 1px solid #e0e0e0;
   transition: background-color 0.2s ease;
 }
@@ -978,7 +976,7 @@ function showGroupManage() {
   max-height: 220px; /* 略增，容纳横向滚动条及操作行 */
   overflow: hidden;
   transition: max-height 0.3s ease, padding 0.3s ease;
-  background: #fff;
+  background: rgba(245, 245, 245, 0.9);
 }
 
 .menu-content.is-collapsed {
