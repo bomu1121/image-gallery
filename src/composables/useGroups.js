@@ -6,7 +6,7 @@ import {
   updateImage,
   putGroup,
   getAllGroups,
-  updateGroup,
+  updateGroup as updateGroupInDB,
   deleteGroup as deleteGroupFromDB,
 } from "@/utils/idb.js";
 
@@ -169,7 +169,7 @@ export function useGroups() {
 
     try {
       // 更新数据库
-      await updateGroup(editingGroup.value.id, {
+      await updateGroupInDB(editingGroup.value.id, {
         name: editingGroup.value.name.trim(),
         description: editingGroup.value.description.trim(),
       });
@@ -227,6 +227,65 @@ export function useGroups() {
         console.error("删除分组失败:", error);
         ElMessage.error("删除分组失败，请重试");
       }
+    }
+  }
+
+  // 重新排序分组（传入 [{id, order}]）
+  async function reorderGroups(ordered) {
+    try {
+      // 更新本地顺序字段
+      const orderMap = new Map(ordered.map((o) => [o.id, o.order]));
+      groups.value = groups.value
+        .map((g) => ({
+          ...g,
+          order: orderMap.has(g.id) ? orderMap.get(g.id) : g.order,
+        }))
+        .sort((a, b) => {
+          if (a.id === 0) return -1;
+          if (b.id === 0) return 1;
+          const ao = typeof a.order === "number" ? a.order : a.createdAt || 0;
+          const bo = typeof b.order === "number" ? b.order : b.createdAt || 0;
+          return ao - bo;
+        });
+
+      // 持久化每个分组的 order
+      for (const g of groups.value) {
+        await updateGroupInDB(g.id, { order: g.order });
+      }
+    } catch (e) {
+      console.error("保存分组顺序失败:", e);
+      ElMessage.error("保存分组顺序失败，请重试");
+    }
+  }
+
+  // 重命名分组
+  async function renameGroup(id, name) {
+    try {
+      await updateGroupInDB(id, { name: name.trim() });
+      const idx = groups.value.findIndex((g) => g.id === id);
+      if (idx !== -1) groups.value[idx].name = name.trim();
+    } catch (e) {
+      console.error("重命名失败:", e);
+      ElMessage.error("重命名失败，请重试");
+    }
+  }
+
+  // 批量删除分组（拖拽删除区）
+  async function bulkDeleteGroups(ids) {
+    try {
+      for (const id of ids) {
+        if (id === 0) continue;
+        editingGroup.value = { id };
+        // 直接删除，不弹窗（弹窗在 UI 层已确认）
+        await deleteGroupFromDB(id);
+        const idx = groups.value.findIndex((g) => g.id === id);
+        if (idx !== -1) groups.value.splice(idx, 1);
+      }
+      // 删除后将对应图片移入未分组：这里简化为统计刷新
+      await loadGroupImages(currentGroupId.value);
+    } catch (e) {
+      console.error("批量删除分组失败:", e);
+      ElMessage.error("批量删除分组失败，请重试");
     }
   }
 
@@ -363,5 +422,8 @@ export function useGroups() {
     moveImageToGroup,
     onFileChange,
     onPasteImages,
+    reorderGroups,
+    renameGroup,
+    bulkDeleteGroups,
   };
 }

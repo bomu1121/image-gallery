@@ -38,6 +38,7 @@
             @show-group-selector="showGroupSelector = !showGroupSelector"
             @select-group="handleSelectGroup"
             @show-create-group="showCreateGroupDialog = true"
+            @show-group-manage="showGroupManageDialog = true"
           ></router-view>
         </div>
       </div>
@@ -75,6 +76,15 @@
       @select-image-group="selectImageGroup"
       @move-image-to-group="handleMoveImageToGroup"
     />
+
+    <!-- 分组管理对话框（拖拽排序、重命名、拖入删除） -->
+    <GroupManageDialog
+      v-model:visible="showGroupManageDialog"
+      :groups="groups"
+      @reorder="handleReorderGroups"
+      @rename="handleRenameGroup"
+      @delete="handleBulkDeleteGroups"
+    />
   </el-config-provider>
 </template>
 
@@ -95,6 +105,7 @@ import SettingsPage from "@/components/SettingsPage.vue";
 import UploadDialog from "@/components/UploadDialog.vue";
 import BackgroundSettings from "@/components/BackgroundSettings.vue";
 import GroupDialogs from "@/components/GroupDialogs.vue";
+import GroupManageDialog from "@/components/GroupManageDialog.vue";
 
 // 组合式函数导入
 import { useBackground } from "@/composables/useBackground.js";
@@ -128,6 +139,7 @@ const showBackgroundSettings = ref(false);
 const showCreateGroupDialog = ref(false);
 const showEditGroupDialog = ref(false);
 const showImageGroupDialog = ref(false);
+const showGroupManageDialog = ref(false);
 
 // 批量删除相关状态
 const batchDeleteMode = ref(false);
@@ -165,6 +177,9 @@ const {
   moveImageToGroup,
   onFileChange,
   onPasteImages,
+  reorderGroups,
+  renameGroup,
+  bulkDeleteGroups,
 } = useGroups();
 
 // 计算当前侧边栏激活项
@@ -284,9 +299,9 @@ async function handleCreateGroup() {
   const newId = await createGroup();
   showCreateGroupDialog.value = false; // 关闭对话框
   if (newId !== null && newId !== undefined) {
-    // 选中新建分组并关闭分组选择器
+    // 选中新建分组并保持分组选择器打开
     selectedGroupId.value = newId;
-    showGroupSelector.value = false;
+    showGroupSelector.value = true;
   }
 }
 
@@ -302,6 +317,24 @@ async function handleMoveImageToGroup() {
 async function handleUpdateGroup() {
   await updateGroup();
   showEditGroupDialog.value = false; // 关闭对话框
+}
+
+// 分组管理：保存顺序
+async function handleReorderGroups(ordered) {
+  await reorderGroups(ordered);
+  ElMessage.success("分组顺序已保存");
+}
+
+// 分组管理：重命名
+async function handleRenameGroup(payload) {
+  await renameGroup(payload.id, payload.name);
+  ElMessage.success("分组已重命名");
+}
+
+// 分组管理：批量删除
+async function handleBulkDeleteGroups(ids) {
+  await bulkDeleteGroups(ids);
+  ElMessage.success("分组已删除");
 }
 
 // 全局粘贴功能

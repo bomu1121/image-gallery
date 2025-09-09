@@ -4,6 +4,7 @@
 const DB_NAME = "image_gallery_db";
 const STORE_NAME = "images";
 const GROUPS_STORE_NAME = "groups";
+const BACKGROUND_STORE_NAME = "background";
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -28,6 +29,17 @@ function openDB() {
           autoIncrement: true,
         });
         groupsStore.createIndex("createdAt", "createdAt", { unique: false });
+      }
+
+      // 创建背景图存储
+      if (!db.objectStoreNames.contains(BACKGROUND_STORE_NAME)) {
+        const backgroundStore = db.createObjectStore(BACKGROUND_STORE_NAME, {
+          keyPath: "id",
+          autoIncrement: true,
+        });
+        backgroundStore.createIndex("createdAt", "createdAt", {
+          unique: false,
+        });
       }
     };
     request.onblocked = () => {
@@ -86,6 +98,50 @@ async function ensureGroupsStoreExists() {
     };
     req.onblocked = () => {
       console.warn("[idb] ensureGroupsStoreExists open blocked");
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// 确保背景对象仓库存在（若缺失则触发一次版本升级创建之）
+async function ensureBackgroundStoreExists() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME);
+    req.onsuccess = () => {
+      const db = req.result;
+      if (db.objectStoreNames.contains(BACKGROUND_STORE_NAME)) {
+        db.close();
+        resolve();
+        return;
+      }
+
+      const nextVersion = db.version + 1;
+      db.close();
+
+      const upgradeReq = indexedDB.open(DB_NAME, nextVersion);
+      upgradeReq.onupgradeneeded = () => {
+        const udb = upgradeReq.result;
+        if (!udb.objectStoreNames.contains(BACKGROUND_STORE_NAME)) {
+          const backgroundStore = udb.createObjectStore(BACKGROUND_STORE_NAME, {
+            keyPath: "id",
+            autoIncrement: true,
+          });
+          backgroundStore.createIndex("createdAt", "createdAt", {
+            unique: false,
+          });
+        }
+      };
+      upgradeReq.onblocked = () => {
+        console.warn("[idb] ensureBackgroundStoreExists upgrade blocked");
+      };
+      upgradeReq.onsuccess = () => {
+        upgradeReq.result.close();
+        resolve();
+      };
+      upgradeReq.onerror = () => reject(upgradeReq.error);
+    };
+    req.onblocked = () => {
+      console.warn("[idb] ensureBackgroundStoreExists open blocked");
     };
     req.onerror = () => reject(req.error);
   });
@@ -260,6 +316,49 @@ export async function clearAllGroups() {
     const tx = db.transaction(GROUPS_STORE_NAME, "readwrite");
     const store = tx.objectStore(GROUPS_STORE_NAME);
     const req = store.clear();
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// 背景图相关函数
+export async function putBackground(backgroundData) {
+  await ensureBackgroundStoreExists();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(BACKGROUND_STORE_NAME, "readwrite");
+    const store = tx.objectStore(BACKGROUND_STORE_NAME);
+    const now = Date.now();
+    const data = {
+      ...backgroundData,
+      createdAt: backgroundData.createdAt || now,
+    };
+    // 使用 put 以覆盖现有背景图（只保存一张背景图）
+    const req = store.put({ id: 1, ...data });
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function getBackground() {
+  await ensureBackgroundStoreExists();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(BACKGROUND_STORE_NAME, "readonly");
+    const store = tx.objectStore(BACKGROUND_STORE_NAME);
+    const req = store.get(1); // 获取 id 为 1 的背景图
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function deleteBackground() {
+  await ensureBackgroundStoreExists();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(BACKGROUND_STORE_NAME, "readwrite");
+    const store = tx.objectStore(BACKGROUND_STORE_NAME);
+    const req = store.delete(1); // 删除 id 为 1 的背景图
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
   });

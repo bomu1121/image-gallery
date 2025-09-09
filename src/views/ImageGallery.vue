@@ -35,6 +35,15 @@
               <el-icon><icon-plus /></el-icon>
             </div>
 
+            <!-- 分组设置按钮 -->
+            <div
+              class="group-tab settings-group-tab"
+              @click="showGroupManage"
+              title="分组设置"
+            >
+              <el-icon><icon-setting /></el-icon>
+            </div>
+
             <!-- 分组标签 -->
             <div
               v-for="group in groups"
@@ -78,11 +87,11 @@
 
     <div class="gallery-scroll">
       <div v-if="!images.length" class="empty">
-        <div class="empty-content">
+        <!-- <div class="empty-content">
           <div class="empty-icon">📷</div>
           <div class="empty-text">暂无图片，请先上传</div>
           <div class="empty-tip">支持拖拽上传、点击上传或 Ctrl+V 粘贴图片</div>
-        </div>
+        </div> -->
       </div>
 
       <div class="grid" v-else>
@@ -190,6 +199,7 @@ import {
   ArrowDown as IconArrowDown,
   Upload as IconUpload,
   Plus as IconPlus,
+  Setting as IconSetting,
 } from "@element-plus/icons-vue";
 import { getAllImages, deleteImage } from "@/utils/idb.js";
 
@@ -227,6 +237,7 @@ const emit = defineEmits([
   "showGroupSelector",
   "selectGroup",
   "showCreateGroup",
+  "showGroupManage",
 ]);
 
 const router = useRouter();
@@ -235,6 +246,8 @@ const viewerVisible = ref(false);
 const current = ref(null);
 const deletingIds = ref([]);
 const MIN_DELETE_MS = 800; // 调试用最小展示时长
+
+// 取消可见数量限制，改为完整展示（结合样式做换行/布局）
 
 // 菜单栏状态
 const isMenuCollapsed = ref(false);
@@ -693,6 +706,10 @@ function selectGroup(groupId) {
 function showCreateGroup() {
   emit("showCreateGroup");
 }
+
+function showGroupManage() {
+  emit("showGroupManage");
+}
 </script>
 
 <style scoped>
@@ -958,10 +975,9 @@ function showCreateGroup() {
 }
 
 .menu-content {
-  max-height: 200px;
+  max-height: 220px; /* 略增，容纳横向滚动条及操作行 */
   overflow: hidden;
   transition: max-height 0.3s ease, padding 0.3s ease;
-
   background: #fff;
 }
 
@@ -1003,7 +1019,7 @@ function showCreateGroup() {
 /* 分组选择器样式 */
 .group-selector {
   border-top: 1px solid #e0e0e0;
-  padding: 16px;
+  padding: 8px 16px; /* 缩小上下内边距，避免顶栏被挤压 */
 }
 
 .group-selector-title {
@@ -1015,14 +1031,13 @@ function showCreateGroup() {
 
 .group-tabs {
   display: flex;
+  align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
-  max-height: 200px;
-  overflow-y: auto;
+  flex-wrap: wrap; /* 允许换行，完整展示 */
 }
 
 .group-tab {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
@@ -1033,6 +1048,13 @@ function showCreateGroup() {
   transition: all 0.2s ease;
   user-select: none;
   font-size: 12px;
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+    color 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
+  vertical-align: top;
+}
+
+.group-tab.more-group-tab {
+  background: #f0f0f0;
 }
 
 .group-tab:hover {
@@ -1041,14 +1063,14 @@ function showCreateGroup() {
 }
 
 .group-tab.active {
-  background: #409eff;
+  background: #e8f4fd;
   border-color: #409eff;
-  color: white;
+  color: #409eff;
 }
 
 .group-tab.create-group-tab {
-  background: #67c23a;
-  border-color: #67c23a;
+  background: #909399;
+  border-color: #909399;
   color: white;
   min-width: 32px;
   justify-content: center;
@@ -1056,8 +1078,8 @@ function showCreateGroup() {
 }
 
 .group-tab.create-group-tab:hover {
-  background: #85ce61;
-  border-color: #85ce61;
+  background: #a6a9ad;
+  border-color: #a6a9ad;
 }
 
 .group-tab .group-name {

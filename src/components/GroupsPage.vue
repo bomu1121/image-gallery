@@ -3,11 +3,17 @@
     <!-- 分组标签栏 -->
     <div class="groups-tabs">
       <!-- 新建分组按钮 -->
-      <div
-        class="group-tab create-group-tab"
-        @click="$emit('showCreateGroup')"
-      >
+      <div class="group-tab create-group-tab" @click="$emit('showCreateGroup')">
         <el-icon><icon-plus /></el-icon>
+      </div>
+
+      <!-- 分组设置按钮 -->
+      <div
+        class="group-tab settings-group-tab"
+        @click="$emit('showGroupManage')"
+        title="分组设置"
+      >
+        <el-icon><icon-setting /></el-icon>
       </div>
 
       <!-- 分组标签 -->
@@ -40,26 +46,30 @@
 </template>
 
 <script setup>
-import { Plus as IconPlus } from "@element-plus/icons-vue";
+import {
+  Plus as IconPlus,
+  Setting as IconSetting,
+} from "@element-plus/icons-vue";
 import ImageGallery from "@/views/ImageGallery.vue";
 
 defineProps({
   groups: {
     type: Array,
-    required: true
+    required: true,
   },
   currentGroupId: {
     type: Number,
-    required: true
-  }
+    required: true,
+  },
 });
 
 defineEmits([
-  'showCreateGroup',
-  'selectGroup', 
-  'showGroupContextMenu',
-  'goToDetail',
-  'showImageContextMenu'
+  "showCreateGroup",
+  "showGroupManage",
+  "selectGroup",
+  "showGroupContextMenu",
+  "goToDetail",
+  "showImageContextMenu",
 ]);
 </script>
 
@@ -101,16 +111,27 @@ defineEmits([
 }
 
 .group-tab.create-group-tab {
-  background: #67c23a;
-  border-color: #67c23a;
+  background: #909399;
+  border-color: #909399;
   color: white;
   min-width: 40px;
   justify-content: center;
 }
 
 .group-tab.create-group-tab:hover {
-  background: #85ce61;
-  border-color: #85ce61;
+  background: #a6a9ad;
+  border-color: #a6a9ad;
+}
+
+.group-tab.settings-group-tab {
+  background: #909399;
+  border-color: #909399;
+  color: white;
+}
+
+.group-tab.settings-group-tab:hover {
+  background: #a6a9ad;
+  border-color: #a6a9ad;
 }
 
 .group-name {
