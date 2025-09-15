@@ -18,8 +18,11 @@
         <!-- 设置页面 -->
         <SettingsPage
           v-if="showSettingsPage"
-          @back="showSettingsPage = false"
-          @show-background-settings="showBackgroundSettings = true"
+          :background-image="backgroundImage"
+          :background-opacity="backgroundOpacity"
+          @background-change="onBackgroundChange"
+          @opacity-change="onOpacityChange"
+          @remove-background="removeBackground"
         />
 
         <!-- 其他页面内容 -->
@@ -49,16 +52,6 @@
       v-model:visible="showUploadDialog"
       @file-change="(file) => onFileChange(file, selectedGroupId)"
       @paste-images="(images) => onPasteImages(images, selectedGroupId)"
-    />
-
-    <!-- 背景设置对话框 -->
-    <BackgroundSettings
-      v-model:visible="showBackgroundSettings"
-      :background-image="backgroundImage"
-      :background-opacity="backgroundOpacity"
-      @background-change="onBackgroundChange"
-      @opacity-change="onOpacityChange"
-      @remove-background="removeBackground"
     />
 
     <!-- 分组相关对话框 -->
@@ -103,7 +96,6 @@ import GlobalBackground from "@/components/GlobalBackground.vue";
 import Sidebar from "@/components/Sidebar.vue";
 import SettingsPage from "@/components/SettingsPage.vue";
 import UploadDialog from "@/components/UploadDialog.vue";
-import BackgroundSettings from "@/components/BackgroundSettings.vue";
 import GroupDialogs from "@/components/GroupDialogs.vue";
 import GroupManageDialog from "@/components/GroupManageDialog.vue";
 
@@ -134,7 +126,6 @@ const locale = computed(() => {
 // 页面状态
 const showUploadDialog = ref(false);
 const showSettingsPage = ref(false);
-const showBackgroundSettings = ref(false);
 // 已移除独立分组页
 const showCreateGroupDialog = ref(false);
 const showEditGroupDialog = ref(false);
