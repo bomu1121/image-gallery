@@ -20,9 +20,12 @@
           v-if="showSettingsPage"
           :background-image="backgroundImage"
           :background-opacity="backgroundOpacity"
+          :groups="groups"
           @background-change="onBackgroundChange"
           @opacity-change="onOpacityChange"
           @remove-background="removeBackground"
+          @data-imported="handleDataImported"
+          @data-exported="handleDataExported"
         />
 
         <!-- 其他页面内容 -->
@@ -78,6 +81,9 @@
       @rename="handleRenameGroup"
       @delete="handleBulkDeleteGroups"
     />
+
+    <!-- 通知容器 -->
+    <NotificationContainer />
   </el-config-provider>
 </template>
 
@@ -98,6 +104,7 @@ import SettingsPage from "@/components/SettingsPage.vue";
 import UploadDialog from "@/components/UploadDialog.vue";
 import GroupDialogs from "@/components/GroupDialogs.vue";
 import GroupManageDialog from "@/components/GroupManageDialog.vue";
+import NotificationContainer from "@/components/NotificationContainer.vue";
 
 // 组合式函数导入
 import { useBackground } from "@/composables/useBackground.js";
@@ -326,6 +333,20 @@ async function handleRenameGroup(payload) {
 async function handleBulkDeleteGroups(ids) {
   await bulkDeleteGroups(ids);
   ElMessage.success("分组已删除");
+}
+
+// 处理数据导入事件
+async function handleDataImported(type) {
+  console.log(`数据导入完成: ${type}`);
+  // 重新初始化分组数据以刷新UI
+  await initializeGroups();
+  // 触发图片库刷新事件
+  window.dispatchEvent(new CustomEvent("imageAdded"));
+}
+
+// 处理数据导出事件
+function handleDataExported(type) {
+  console.log(`数据导出完成: ${type}`);
 }
 
 // 全局粘贴功能

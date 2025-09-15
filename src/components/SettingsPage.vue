@@ -46,6 +46,14 @@
           @sync-status-change="$emit('syncStatusChange', $event)"
         />
 
+        <!-- 导入导出设置内容 -->
+        <ImportExportSettings
+          v-else-if="activeSetting === 'import-export'"
+          :groups="groups"
+          @data-imported="$emit('dataImported', $event)"
+          @data-exported="$emit('dataExported', $event)"
+        />
+
         <!-- 其他设置内容可以在这里添加 -->
         <div v-else class="empty-content">
           <el-icon class="empty-icon"><icon-setting /></el-icon>
@@ -62,9 +70,11 @@ import {
   Picture as IconPicture,
   Setting as IconSetting,
   Upload as IconCloudUpload,
+  Download as IconDownload,
 } from "@element-plus/icons-vue";
 import BackgroundSettingsContent from "./BackgroundSettingsContent.vue";
 import CloudSyncSettings from "./CloudSyncSettings.vue";
+import ImportExportSettings from "./ImportExportSettings.vue";
 
 const props = defineProps({
   backgroundImage: {
@@ -75,6 +85,10 @@ const props = defineProps({
     type: Number,
     default: 0.3,
   },
+  groups: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const emit = defineEmits([
@@ -82,6 +96,8 @@ const emit = defineEmits([
   "opacityChange",
   "removeBackground",
   "syncStatusChange",
+  "dataImported",
+  "dataExported",
 ]);
 
 // 设置项配置
@@ -97,6 +113,12 @@ const settingsItems = [
     title: "云同步",
     description: "配置云服务器实现数据同步",
     icon: IconCloudUpload,
+  },
+  {
+    key: "import-export",
+    title: "导入导出",
+    description: "图片资源的导入和导出功能",
+    icon: IconDownload,
   },
   // 可以在这里添加更多设置项
 ];
