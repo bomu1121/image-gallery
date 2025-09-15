@@ -432,20 +432,144 @@ async function copyImageToClipboard(img) {
   if (!img) return;
 
   try {
+    console.log("开始复制图片:", img.name);
+
     // 获取图片的blob数据
     let imageBlob;
     if (img.blob) {
       imageBlob = img.blob;
+      console.log(
+        "使用原始blob数据，大小:",
+        imageBlob.size,
+        "类型:",
+        imageBlob.type
+      );
     } else if (img.objectUrl) {
       // 如果只有objectUrl，需要先获取blob
+      console.log("从objectUrl获取blob数据");
       const response = await fetch(img.objectUrl);
       imageBlob = await response.blob();
+      console.log(
+        "获取到blob数据，大小:",
+        imageBlob.size,
+        "类型:",
+        imageBlob.type
+      );
     } else {
       error("无法获取图片数据");
       return;
     }
 
-    // 创建一个临时的隐藏图片元素用于复制
+    // 确保blob有正确的MIME类型
+    if (!imageBlob.type || imageBlob.type === "application/octet-stream") {
+      console.log("修正MIME类型");
+      // 根据文件扩展名推断MIME类型
+      const fileName = img.name || "image";
+      if (fileName.toLowerCase().includes(".png")) {
+        imageBlob = new Blob([imageBlob], { type: "image/png" });
+      } else if (
+        fileName.toLowerCase().includes(".jpg") ||
+        fileName.toLowerCase().includes(".jpeg")
+      ) {
+        imageBlob = new Blob([imageBlob], { type: "image/jpeg" });
+      } else if (fileName.toLowerCase().includes(".gif")) {
+        imageBlob = new Blob([imageBlob], { type: "image/gif" });
+      } else if (fileName.toLowerCase().includes(".webp")) {
+        imageBlob = new Blob([imageBlob], { type: "image/webp" });
+      } else {
+        // 默认为PNG
+        imageBlob = new Blob([imageBlob], { type: "image/png" });
+      }
+      console.log("修正后的MIME类型:", imageBlob.type);
+    }
+
+    // 先尝试清空剪贴板
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText("");
+        console.log("剪贴板已清空");
+        // 等待一小段时间确保清空操作完成
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    } catch (clearError) {
+      console.warn("清空剪贴板失败:", clearError);
+    }
+
+    // 方法1：优先使用现代剪贴板API（需要转换为PNG）
+    if (navigator.clipboard && window.ClipboardItem) {
+      try {
+        console.log("尝试使用现代剪贴板API");
+
+        // 现代剪贴板API主要支持PNG格式，需要转换
+        let clipboardBlob = imageBlob;
+        if (imageBlob.type === "image/jpeg" || imageBlob.type === "image/jpg") {
+          console.log("JPEG格式需要转换为PNG");
+          // 创建canvas来转换JPEG为PNG
+          const tempCanvas = document.createElement("canvas");
+          const tempCtx = tempCanvas.getContext("2d");
+          const tempImg = document.createElement("img");
+
+          tempImg.src = URL.createObjectURL(imageBlob);
+          await new Promise((resolve, reject) => {
+            tempImg.onload = resolve;
+            tempImg.onerror = reject;
+            setTimeout(() => reject(new Error("图片加载超时")), 5000);
+          });
+
+          tempCanvas.width = tempImg.naturalWidth;
+          tempCanvas.height = tempImg.naturalHeight;
+          tempCtx.drawImage(tempImg, 0, 0);
+
+          clipboardBlob = await new Promise((resolve, reject) => {
+            tempCanvas.toBlob((blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error("Canvas转换失败"));
+              }
+            }, "image/png");
+          });
+
+          URL.revokeObjectURL(tempImg.src);
+          console.log("JPEG转换为PNG成功，大小:", clipboardBlob.size);
+        }
+
+        const clipboardItem = new ClipboardItem({
+          [clipboardBlob.type]: clipboardBlob,
+        });
+        await navigator.clipboard.write([clipboardItem]);
+
+        // 验证复制是否成功
+        try {
+          const clipboardItems = await navigator.clipboard.read();
+          console.log("剪贴板验证成功，项目数量:", clipboardItems.length);
+          if (clipboardItems.length > 0) {
+            const item = clipboardItems[0];
+            const types = item.types;
+            console.log("剪贴板中的类型:", types);
+            success("图片已复制到剪贴板");
+            hideContextMenu();
+            return;
+          }
+        } catch (verifyError) {
+          console.warn("剪贴板验证失败:", verifyError);
+          // 即使验证失败，也可能复制成功了
+          success("图片已复制到剪贴板");
+          hideContextMenu();
+          return;
+        }
+      } catch (clipboardError) {
+        console.warn("现代剪贴板API失败:", clipboardError);
+        // 继续尝试其他方法
+      }
+    }
+
+    // 方法2：使用Canvas + 现代剪贴板API
+    console.log("尝试使用Canvas方法");
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    // 创建一个临时的隐藏图片元素用于绘制到canvas
     const tempImg = document.createElement("img");
     tempImg.style.position = "absolute";
     tempImg.style.left = "-9999px";
@@ -453,122 +577,102 @@ async function copyImageToClipboard(img) {
     tempImg.style.width = "1px";
     tempImg.style.height = "1px";
     tempImg.src = URL.createObjectURL(imageBlob);
-
     document.body.appendChild(tempImg);
 
     // 等待图片加载完成
     await new Promise((resolve, reject) => {
       tempImg.onload = resolve;
       tempImg.onerror = reject;
-      // 设置超时
       setTimeout(() => reject(new Error("图片加载超时")), 5000);
     });
 
-    try {
-      // 方法1：尝试使用现代剪贴板API
-      if (navigator.clipboard && window.ClipboardItem) {
-        try {
-          const clipboardItem = new ClipboardItem({
-            [imageBlob.type]: imageBlob,
-          });
-          await navigator.clipboard.write([clipboardItem]);
+    canvas.width = tempImg.naturalWidth;
+    canvas.height = tempImg.naturalHeight;
+    ctx.drawImage(tempImg, 0, 0);
+    console.log("Canvas绘制完成，尺寸:", canvas.width, "x", canvas.height);
 
-          // 验证是否真的复制成功
-          try {
-            const clipboardItems = await navigator.clipboard.read();
-            if (clipboardItems.length > 0) {
-              success("图片已复制到剪贴板");
-              hideContextMenu();
-              return;
-            } else {
-              throw new Error("剪贴板验证失败");
-            }
-          } catch (verifyError) {
-            console.warn("剪贴板验证失败:", verifyError);
-            // 继续尝试其他方法
+    try {
+      // 将canvas转换为blob（强制使用PNG格式）
+      const canvasBlob = await new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("Canvas转换失败"));
           }
-        } catch (clipboardError) {
-          console.warn("现代剪贴板API失败:", clipboardError);
+        }, "image/png"); // 强制使用PNG格式
+      });
+      console.log(
+        "Canvas转换为blob成功，大小:",
+        canvasBlob.size,
+        "类型:",
+        canvasBlob.type
+      );
+
+      // 尝试使用现代剪贴板API
+      if (navigator.clipboard && navigator.clipboard.write) {
+        try {
+          console.log("尝试使用Canvas + 剪贴板API");
+          await navigator.clipboard.write([
+            new ClipboardItem({ [canvasBlob.type]: canvasBlob }),
+          ]);
+
+          success("图片已复制到剪贴板");
+          hideContextMenu();
+          return;
+        } catch (error) {
+          console.warn("Canvas剪贴板API失败:", error);
           // 继续尝试其他方法
         }
       }
 
-      // 方法2：尝试使用Canvas + 现代剪贴板API
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-
-      canvas.width = tempImg.naturalWidth;
-      canvas.height = tempImg.naturalHeight;
-      ctx.drawImage(tempImg, 0, 0);
-
+      // 方法3：使用execCommand（兼容性方法）
       try {
-        canvas.toBlob(async (blob) => {
-          if (navigator.clipboard && navigator.clipboard.write) {
-            try {
-              await navigator.clipboard.write([
-                new ClipboardItem({ [blob.type]: blob }),
-              ]);
+        console.log("尝试使用execCommand方法");
 
-              // 验证是否真的复制成功
-              try {
-                const clipboardItems = await navigator.clipboard.read();
-                if (clipboardItems.length > 0) {
-                  success("图片已复制到剪贴板");
-                  hideContextMenu();
-                  return;
-                } else {
-                  throw new Error("Canvas剪贴板验证失败");
-                }
-              } catch (verifyError) {
-                console.warn("Canvas剪贴板验证失败:", verifyError);
-                // 继续尝试其他方法
-              }
-            } catch (error) {
-              console.warn("Canvas剪贴板API失败:", error);
-              // 继续尝试其他方法
-            }
-          }
+        // 创建一个可选择的元素
+        const selectableDiv = document.createElement("div");
+        selectableDiv.style.position = "absolute";
+        selectableDiv.style.left = "-9999px";
+        selectableDiv.style.top = "-9999px";
+        selectableDiv.style.width = "1px";
+        selectableDiv.style.height = "1px";
+        selectableDiv.style.overflow = "hidden";
 
-          // 方法3：尝试使用execCommand（兼容性最好）
-          try {
-            // 将canvas添加到DOM中
-            canvas.style.position = "absolute";
-            canvas.style.left = "-9999px";
-            canvas.style.top = "-9999px";
-            document.body.appendChild(canvas);
+        // 将canvas添加到可选择的div中
+        selectableDiv.appendChild(canvas);
+        document.body.appendChild(selectableDiv);
 
-            // 尝试使用execCommand复制
-            const selection = window.getSelection();
-            const range = document.createRange();
-            range.selectNodeContents(canvas);
-            selection.removeAllRanges();
-            selection.addRange(range);
+        // 选择canvas并复制
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(canvas);
+        selection.removeAllRanges();
+        selection.addRange(range);
 
-            const execSuccess = document.execCommand("copy");
-            if (execSuccess) {
-              // 对于execCommand，我们无法直接验证，但可以提示用户测试
-              success("图片已复制到剪贴板，请在目标应用中粘贴测试");
-            } else {
-              // 如果execCommand也失败了，提供下载选项
-              warning("复制失败，是否要下载图片？");
-            }
+        const execSuccess = document.execCommand("copy");
+        console.log("execCommand复制结果:", execSuccess);
 
-            // 清理
-            document.body.removeChild(canvas);
-            selection.removeAllRanges();
-            hideContextMenu();
-          } catch (execError) {
-            console.warn("execCommand失败:", execError);
-            // 如果execCommand也失败了，提供下载选项
-            warning("复制失败，是否要下载图片？");
-            hideContextMenu();
-          }
-        }, imageBlob.type);
-      } catch (canvasError) {
-        console.warn("Canvas处理失败:", canvasError);
-        info("复制失败，请使用下载功能");
-        hideContextMenu();
+        // 清理
+        document.body.removeChild(selectableDiv);
+        selection.removeAllRanges();
+
+        if (execSuccess) {
+          success("图片已复制到剪贴板");
+          hideContextMenu();
+          return;
+        }
+      } catch (execError) {
+        console.warn("execCommand失败:", execError);
       }
+
+      // 方法4：最后的备选方案 - 提示用户下载
+      warning("复制失败，是否要下载图片？");
+      hideContextMenu();
+    } catch (canvasError) {
+      console.warn("Canvas处理失败:", canvasError);
+      info("复制失败，请使用下载功能");
+      hideContextMenu();
     } finally {
       // 清理临时元素
       document.body.removeChild(tempImg);
@@ -1218,14 +1322,14 @@ function showGroupManage() {
 }
 
 .group-tab:hover {
-  background: #e8f4fd;
-  border-color: #409eff;
+  background: #e0e0e0;
+  border-color: #e0e0e0;
 }
 
 .group-tab.active {
-  background: #e8f4fd;
-  border-color: #409eff;
-  color: #409eff;
+  background: #e0e0e0;
+  border-color: #e0e0e0;
+  color: #333;
 }
 
 .group-tab.create-group-tab {
@@ -1244,6 +1348,7 @@ function showGroupManage() {
 
 .group-tab .group-name {
   font-weight: 500;
+  color: #333;
 }
 
 .group-tab .group-count {
