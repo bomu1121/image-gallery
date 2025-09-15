@@ -727,7 +727,82 @@ function showGroupManage() {
 .gallery-scroll {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  /* 优先使用 overlay，如果不支持则回退到 auto */
+  overflow-y: overlay;
+  /* 始终为滚动条预留空间，避免宽度波动 */
+  scrollbar-gutter: stable;
+  /* 平滑滚动 */
+  scroll-behavior: smooth;
+}
+
+/* 回退方案：对于不支持 overlay 的浏览器 */
+@supports not (overflow-y: overlay) {
+  .gallery-scroll {
+    overflow-y: auto;
+  }
+}
+
+/* 自定义滚动条样式 - 透明背景，悬停显示 */
+.gallery-scroll::-webkit-scrollbar {
+  width: 8px;
+  background: transparent;
+  /* 确保滚动条始终占用空间 */
+  scrollbar-gutter: stable;
+}
+
+.gallery-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.gallery-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  /* 最小高度，确保滚动条可见性 */
+  min-height: 20px;
+}
+
+/* 滚动条悬停时更明显 */
+.gallery-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Firefox 滚动条样式 */
+.gallery-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+/* 针对 Edge 浏览器的滚动条样式 */
+.gallery-scroll {
+  -ms-overflow-style: -ms-autohiding-scrollbar;
+}
+
+/* 确保滚动条在触摸设备上的表现 */
+@media (hover: none) {
+  .gallery-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  .gallery-scroll {
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+  .gallery-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .gallery-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  .gallery-scroll {
+    scrollbar-color: rgba(0, 0, 0, 0.5) transparent;
+  }
 }
 .card {
   border: 1px solid #eee;
