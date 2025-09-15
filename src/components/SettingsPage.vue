@@ -40,6 +40,12 @@
           @remove-background="$emit('removeBackground')"
         />
 
+        <!-- 云同步设置内容 -->
+        <CloudSyncSettings
+          v-else-if="activeSetting === 'cloud-sync'"
+          @sync-status-change="$emit('syncStatusChange', $event)"
+        />
+
         <!-- 其他设置内容可以在这里添加 -->
         <div v-else class="empty-content">
           <el-icon class="empty-icon"><icon-setting /></el-icon>
@@ -55,8 +61,10 @@ import { ref, computed } from "vue";
 import {
   Picture as IconPicture,
   Setting as IconSetting,
+  Upload as IconCloudUpload,
 } from "@element-plus/icons-vue";
 import BackgroundSettingsContent from "./BackgroundSettingsContent.vue";
+import CloudSyncSettings from "./CloudSyncSettings.vue";
 
 const props = defineProps({
   backgroundImage: {
@@ -73,6 +81,7 @@ const emit = defineEmits([
   "backgroundChange",
   "opacityChange",
   "removeBackground",
+  "syncStatusChange",
 ]);
 
 // 设置项配置
@@ -82,6 +91,12 @@ const settingsItems = [
     title: "背景设置",
     description: "自定义应用背景图片和透明度",
     icon: IconPicture,
+  },
+  {
+    key: "cloud-sync",
+    title: "云同步",
+    description: "配置云服务器实现数据同步",
+    icon: IconCloudUpload,
   },
   // 可以在这里添加更多设置项
 ];
