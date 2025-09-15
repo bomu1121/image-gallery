@@ -89,7 +89,8 @@
 
 <script setup>
 // #region --- element语言
-import { ElConfigProvider, ElMessage, ElMessageBox } from "element-plus";
+import { ElConfigProvider, ElMessageBox } from "element-plus";
+import { useDrawerNotification } from "@/composables/useDrawerNotification.js";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import en from "element-plus/es/locale/lang/en";
 import { useSystemLang } from "@/store/system/lang.js";
@@ -128,6 +129,10 @@ const locale = computed(() => {
   const { locale } = currentLang.value;
   return elLocaleMap[locale] || zhCn;
 });
+// #endregion
+
+// #region --- 通知设置
+const { success, error, warning, info } = useDrawerNotification();
 // #endregion
 
 // 页面状态
@@ -226,7 +231,7 @@ function clearSelection() {
 // 处理批量删除
 async function handleBatchDelete() {
   if (selectedImages.value.size === 0) {
-    ElMessage.warning("请先选择要删除的图片");
+    warning("请先选择要删除的图片");
     return;
   }
 
@@ -254,16 +259,16 @@ async function handleBatchDelete() {
     // 重新统计分组图片数量
     await initializeGroups();
 
-    ElMessage.success(`成功删除 ${selectedImages.value.size} 张图片`);
+    success(`成功删除 ${selectedImages.value.size} 张图片`);
     selectedImages.value.clear();
     // 保持批量模式开启，不自动关闭
 
     // 刷新图片列表
     window.dispatchEvent(new CustomEvent("imageAdded"));
-  } catch (error) {
-    if (error !== "cancel") {
-      console.error("批量删除失败:", error);
-      ElMessage.error("删除失败，请重试");
+  } catch (err) {
+    if (err !== "cancel") {
+      console.error("批量删除失败:", err);
+      error("删除失败，请重试");
     }
   }
 }
@@ -320,19 +325,19 @@ async function handleUpdateGroup() {
 // 分组管理：保存顺序
 async function handleReorderGroups(ordered) {
   await reorderGroups(ordered);
-  ElMessage.success("分组顺序已保存");
+  success("分组顺序已保存");
 }
 
 // 分组管理：重命名
 async function handleRenameGroup(payload) {
   await renameGroup(payload.id, payload.name);
-  ElMessage.success("分组已重命名");
+  success("分组已重命名");
 }
 
 // 分组管理：批量删除
 async function handleBulkDeleteGroups(ids) {
   await bulkDeleteGroups(ids);
-  ElMessage.success("分组已删除");
+  success("分组已删除");
 }
 
 // 处理数据导入事件
@@ -377,9 +382,9 @@ async function handleGlobalPaste(event) {
         }
       }
     }
-  } catch (error) {
-    console.error("处理全局粘贴事件时出错:", error);
-    ElMessage.error("粘贴失败，请重试");
+  } catch (err) {
+    console.error("处理全局粘贴事件时出错:", err);
+    error("粘贴失败，请重试");
   }
 }
 

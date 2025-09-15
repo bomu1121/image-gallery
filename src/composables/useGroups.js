@@ -1,5 +1,6 @@
 import { ref, watch } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessageBox } from "element-plus";
+import { useDrawerNotification } from "@/composables/useDrawerNotification.js";
 import {
   putImage,
   getAllImages,
@@ -11,6 +12,8 @@ import {
 } from "@/utils/idb.js";
 
 export function useGroups() {
+  const { success, error, warning, info } = useDrawerNotification();
+
   const groups = ref([
     { id: 0, name: "未分组", description: "默认分组", imageCount: 0 },
   ]);
@@ -126,7 +129,7 @@ export function useGroups() {
 
   async function createGroup() {
     if (!newGroup.value.name.trim()) {
-      ElMessage.warning("请输入分组名称");
+      warning("请输入分组名称");
       return;
     }
 
@@ -146,11 +149,11 @@ export function useGroups() {
       // 添加到本地状态
       groups.value.push(normalized);
       newGroup.value = { name: "", description: "" };
-      ElMessage.success("分组创建成功");
+      success("分组创建成功");
       return normalized.id;
-    } catch (error) {
-      console.error("创建分组失败:", error);
-      ElMessage.error("创建分组失败，请重试");
+    } catch (err) {
+      console.error("创建分组失败:", err);
+      error("创建分组失败，请重试");
       return null;
     }
   }
@@ -163,7 +166,7 @@ export function useGroups() {
 
   async function updateGroup() {
     if (!editingGroup.value.name.trim()) {
-      ElMessage.warning("请输入分组名称");
+      warning("请输入分组名称");
       return;
     }
 
@@ -180,11 +183,11 @@ export function useGroups() {
       );
       if (index !== -1) {
         groups.value[index] = { ...editingGroup.value };
-        ElMessage.success("分组更新成功");
+        success("分组更新成功");
       }
-    } catch (error) {
-      console.error("更新分组失败:", error);
-      ElMessage.error("更新分组失败，请重试");
+    } catch (err) {
+      console.error("更新分组失败:", err);
+      error("更新分组失败，请重试");
     }
   }
 
@@ -215,17 +218,17 @@ export function useGroups() {
         }
 
         groups.value.splice(index, 1);
-        ElMessage.success("分组删除成功");
+        success("分组删除成功");
 
         if (currentGroupId.value === deletedGroup.id) {
           currentGroupId.value = 0;
           loadGroupImages(0);
         }
       }
-    } catch (error) {
-      if (error !== "cancel") {
-        console.error("删除分组失败:", error);
-        ElMessage.error("删除分组失败，请重试");
+    } catch (err) {
+      if (err !== "cancel") {
+        console.error("删除分组失败:", err);
+        error("删除分组失败，请重试");
       }
     }
   }
@@ -254,7 +257,7 @@ export function useGroups() {
       }
     } catch (e) {
       console.error("保存分组顺序失败:", e);
-      ElMessage.error("保存分组顺序失败，请重试");
+      error("保存分组顺序失败，请重试");
     }
   }
 
@@ -266,7 +269,7 @@ export function useGroups() {
       if (idx !== -1) groups.value[idx].name = name.trim();
     } catch (e) {
       console.error("重命名失败:", e);
-      ElMessage.error("重命名失败，请重试");
+      error("重命名失败，请重试");
     }
   }
 
@@ -285,7 +288,7 @@ export function useGroups() {
       await loadGroupImages(currentGroupId.value);
     } catch (e) {
       console.error("批量删除分组失败:", e);
-      ElMessage.error("批量删除分组失败，请重试");
+      error("批量删除分组失败，请重试");
     }
   }
 
@@ -305,7 +308,7 @@ export function useGroups() {
     const newGroupId = selectedImageGroupId.value;
 
     if (oldGroupId === newGroupId) {
-      ElMessage.warning("图片已在当前分组中");
+      warning("图片已在当前分组中");
       return;
     }
 
@@ -327,10 +330,10 @@ export function useGroups() {
         newGroup.imageCount++;
       }
 
-      ElMessage.success("图片已移动到指定分组");
-    } catch (error) {
-      console.error("移动图片失败:", error);
-      ElMessage.error("移动图片失败，请重试");
+      success("图片已移动到指定分组");
+    } catch (err) {
+      console.error("移动图片失败:", err);
+      error("移动图片失败，请重试");
     }
   }
 
@@ -364,10 +367,10 @@ export function useGroups() {
       // 触发图片库刷新事件
       window.dispatchEvent(new CustomEvent("imageAdded"));
 
-      ElMessage.success("图片上传成功");
+      success("图片上传成功");
     } catch (e) {
       console.error("上传失败:", e);
-      ElMessage.error("上传失败，请重试");
+      error("上传失败，请重试");
     }
   }
 
@@ -397,10 +400,10 @@ export function useGroups() {
       // 触发图片库刷新事件
       window.dispatchEvent(new CustomEvent("imageAdded"));
 
-      ElMessage.success(`成功粘贴 ${processedImages.length} 张图片`);
+      success(`成功粘贴 ${processedImages.length} 张图片`);
     } catch (e) {
       console.error("粘贴失败:", e);
-      ElMessage.error("粘贴失败，请重试");
+      error("粘贴失败，请重试");
     }
   }
 

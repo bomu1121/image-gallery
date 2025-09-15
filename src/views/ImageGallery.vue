@@ -13,18 +13,29 @@
 
       <div class="menu-content" :class="{ 'is-collapsed': isMenuCollapsed }">
         <div class="menu-actions">
-          <el-button @click="showUploadDialog" size="small">
+          <div
+            class="menu-action-item upload"
+            @click="showUploadDialog"
+            title="上传图片"
+          >
             <el-icon><icon-upload /></el-icon>
-            上传图片
-          </el-button>
-          <el-button @click="startBatchDelete" size="small">
+          </div>
+          <div
+            class="menu-action-item"
+            :class="{ active: batchDeleteMode }"
+            @click="startBatchDelete"
+            title="批量删除"
+          >
             <el-icon><icon-delete /></el-icon>
-            批量删除
-          </el-button>
-          <el-button @click="onToggleGroupSelector" size="small">
+          </div>
+          <div
+            class="menu-action-item"
+            :class="{ active: showGroupSelector }"
+            @click="onToggleGroupSelector"
+            title="选择分组"
+          >
             <el-icon><icon-folder /></el-icon>
-            选择分组
-          </el-button>
+          </div>
         </div>
 
         <!-- 分组选择区域 -->
@@ -184,11 +195,11 @@ import { useRouter } from "vue-router";
 import {
   ElButton,
   ElIcon,
-  ElMessage,
   ElEmpty,
   ElDialog,
-  ElMessageBox,
+  // ElMessageBox,
 } from "element-plus";
+import { useDrawerNotification } from "@/composables/useDrawerNotification.js";
 import {
   Delete as IconDelete,
   CopyDocument as IconCopy,
@@ -241,6 +252,8 @@ const emit = defineEmits([
 ]);
 
 const router = useRouter();
+const { success, error, warning, info } = useDrawerNotification();
+
 const images = ref([]);
 const viewerVisible = ref(false);
 const current = ref(null);
@@ -405,7 +418,7 @@ async function copyImageToClipboard(img) {
       const response = await fetch(img.objectUrl);
       imageBlob = await response.blob();
     } else {
-      ElMessage.error("无法获取图片数据");
+      error("无法获取图片数据");
       return;
     }
 
@@ -441,7 +454,7 @@ async function copyImageToClipboard(img) {
           try {
             const clipboardItems = await navigator.clipboard.read();
             if (clipboardItems.length > 0) {
-              ElMessage.success("图片已复制到剪贴板");
+              success("图片已复制到剪贴板");
               hideContextMenu();
               return;
             } else {
@@ -477,7 +490,7 @@ async function copyImageToClipboard(img) {
               try {
                 const clipboardItems = await navigator.clipboard.read();
                 if (clipboardItems.length > 0) {
-                  ElMessage.success("图片已复制到剪贴板");
+                  success("图片已复制到剪贴板");
                   hideContextMenu();
                   return;
                 } else {
@@ -508,36 +521,13 @@ async function copyImageToClipboard(img) {
             selection.removeAllRanges();
             selection.addRange(range);
 
-            const success = document.execCommand("copy");
-            if (success) {
+            const execSuccess = document.execCommand("copy");
+            if (execSuccess) {
               // 对于execCommand，我们无法直接验证，但可以提示用户测试
-              ElMessage.success("图片已复制到剪贴板，请在目标应用中粘贴测试");
+              success("图片已复制到剪贴板，请在目标应用中粘贴测试");
             } else {
               // 如果execCommand也失败了，提供下载选项
-              ElMessage({
-                message: "复制失败，是否要下载图片？",
-                type: "warning",
-                duration: 5000,
-                showClose: true,
-                onClose: () => {
-                  // 询问用户是否要下载
-                  ElMessageBox.confirm(
-                    "复制失败，是否要下载图片？",
-                    "操作提示",
-                    {
-                      confirmButtonText: "下载",
-                      cancelButtonText: "取消",
-                      type: "info",
-                    }
-                  )
-                    .then(() => {
-                      downloadImage(img);
-                    })
-                    .catch(() => {
-                      // 用户取消
-                    });
-                },
-              });
+              warning("复制失败，是否要下载图片？");
             }
 
             // 清理
@@ -547,32 +537,13 @@ async function copyImageToClipboard(img) {
           } catch (execError) {
             console.warn("execCommand失败:", execError);
             // 如果execCommand也失败了，提供下载选项
-            ElMessage({
-              message: "复制失败，是否要下载图片？",
-              type: "warning",
-              duration: 5000,
-              showClose: true,
-              onClose: () => {
-                // 询问用户是否要下载
-                ElMessageBox.confirm("复制失败，是否要下载图片？", "操作提示", {
-                  confirmButtonText: "下载",
-                  cancelButtonText: "取消",
-                  type: "info",
-                })
-                  .then(() => {
-                    downloadImage(img);
-                  })
-                  .catch(() => {
-                    // 用户取消
-                  });
-              },
-            });
+            warning("复制失败，是否要下载图片？");
             hideContextMenu();
           }
         }, imageBlob.type);
       } catch (canvasError) {
         console.warn("Canvas处理失败:", canvasError);
-        ElMessage.info("复制失败，请使用下载功能");
+        info("复制失败，请使用下载功能");
         hideContextMenu();
       }
     } finally {
@@ -582,7 +553,7 @@ async function copyImageToClipboard(img) {
     }
   } catch (error) {
     console.error("复制失败:", error);
-    ElMessage.info("复制失败，请使用下载功能");
+    info("复制失败，请使用下载功能");
     hideContextMenu();
   }
 }
@@ -600,7 +571,7 @@ async function downloadImage(img) {
       const response = await fetch(img.objectUrl);
       imageBlob = await response.blob();
     } else {
-      ElMessage.error("无法获取图片数据");
+      error("无法获取图片数据");
       return;
     }
 
@@ -614,11 +585,11 @@ async function downloadImage(img) {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    ElMessage.success("图片已下载到本地");
+    success("图片已下载到本地");
     hideContextMenu();
   } catch (error) {
     console.error("下载失败:", error);
-    ElMessage.error("下载失败，请重试");
+    error("下载失败，请重试");
     hideContextMenu();
   }
 }
@@ -634,10 +605,10 @@ async function deleteImageFromContext(img) {
     console.time(`delete-image-${img.id}`);
     await withMinDuration(deleteImage(img.id), MIN_DELETE_MS);
     console.timeEnd(`delete-image-${img.id}`);
-    ElMessage.success("删除成功");
+    success("删除成功");
     await load();
   } catch (error) {
-    ElMessage.error("删除失败");
+    error("删除失败");
   } finally {
     stopDeleting(img.id);
   }
@@ -672,7 +643,7 @@ function exitBatchMode() {
 
 function confirmBatchDelete() {
   if (props.selectedImages.size === 0) {
-    ElMessage.warning("请先选择要删除的图片");
+    warning("请先选择要删除的图片");
     return;
   }
 
@@ -990,28 +961,37 @@ function showGroupManage() {
   padding: 16px;
 }
 
-.menu-actions .el-button {
+.menu-action-item {
   width: 40px;
   height: 40px;
-  padding: 0;
-  border-radius: 6px;
-  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
   color: #666;
-  font-size: 0; /* 隐藏文字，仅显示图标 */
 }
 
-.menu-actions .el-button:hover {
+.menu-action-item:hover {
   background: #e0e0e0;
   color: #333;
 }
 
-/* 隐藏按钮文字，仅保留图标，保持与侧栏风格一致 */
-.menu-actions .el-button .el-icon {
-  font-size: 16px; /* 恢复图标大小 */
+/* 区分上传按钮的样式（始终突出） */
+.menu-action-item.upload {
+  background: #f0f0f0;
+  color: #666;
+}
+.menu-action-item.upload:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+/* 其他按钮的选中态样式 */
+.menu-action-item.active {
+  background: #e0e0e0;
+  color: #333;
 }
 
 /* 分组选择器样式 */
