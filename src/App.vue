@@ -7,7 +7,6 @@
     <div class="app-layout">
       <Sidebar
         :active="activeKey"
-        @show-upload="showUploadDialog = true"
         @go-home="goToHome"
         @show-settings="showSettingsPage = true"
         @start-batch-delete="startBatchDelete"
@@ -36,26 +35,21 @@
             :groups="groups"
             :selected-group-id="selectedGroupId"
             :show-group-selector="showGroupSelector"
+            :upload-mode="uploadMode"
             @toggle-image-selection="toggleImageSelection"
             @clear-selection="clearSelection"
             @batch-delete="handleBatchDelete"
-            @show-upload-dialog="showUploadDialog = true"
             @start-batch-delete="startBatchDelete"
-            @show-group-selector="showGroupSelector = !showGroupSelector"
+            @show-group-selector="toggleGroupSelector"
             @select-group="handleSelectGroup"
             @show-create-group="showCreateGroupDialog = true"
             @show-group-manage="showGroupManageDialog = true"
+            @toggle-upload-mode="toggleUploadMode"
+            @file-change="(file) => onFileChange(file, selectedGroupId)"
           ></router-view>
         </div>
       </div>
     </div>
-
-    <!-- 上传对话框 -->
-    <UploadDialog
-      v-model:visible="showUploadDialog"
-      @file-change="(file) => onFileChange(file, selectedGroupId)"
-      @paste-images="(images) => onPasteImages(images, selectedGroupId)"
-    />
 
     <!-- 分组相关对话框 -->
     <GroupDialogs
@@ -102,7 +96,6 @@ import { useRouter } from "vue-router";
 import GlobalBackground from "@/components/GlobalBackground.vue";
 import Sidebar from "@/components/Sidebar.vue";
 import SettingsPage from "@/components/SettingsPage.vue";
-import UploadDialog from "@/components/UploadDialog.vue";
 import GroupDialogs from "@/components/GroupDialogs.vue";
 import GroupManageDialog from "@/components/GroupManageDialog.vue";
 import NotificationContainer from "@/components/NotificationContainer.vue";
@@ -136,7 +129,6 @@ const { success, error, warning, info } = useDrawerNotification();
 // #endregion
 
 // 页面状态
-const showUploadDialog = ref(false);
 const showSettingsPage = ref(false);
 // 已移除独立分组页
 const showCreateGroupDialog = ref(false);
@@ -147,6 +139,9 @@ const showGroupManageDialog = ref(false);
 // 批量删除相关状态
 const batchDeleteMode = ref(false);
 const selectedImages = ref(new Set());
+
+// 上传相关状态
+const uploadMode = ref(false);
 
 // 分组相关状态
 const showGroupSelector = ref(false);
@@ -278,6 +273,18 @@ function handleSelectGroup(groupId) {
   selectedGroupId.value = groupId;
 }
 
+// 切换上传模式
+function toggleUploadMode() {
+  // 切换上传模式
+  uploadMode.value = !uploadMode.value;
+}
+
+// 切换分组选择器
+function toggleGroupSelector() {
+  // 切换分组选择器
+  showGroupSelector.value = !showGroupSelector.value;
+}
+
 // 跳转到详情页
 function goToDetail(img) {
   router.push(`/image/${img.id}`);
@@ -365,21 +372,9 @@ async function handleGlobalPaste(event) {
 
       if (processedImages.length > 0) {
         console.log(`处理了 ${processedImages.length} 张图片`);
-        // 检查是否在上传弹窗中
-        if (showUploadDialog.value) {
-          console.log("在弹窗中，通过事件系统处理");
-          // 在弹窗中，通过emit传递给弹窗处理
-          // 这里我们需要通过事件系统通知弹窗
-          window.dispatchEvent(
-            new CustomEvent("pasteImagesInDialog", {
-              detail: { processedImages },
-            })
-          );
-        } else {
-          console.log("不在弹窗中，直接处理");
-          // 不在弹窗中，直接处理，使用当前选中的分组ID
-          await onPasteImages(processedImages, selectedGroupId.value);
-        }
+        console.log("直接处理粘贴的图片");
+        // 直接处理，使用当前选中的分组ID
+        await onPasteImages(processedImages, selectedGroupId.value);
       }
     }
   } catch (err) {

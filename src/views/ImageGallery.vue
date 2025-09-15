@@ -14,8 +14,9 @@
       <div class="menu-content" :class="{ 'is-collapsed': isMenuCollapsed }">
         <div class="menu-actions">
           <div
-            class="menu-action-item upload"
-            @click="showUploadDialog"
+            class="menu-action-item"
+            :class="{ active: uploadMode }"
+            @click="toggleUploadMode"
             title="上传图片"
           >
             <el-icon><icon-upload /></el-icon>
@@ -67,6 +68,22 @@
               <span class="group-count">({{ group.imageCount }})</span>
             </div>
           </div>
+        </div>
+
+        <!-- 上传区域 -->
+        <div v-if="uploadMode" class="upload-area">
+          <el-upload
+            class="uploader"
+            drag
+            :auto-upload="false"
+            :show-file-list="false"
+            accept="image/*"
+            :on-change="onFileChange"
+          >
+            <el-icon class="el-icon--upload"><icon-upload /></el-icon>
+            <div class="el-upload__text">拖拽图片到此处，或点击选择</div>
+            <!-- <div class="el-upload__tip">支持 Ctrl+V 粘贴图片</div> -->
+          </el-upload>
         </div>
 
         <!-- 批量删除操作（集成到折叠区域） -->
@@ -197,6 +214,7 @@ import {
   ElIcon,
   ElEmpty,
   ElDialog,
+  ElUpload,
   // ElMessageBox,
 } from "element-plus";
 import { useDrawerNotification } from "@/composables/useDrawerNotification.js";
@@ -236,6 +254,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  uploadMode: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Emits
@@ -243,12 +265,13 @@ const emit = defineEmits([
   "toggleImageSelection",
   "clearSelection",
   "batchDelete",
-  "showUploadDialog",
   "startBatchDelete",
   "showGroupSelector",
   "selectGroup",
   "showCreateGroup",
   "showGroupManage",
+  "toggleUploadMode",
+  "fileChange",
 ]);
 
 const router = useRouter();
@@ -658,8 +681,12 @@ function toggleMenu() {
 
 // 顶部刷新按钮已移除
 
-function showUploadDialog() {
-  emit("showUploadDialog");
+function toggleUploadMode() {
+  emit("toggleUploadMode");
+}
+
+function onFileChange(file) {
+  emit("fileChange", file);
 }
 
 function startBatchDelete() {
@@ -917,7 +944,7 @@ function showGroupManage() {
 }
 
 .menu-header:hover {
-  background: #e9ecef;
+  background: #e0e0e0;
 }
 
 .menu-title {
@@ -944,7 +971,7 @@ function showGroupManage() {
 }
 
 .menu-content {
-  max-height: 220px; /* 略增，容纳横向滚动条及操作行 */
+  max-height: 340px; /* 增加高度以容纳上传区域 */
   overflow: hidden;
   transition: max-height 0.3s ease, padding 0.3s ease;
   background: rgba(245, 245, 245, 0.9);
@@ -992,6 +1019,86 @@ function showGroupManage() {
 .menu-action-item.active {
   background: #e0e0e0;
   color: #333;
+}
+
+/* 上传区域样式 */
+.upload-area {
+  border-top: 1px solid #e0e0e0;
+  padding: 16px;
+  height: 120px; /* 固定高度 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-area .uploader {
+  border: 2px dashed #d9d9d9;
+}
+
+.upload-area .uploader:hover {
+  border-color: #409eff;
+  background: #f0f9ff;
+}
+
+.uploader {
+  border: none; /* 移除默认边框，避免双层虚线 */
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fafafa;
+}
+
+.uploader:hover {
+  background: #f0f9ff;
+}
+
+/* 覆盖 el-upload 的默认样式 */
+.uploader :deep(.el-upload-dragger) {
+  border: none;
+  background: transparent;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.uploader :deep(.el-upload-dragger:hover) {
+  border: none;
+  background: transparent;
+}
+
+/* 调整上传图标大小 */
+.uploader :deep(.el-icon--upload) {
+  font-size: 24px;
+  color: #999;
+  margin-bottom: 8px;
+}
+
+.uploader :deep(.el-upload__text) {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.el-upload__tip {
+  color: #999;
+  font-size: 12px;
+  margin-top: 8px;
 }
 
 /* 分组选择器样式 */

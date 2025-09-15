@@ -1,13 +1,13 @@
 <template>
   <div class="sidebar">
     <div class="sidebar-top">
-      <div
+      <!-- <div
         class="sidebar-item upload"
         @click="$emit('showUpload')"
         title="上传图片"
       >
         <el-icon><icon-upload /></el-icon>
-      </div>
+      </div> -->
 
       <div
         class="sidebar-item"
