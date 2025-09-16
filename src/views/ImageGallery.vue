@@ -103,12 +103,13 @@
               >清空</el-button
             >
             <el-button
-              type="danger"
               @click="confirmBatchDelete"
               :disabled="selectedImages.size === 0"
-              class="batch-delete-button"
-              >删除选中</el-button
+              class="batch-delete-icon-button"
+              circle
             >
+              <el-icon><icon-delete /></el-icon>
+            </el-button>
           </div>
         </div>
       </div>
@@ -1075,26 +1076,29 @@ function showGroupManage() {
   padding: 6px 12px;
 }
 
-.batch-delete-button {
-  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%) !important;
+.batch-delete-icon-button {
+  background: transparent !important;
   border: none !important;
-  color: #fff !important;
-  font-weight: 500 !important;
+  color: #ff6b6b !important;
   transition: all 0.3s ease !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+  width: 32px !important;
+  height: 32px !important;
+  padding: 0 !important;
+  box-shadow: none !important;
 }
 
-.batch-delete-button:hover {
-  background: linear-gradient(135deg, #ff5252 0%, #e53935 100%) !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+.batch-delete-icon-button:hover {
+  color: #ff5252 !important;
 }
 
-.batch-delete-button:disabled {
-  background: #f5f5f5 !important;
+.batch-delete-icon-button:disabled {
+  background: transparent !important;
   color: #c0c4cc !important;
   transform: none !important;
-  box-shadow: none !important;
+}
+
+.batch-delete-icon-button .el-icon {
+  font-size: 18px !important;
 }
 
 /* 选中状态样式 */

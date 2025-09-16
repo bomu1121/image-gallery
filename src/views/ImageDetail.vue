@@ -5,11 +5,9 @@
         返回
       </el-button>
       <el-button
-        type="danger"
         @click="removeImage"
         :disabled="!image"
-        size="large"
-        class="delete-button"
+        class="delete-icon-button"
         circle
       >
         <el-icon><Delete /></el-icon>
@@ -271,29 +269,29 @@ async function saveNotes() {
   transform: translateX(-2px);
 }
 
-.delete-button {
-  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
-  border: none;
-  color: #fff;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  width: 40px;
-  height: 40px;
-  padding: 0;
+.delete-icon-button {
+  background: transparent !important;
+  border: none !important;
+  color: #ff6b6b !important;
+  transition: all 0.3s ease !important;
+  width: 32px !important;
+  height: 32px !important;
+  padding: 0 !important;
+  box-shadow: none !important;
 }
 
-.delete-button:hover {
-  background: linear-gradient(135deg, #ff5252 0%, #e53935 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.delete-icon-button:hover {
+  color: #ff5252 !important;
 }
 
-.delete-button:disabled {
-  background: #f5f5f5;
-  color: #c0c4cc;
-  transform: none;
-  box-shadow: none;
+.delete-icon-button:disabled {
+  background: transparent !important;
+  color: #c0c4cc !important;
+  transform: none !important;
+}
+
+.delete-icon-button .el-icon {
+  font-size: 18px !important;
 }
 
 .content {
