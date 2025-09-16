@@ -37,6 +37,14 @@
           >
             <el-icon><icon-folder /></el-icon>
           </div>
+          <div
+            class="menu-action-item"
+            :class="{ active: showSearchArea }"
+            @click="onToggleSearchArea"
+            title="搜索图片"
+          >
+            <el-icon><icon-search /></el-icon>
+          </div>
         </div>
 
         <!-- 分组选择区域 -->
@@ -114,6 +122,47 @@
             >
               <el-icon><icon-delete /></el-icon>
             </el-button>
+          </div>
+        </div>
+
+        <!-- 搜索区域 -->
+        <div v-if="showSearchArea" class="search-area">
+          <div class="search-form">
+            <div class="search-field">
+              <label class="search-label">按名称搜索：</label>
+              <el-input
+                v-model="searchName"
+                placeholder="输入图片名称"
+                clearable
+                @input="onSearchChange"
+                @clear="onSearchChange"
+              />
+            </div>
+            <div class="search-field">
+              <label class="search-label">按标签搜索：</label>
+              <el-input
+                v-model="searchTagsInput"
+                placeholder="输入标签，按回车或失焦添加"
+                clearable
+                @keyup.enter="addTagFromInput"
+                @blur="addTagFromInput"
+                @clear="onSearchChange"
+              />
+              <div v-if="searchTags.length > 0" class="selected-tags">
+                <div
+                  v-for="tag in searchTags"
+                  :key="tag"
+                  class="tag-item"
+                  @click="removeTag(tag)"
+                >
+                  {{ tag }}
+                  <el-icon class="tag-remove"><icon-delete /></el-icon>
+                </div>
+              </div>
+            </div>
+            <div class="search-actions">
+              <el-button @click="clearSearch" size="small">清空搜索</el-button>
+            </div>
           </div>
         </div>
       </div>
@@ -242,6 +291,7 @@ import {
   Upload as IconUpload,
   Plus as IconPlus,
   Setting as IconSetting,
+  Search as IconSearch,
 } from "@element-plus/icons-vue";
 import { getAllImages, deleteImage } from "@/utils/idb.js";
 
@@ -301,6 +351,14 @@ const MIN_DELETE_MS = 800; // 调试用最小展示时长
 // 菜单栏状态
 const isMenuCollapsed = ref(false);
 
+// 搜索相关状态
+const showSearchArea = ref(false);
+const searchName = ref("");
+const searchTagsInput = ref("");
+const searchTags = ref([]);
+const isSearchActive = ref(false);
+const originalImages = ref([]); // 保存原始图片列表，用于搜索后恢复
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -340,6 +398,11 @@ function revokeObjectUrls(list) {
 }
 
 async function load() {
+  // 如果正在搜索状态，不重新加载图片
+  if (isSearchActive.value) {
+    return;
+  }
+
   const prev = images.value;
   const data = await getAllImages();
   revokeObjectUrls(prev);
@@ -381,6 +444,10 @@ onMounted(() => {
 watch(
   () => props.selectedGroupId,
   () => {
+    // 分组切换时清除搜索状态
+    if (isSearchActive.value) {
+      clearSearch();
+    }
     load();
   }
 );
@@ -876,6 +943,94 @@ function showCreateGroup() {
 function showGroupManage() {
   emit("showGroupManage");
 }
+
+// 搜索相关函数
+function onToggleSearchArea() {
+  showSearchArea.value = !showSearchArea.value;
+  if (!showSearchArea.value) {
+    // 关闭搜索区域时，清除搜索状态
+    clearSearch();
+  }
+}
+
+function onSearchChange() {
+  // 实时搜索
+  performRealtimeSearch();
+}
+
+function addTagFromInput() {
+  // 处理标签输入，添加当前输入框的内容作为标签
+  if (searchTagsInput.value) {
+    const tag = searchTagsInput.value.trim();
+    if (tag && !searchTags.value.includes(tag)) {
+      searchTags.value.push(tag);
+      searchTagsInput.value = "";
+      // 添加标签后触发搜索
+      performRealtimeSearch();
+    }
+  }
+}
+
+function removeTag(tag) {
+  const index = searchTags.value.indexOf(tag);
+  if (index > -1) {
+    searchTags.value.splice(index, 1);
+    // 删除标签后触发实时搜索
+    performRealtimeSearch();
+  }
+}
+
+function performRealtimeSearch() {
+  // 如果没有搜索条件，恢复原始状态
+  if (!searchName.value && searchTags.value.length === 0) {
+    if (isSearchActive.value) {
+      clearSearch();
+    }
+    return;
+  }
+
+  // 保存原始图片列表（如果还没有保存）
+  if (!isSearchActive.value) {
+    originalImages.value = [...images.value];
+  }
+
+  // 执行搜索
+  let filteredImages = [...originalImages.value];
+
+  // 按名称搜索（前缀匹配）
+  if (searchName.value) {
+    const nameKeyword = searchName.value.toLowerCase();
+    filteredImages = filteredImages.filter(
+      (img) => img.name && img.name.toLowerCase().startsWith(nameKeyword)
+    );
+  }
+
+  // 按标签搜索（前缀匹配，暂时使用名称作为标签的替代）
+  if (searchTags.value.length > 0) {
+    filteredImages = filteredImages.filter((img) => {
+      return searchTags.value.some((tag) => {
+        const tagLower = tag.toLowerCase();
+        return img.name && img.name.toLowerCase().startsWith(tagLower);
+      });
+    });
+  }
+
+  images.value = filteredImages;
+  isSearchActive.value = true;
+}
+
+function clearSearch() {
+  searchName.value = "";
+  searchTagsInput.value = "";
+  searchTags.value = [];
+  isSearchActive.value = false;
+
+  // 恢复原始图片列表
+  if (originalImages.value.length > 0) {
+    images.value = [...originalImages.value];
+    originalImages.value = [];
+  }
+}
 </script>
 
 <style scoped>
@@ -1274,14 +1429,15 @@ function showGroupManage() {
 }
 
 .menu-content {
-  max-height: 340px; /* 增加高度以容纳上传区域 */
-  overflow: hidden;
-  transition: max-height 0.3s ease, padding 0.3s ease;
+  max-height: none; /* 移除高度限制，让内容自然展开 */
+  overflow: visible; /* 移除滚动，让内容完全可见 */
+  transition: padding 0.3s ease;
   background: rgba(245, 245, 245, 0.9);
 }
 
 .menu-content.is-collapsed {
   max-height: 0;
+  overflow: hidden;
 }
 
 .menu-actions {
@@ -1478,5 +1634,81 @@ function showGroupManage() {
 .group-tab .group-count {
   font-size: 11px;
   opacity: 0.8;
+}
+
+/* 搜索区域样式 */
+.search-area {
+  border-top: 1px solid #e0e0e0;
+  padding: 16px;
+  background: rgba(245, 245, 245, 0.9);
+}
+
+.search-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.search-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.search-field .el-input {
+  width: 100%;
+}
+
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tag-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #e0e0e0;
+  border: 1px solid #d9d9d9;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tag-item:hover {
+  background: #d9d9d9;
+  border-color: #ccc;
+}
+
+.tag-remove {
+  font-size: 10px;
+  color: #999;
+}
+
+.tag-remove:hover {
+  color: #ff6b6b;
+}
+
+.search-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.search-actions .el-button {
+  font-size: 12px;
+  padding: 6px 12px;
 }
 </style>
