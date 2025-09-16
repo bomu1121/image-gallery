@@ -55,7 +55,7 @@
             </template>
             <template v-else>
               <span class="name">{{ element.name }}</span>
-              <span class="count">({{ element.imageCount || 0 }})</span>
+              <!-- <span class="count">({{ element.imageCount || 0 }})</span> -->
             </template>
           </div>
         </template>
@@ -199,9 +199,9 @@ function clearSelectionAndExit() {
 
 function saveOrder() {
   // 计算新的顺序，未分组固定为最前（order=0），其他顺序按当前索引从1开始
-  const ordered = localGroups.value.map((g, idx) => ({ 
-    id: g.id, 
-    order: g.id === 0 ? 0 : idx 
+  const ordered = localGroups.value.map((g, idx) => ({
+    id: g.id,
+    order: g.id === 0 ? 0 : idx,
   }));
   emit("reorder", ordered);
 }

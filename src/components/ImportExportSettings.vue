@@ -13,11 +13,7 @@
             <h5>导出完整数据</h5>
             <p>将所有图片文件和元数据打包为ZIP文件，包含分组信息和图片数据</p>
           </div>
-          <el-button
-            type="primary"
-            :loading="exporting"
-            @click="exportCompleteData"
-          >
+          <el-button type="primary" @click="exportCompleteData">
             <el-icon><Download /></el-icon>
             导出完整数据
           </el-button>
@@ -46,7 +42,7 @@
             :on-change="handleZipFileChange"
             :before-upload="beforeZipUpload"
           >
-            <el-button type="primary" :loading="importing">
+            <el-button type="primary">
               <el-icon><Upload /></el-icon>
               选择备份文件
             </el-button>
@@ -137,6 +133,7 @@ const {
   showProgressNotification,
   updateNotificationProgress,
   updateNotificationStatus,
+  closeNotification,
 } = useDrawerNotification();
 
 // 状态管理
@@ -197,6 +194,15 @@ async function exportCompleteData() {
         imageCount: group.imageCount,
         createdAt: group.createdAt,
       })),
+      // 确保包含默认的"未分组"分组（如果不存在）
+      defaultGroup: {
+        id: 0,
+        name: "未分组",
+        description: "默认分组",
+        imageCount: images.filter((img) => !img.groupId || img.groupId === 0)
+          .length,
+        createdAt: Date.now(),
+      },
     };
 
     // 添加元数据文件到ZIP
@@ -331,20 +337,56 @@ async function importCompleteData(file) {
       `共 ${data.groups.length} 个分组`
     );
 
-    // 导入分组
-    for (let i = 0; i < data.groups.length; i++) {
-      const group = data.groups[i];
+    // 导入分组（包括默认分组）
+    const allGroups = [...data.groups];
+
+    // 如果备份文件中有defaultGroup，使用它；否则创建默认分组
+    if (data.defaultGroup) {
+      allGroups.push(data.defaultGroup);
+    } else {
+      // 创建默认的"未分组"分组
+      allGroups.push({
+        id: 0,
+        name: "未分组",
+        description: "默认分组",
+        imageCount: 0,
+        createdAt: Date.now(),
+      });
+    }
+
+    // 合并模式：检查分组名称冲突
+    let existingGroups = [];
+    if (importOptions.value.importMode === "merge") {
+      existingGroups = await getAllGroups();
+    }
+
+    for (let i = 0; i < allGroups.length; i++) {
+      const group = allGroups[i];
+
+      // 合并模式：检查分组名称冲突，如果存在同名分组则跳过
+      if (importOptions.value.importMode === "merge") {
+        const hasConflict = existingGroups.some(
+          (existingGroup) =>
+            existingGroup.name === group.name && existingGroup.id !== group.id
+        );
+
+        if (hasConflict) {
+          console.log(`跳过重复分组: ${group.name}`);
+          continue;
+        }
+      }
+
       await putGroup({
         ...group,
         imageCount: 0, // 重置图片数量，稍后重新计算
       });
 
       // 更新进度
-      const progress = 50 + (i / data.groups.length) * 20;
+      const progress = 50 + (i / allGroups.length) * 20;
       updateNotificationProgress(
         progressNotificationId,
         progress,
-        `正在导入分组 ${i + 1}/${data.groups.length}...`,
+        `正在导入分组 ${i + 1}/${allGroups.length}...`,
         group.name
       );
     }
@@ -356,6 +398,12 @@ async function importCompleteData(file) {
       "正在导入图片...",
       `共 ${data.images.length} 张图片`
     );
+
+    // 合并模式：获取现有图片列表用于冲突检测
+    let existingImages = [];
+    if (importOptions.value.importMode === "merge") {
+      existingImages = await getAllImages();
+    }
 
     // 导入图片
     for (let i = 0; i < data.images.length; i++) {
@@ -370,9 +418,39 @@ async function importCompleteData(file) {
         imageData.name
       );
 
+      // 合并模式：检查图片名称冲突
+      if (importOptions.value.importMode === "merge") {
+        const hasConflict = existingImages.some(
+          (existingImage) =>
+            existingImage.name === imageData.name &&
+            existingImage.type === imageData.type &&
+            existingImage.size === imageData.size
+        );
+
+        if (hasConflict) {
+          console.log(`跳过重复图片: ${imageData.name}`);
+          continue;
+        }
+      }
+
       // 查找对应的图片文件
-      const groupName =
-        data.groups.find((g) => g.id === imageData.groupId)?.name || "未分组";
+      let groupName = "未分组";
+      if (imageData.groupId === 0 || !imageData.groupId) {
+        // 未分组图片
+        groupName = "未分组";
+      } else {
+        // 查找分组名称
+        const group = data.groups.find((g) => g.id === imageData.groupId);
+        if (group) {
+          groupName = group.name;
+        } else if (
+          data.defaultGroup &&
+          imageData.groupId === data.defaultGroup.id
+        ) {
+          groupName = data.defaultGroup.name;
+        }
+      }
+
       const imagePath = `images/${groupName}/${imageData.name}`;
       const imageFile = zip.file(imagePath);
 
@@ -396,18 +474,18 @@ async function importCompleteData(file) {
       }
     }
 
-    // 完成导入
-    updateNotificationStatus(
-      progressNotificationId,
-      "success",
-      "导入完成",
-      `成功导入 ${data.groups.length} 个分组和 ${data.images.length} 张图片`
-    );
+    // 完成导入 - 关闭进度通知并显示成功通知
+    if (progressNotificationId) {
+      closeNotification(progressNotificationId);
+    }
 
     setTimeout(() => {
-      success(
-        `成功导入完整数据：${data.groups.length} 个分组，${data.images.length} 张图片`
-      );
+      const message =
+        importOptions.value.importMode === "merge"
+          ? `成功导入完整数据（合并模式）：${data.groups.length} 个分组，${data.images.length} 张图片。重复项目已自动跳过。`
+          : `成功导入完整数据（替换模式）：${data.groups.length} 个分组，${data.images.length} 张图片`;
+
+      success(message);
       emit("dataImported", "complete");
     }, 1000);
   } catch (err) {
