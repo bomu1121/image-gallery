@@ -209,7 +209,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed, watch } from "vue";
+import {
+  ref,
+  onMounted,
+  onBeforeUnmount,
+  computed,
+  watch,
+  nextTick,
+} from "vue";
 import { useRouter } from "vue-router";
 import {
   ElButton,
@@ -415,9 +422,51 @@ function onCardClick(img) {
 function showContextMenu(event, img) {
   event.preventDefault();
   contextMenuImage.value = img;
+
+  // 先显示菜单以获取实际尺寸
   contextMenuX.value = event.clientX;
   contextMenuY.value = event.clientY;
   contextMenuVisible.value = true;
+
+  // 使用 nextTick 确保菜单已渲染，然后调整位置
+  nextTick(() => {
+    adjustContextMenuPosition(event.clientX, event.clientY);
+  });
+}
+
+// 调整右键菜单位置的函数
+function adjustContextMenuPosition(originalX, originalY) {
+  const menuElement = document.querySelector(".context-menu");
+  if (!menuElement) return;
+
+  const menuRect = menuElement.getBoundingClientRect();
+  const menuWidth = menuRect.width;
+  const menuHeight = menuRect.height;
+  const padding = 10; // 距离屏幕边缘的最小距离
+
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
+  let x = originalX;
+  let y = originalY;
+
+  // 水平方向：如果会超出右边界，则贴右边界
+  if (x + menuWidth + padding > viewportWidth) {
+    x = viewportWidth - menuWidth - padding;
+  }
+
+  // 垂直方向：如果会超出下边界，则贴下边界
+  if (y + menuHeight + padding > viewportHeight) {
+    y = viewportHeight - menuHeight - padding;
+  }
+
+  // 确保不超出左边界和上边界
+  x = Math.max(padding, x);
+  y = Math.max(padding, y);
+
+  // 更新菜单位置
+  contextMenuX.value = x;
+  contextMenuY.value = y;
 }
 
 function onCardContextMenu(event, img) {
@@ -1004,6 +1053,7 @@ function showGroupManage() {
   z-index: 1000;
   min-width: 120px;
   padding: 4px 0;
+  transition: left 0.15s ease-out, top 0.15s ease-out;
 }
 
 .context-menu-item {
