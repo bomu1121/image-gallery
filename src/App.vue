@@ -394,6 +394,11 @@ onMounted(() => {
     showImageGroupDialog.value = true;
   });
 
+  // 监听图片变化事件，更新分组数量
+  window.addEventListener("imageAdded", async () => {
+    await initializeGroups();
+  });
+
   // 添加全局粘贴事件监听器，使用 capture 模式
   document.addEventListener("paste", handleGlobalPaste, true);
 });

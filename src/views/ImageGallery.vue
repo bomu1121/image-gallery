@@ -785,6 +785,9 @@ async function deleteImageFromContext(img) {
     console.timeEnd(`delete-image-${img.id}`);
     success("删除成功");
     await load();
+
+    // 触发分组数量更新事件
+    window.dispatchEvent(new CustomEvent("imageAdded"));
   } catch (error) {
     error("删除失败");
   } finally {
