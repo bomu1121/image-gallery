@@ -97,10 +97,14 @@
             <el-button
               @click="selectAll"
               :disabled="selectedImages.size === images.length"
+              class="gray-button"
               >全选</el-button
             >
-            <el-button @click="clearAll" :disabled="selectedImages.size === 0"
-              >清空</el-button
+            <el-button
+              @click="clearAll"
+              :disabled="selectedImages.size === 0"
+              class="gray-button"
+              >取消选择</el-button
             >
             <el-button
               @click="confirmBatchDelete"
@@ -1127,6 +1131,40 @@ function showGroupManage() {
 .batch-actions .el-button {
   font-size: 12px;
   padding: 6px 12px;
+}
+
+/* 灰色主题按钮样式 */
+.gray-button {
+  background: #f5f5f5 !important;
+  border-color: #d9d9d9 !important;
+  color: #666 !important;
+}
+
+.gray-button:hover {
+  background: #e6e6e6 !important;
+  border-color: #d9d9d9 !important;
+  color: #333 !important;
+}
+
+.gray-button:focus {
+  background: #e6e6e6 !important;
+  border-color: #d9d9d9 !important;
+  color: #333 !important;
+}
+
+.gray-button:active {
+  background: #d9d9d9 !important;
+  border-color: #d9d9d9 !important;
+  color: #333 !important;
+}
+
+.gray-button.is-disabled,
+.gray-button.is-disabled:hover,
+.gray-button.is-disabled:focus,
+.gray-button.is-disabled:active {
+  background: #f5f5f5 !important;
+  border-color: #e4e7ed !important;
+  color: #c0c4cc !important;
 }
 
 .batch-delete-icon-button {

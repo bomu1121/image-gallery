@@ -220,7 +220,8 @@ function toggleImageSelection(imageId) {
 // 清空选择
 function clearSelection() {
   selectedImages.value.clear();
-  batchDeleteMode.value = false;
+  // 不再自动关闭批量删除模式，让用户手动控制
+  // batchDeleteMode.value = false;
 }
 
 // 处理批量删除
