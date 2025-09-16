@@ -198,8 +198,11 @@ function clearSelectionAndExit() {
 }
 
 function saveOrder() {
-  // 计算新的顺序，未分组固定为最前，其他顺序按当前索引
-  const ordered = localGroups.value.map((g, idx) => ({ id: g.id, order: idx }));
+  // 计算新的顺序，未分组固定为最前（order=0），其他顺序按当前索引从1开始
+  const ordered = localGroups.value.map((g, idx) => ({ 
+    id: g.id, 
+    order: g.id === 0 ? 0 : idx 
+  }));
   emit("reorder", ordered);
 }
 </script>

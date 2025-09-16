@@ -58,8 +58,14 @@ export function useGroups() {
         // 保存默认分组到数据库
         await putGroup(defaultGroup);
       } else {
-        // 使用数据库中的分组数据
-        groups.value = savedGroups;
+        // 使用数据库中的分组数据，并确保未分组排在第一位
+        groups.value = savedGroups.sort((a, b) => {
+          if (a.id === 0) return -1;
+          if (b.id === 0) return 1;
+          const ao = typeof a.order === "number" ? a.order : a.createdAt || 0;
+          const bo = typeof b.order === "number" ? b.order : b.createdAt || 0;
+          return ao - bo;
+        });
       }
 
       // 计算每个分组的图片数量
@@ -238,14 +244,18 @@ export function useGroups() {
     try {
       // 更新本地顺序字段
       const orderMap = new Map(ordered.map((o) => [o.id, o.order]));
+      
+      // 确保未分组的order为0，其他分组从1开始
       groups.value = groups.value
         .map((g) => ({
           ...g,
-          order: orderMap.has(g.id) ? orderMap.get(g.id) : g.order,
+          order: g.id === 0 ? 0 : (orderMap.has(g.id) ? orderMap.get(g.id) + 1 : g.order),
         }))
         .sort((a, b) => {
+          // 未分组始终排在第一位
           if (a.id === 0) return -1;
           if (b.id === 0) return 1;
+          // 其他分组按order排序
           const ao = typeof a.order === "number" ? a.order : a.createdAt || 0;
           const bo = typeof b.order === "number" ? b.order : b.createdAt || 0;
           return ao - bo;
