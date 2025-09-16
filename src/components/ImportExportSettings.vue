@@ -173,7 +173,9 @@ async function exportCompleteData() {
     }
 
     const zip = new JSZip();
-    const groupMap = new Map(groups.map((g) => [g.id, g.name]));
+    const groupMap = new Map(
+      groups.filter((g) => g.id !== -1).map((g) => [g.id, g.name])
+    );
 
     // 创建元数据文件
     const exportData = {
@@ -187,13 +189,15 @@ async function exportCompleteData() {
         groupId: img.groupId || 0,
         createdAt: img.createdAt,
       })),
-      groups: groups.map((group) => ({
-        id: group.id,
-        name: group.name,
-        description: group.description,
-        imageCount: group.imageCount,
-        createdAt: group.createdAt,
-      })),
+      groups: groups
+        .filter((group) => group.id !== -1)
+        .map((group) => ({
+          id: group.id,
+          name: group.name,
+          description: group.description,
+          imageCount: group.imageCount,
+          createdAt: group.createdAt,
+        })),
       // 确保包含默认的"未分组"分组（如果不存在）
       defaultGroup: {
         id: 0,
@@ -239,7 +243,9 @@ async function exportCompleteData() {
     URL.revokeObjectURL(url);
 
     success(
-      `成功导出完整数据：${groups.length} 个分组，${images.length} 张图片`
+      `成功导出完整数据：${groups.filter((g) => g.id !== -1).length} 个分组，${
+        images.length
+      } 张图片`
     );
     emit("dataExported", "complete");
   } catch (err) {
@@ -474,10 +480,13 @@ async function importCompleteData(file) {
       }
     }
 
-    // 完成导入 - 关闭进度通知并显示成功通知
-    if (progressNotificationId) {
-      closeNotification(progressNotificationId);
-    }
+    // 完成导入
+    updateNotificationStatus(
+      progressNotificationId,
+      "success",
+      "导入完成",
+      `成功导入 ${data.groups.length} 个分组和 ${data.images.length} 张图片`
+    );
 
     setTimeout(() => {
       const message =
