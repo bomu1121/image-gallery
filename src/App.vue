@@ -145,7 +145,7 @@ const uploadMode = ref(false);
 
 // 分组相关状态
 const showGroupSelector = ref(false);
-const selectedGroupId = ref(0);
+const selectedGroupId = ref(-1);
 
 // 使用组合式函数
 const {

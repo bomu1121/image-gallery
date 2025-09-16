@@ -347,9 +347,15 @@ async function load() {
   // 根据选中的分组筛选图片
   let filteredData = data;
   if (props.selectedGroupId !== null && props.selectedGroupId !== undefined) {
-    filteredData = data.filter(
-      (img) => (img.groupId || 0) === props.selectedGroupId
-    );
+    if (props.selectedGroupId === -1) {
+      // "全部"分组：显示所有图片
+      filteredData = data;
+    } else {
+      // 其他分组：过滤出指定分组的图片
+      filteredData = data.filter(
+        (img) => (img.groupId || 0) === props.selectedGroupId
+      );
+    }
   }
 
   images.value = filteredData.map((r) => ({

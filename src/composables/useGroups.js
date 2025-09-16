@@ -15,9 +15,10 @@ export function useGroups() {
   const { success, error, warning, info } = useDrawerNotification();
 
   const groups = ref([
+    { id: -1, name: "全部", description: "显示所有图片", imageCount: 0 },
     { id: 0, name: "未分组", description: "默认分组", imageCount: 0 },
   ]);
-  const currentGroupId = ref(0);
+  const currentGroupId = ref(-1);
   const currentGroupImages = ref([]);
   const newGroup = ref({ name: "", description: "" });
   const editingGroup = ref({ id: null, name: "", description: "" });
@@ -28,8 +29,8 @@ export function useGroups() {
   watch(
     () => groups.value,
     async (newValue) => {
-      if (newValue && currentGroupId.value === 0) {
-        await loadGroupImages(0);
+      if (newValue && currentGroupId.value === -1) {
+        await loadGroupImages(-1);
       }
     }
   );
@@ -46,6 +47,14 @@ export function useGroups() {
       // 从数据库加载分组数据
       const savedGroups = await getAllGroups();
 
+      // 创建"全部"分组（始终存在，不保存到数据库）
+      const allGroup = {
+        id: -1,
+        name: "全部",
+        description: "显示所有图片",
+        imageCount: 0,
+      };
+
       // 如果数据库中没有分组数据，创建默认的未分组
       if (savedGroups.length === 0) {
         const defaultGroup = {
@@ -54,18 +63,19 @@ export function useGroups() {
           description: "默认分组",
           imageCount: 0,
         };
-        groups.value = [defaultGroup];
+        groups.value = [allGroup, defaultGroup];
         // 保存默认分组到数据库
         await putGroup(defaultGroup);
       } else {
-        // 使用数据库中的分组数据，并确保未分组排在第一位
-        groups.value = savedGroups.sort((a, b) => {
+        // 使用数据库中的分组数据，并确保未分组排在第二位（全部分组始终第一位）
+        const sortedGroups = savedGroups.sort((a, b) => {
           if (a.id === 0) return -1;
           if (b.id === 0) return 1;
           const ao = typeof a.order === "number" ? a.order : a.createdAt || 0;
           const bo = typeof b.order === "number" ? b.order : b.createdAt || 0;
           return ao - bo;
         });
+        groups.value = [allGroup, ...sortedGroups];
       }
 
       // 计算每个分组的图片数量
@@ -78,7 +88,12 @@ export function useGroups() {
 
       // 更新所有分组的图片数量
       groups.value.forEach((group) => {
-        group.imageCount = groupCounts[group.id] || 0;
+        if (group.id === -1) {
+          // "全部"分组的数量是所有图片的总数
+          group.imageCount = allImages.length;
+        } else {
+          group.imageCount = groupCounts[group.id] || 0;
+        }
       });
 
       // 为有图片但没有对应分组的ID创建临时分组
@@ -100,8 +115,9 @@ export function useGroups() {
       });
     } catch (error) {
       console.error("初始化分组数据失败:", error);
-      // 如果出错，至少保证有默认的未分组
+      // 如果出错，至少保证有"全部"和默认的未分组
       groups.value = [
+        { id: -1, name: "全部", description: "显示所有图片", imageCount: 0 },
         { id: 0, name: "未分组", description: "默认分组", imageCount: 0 },
       ];
     }
@@ -111,10 +127,14 @@ export function useGroups() {
     try {
       const allImages = await getAllImages();
 
-      // 过滤出指定分组的图片
-      const groupImages = allImages.filter(
-        (img) => (img.groupId || 0) === groupId
-      );
+      let groupImages;
+      if (groupId === -1) {
+        // "全部"分组：显示所有图片
+        groupImages = allImages;
+      } else {
+        // 其他分组：过滤出指定分组的图片
+        groupImages = allImages.filter((img) => (img.groupId || 0) === groupId);
+      }
 
       // 为图片创建 objectUrl
       currentGroupImages.value = groupImages.map((img) => ({
@@ -125,7 +145,12 @@ export function useGroups() {
       // 更新分组的图片数量
       const group = groups.value.find((g) => g.id === groupId);
       if (group) {
-        group.imageCount = groupImages.length;
+        if (groupId === -1) {
+          // "全部"分组的数量是所有图片的总数
+          group.imageCount = allImages.length;
+        } else {
+          group.imageCount = groupImages.length;
+        }
       }
     } catch (error) {
       console.error("加载分组图片失败:", error);
@@ -398,12 +423,17 @@ export function useGroups() {
       if (!raw) return;
       const arrayBuffer = await raw.arrayBuffer();
       const blob = new Blob([arrayBuffer], { type: raw.type || "image/*" });
+      // 如果目标分组是"全部"分组，则使用"未分组"作为实际存储分组
+      const actualGroupId =
+        targetGroupId !== null ? targetGroupId : currentGroupId.value;
+      const finalGroupId = actualGroupId === -1 ? 0 : actualGroupId;
+
       const record = {
         name: raw.name,
         type: raw.type,
         size: raw.size,
         blob,
-        groupId: targetGroupId !== null ? targetGroupId : currentGroupId.value, // 使用指定的分组ID或当前分组ID
+        groupId: finalGroupId, // 使用实际的分组ID
       };
       await putImage(record);
 
@@ -411,6 +441,12 @@ export function useGroups() {
       const targetGroup = groups.value.find((g) => g.id === record.groupId);
       if (targetGroup) {
         targetGroup.imageCount++;
+      }
+
+      // 更新"全部"分组的数量
+      const allGroup = groups.value.find((g) => g.id === -1);
+      if (allGroup) {
+        allGroup.imageCount++;
       }
 
       // 如果当前在分组页面且显示的是目标分组，刷新图片显示
@@ -431,24 +467,32 @@ export function useGroups() {
   // 处理粘贴的图片（与上传类似，但不需要文件对象）
   async function onPasteImages(processedImages, targetGroupId = null) {
     try {
-      const groupId =
+      const actualGroupId =
         targetGroupId !== null ? targetGroupId : currentGroupId.value;
+      // 如果目标分组是"全部"分组，则使用"未分组"作为实际存储分组
+      const finalGroupId = actualGroupId === -1 ? 0 : actualGroupId;
 
       for (const imageRecord of processedImages) {
         // 使用克隆对象，避免后续复用同一引用导致分组串写
-        const toInsert = { ...imageRecord, groupId };
+        const toInsert = { ...imageRecord, groupId: finalGroupId };
         await putImage(toInsert);
       }
 
       // 更新对应分组的图片数量
-      const targetGroup = groups.value.find((g) => g.id === groupId);
+      const targetGroup = groups.value.find((g) => g.id === finalGroupId);
       if (targetGroup) {
         targetGroup.imageCount += processedImages.length;
       }
 
+      // 更新"全部"分组的数量
+      const allGroup = groups.value.find((g) => g.id === -1);
+      if (allGroup) {
+        allGroup.imageCount += processedImages.length;
+      }
+
       // 如果当前在分组页面且显示的是目标分组，刷新图片显示
-      if (currentGroupId.value === groupId) {
-        await loadGroupImages(groupId);
+      if (currentGroupId.value === actualGroupId) {
+        await loadGroupImages(actualGroupId);
       }
 
       // 触发图片库刷新事件

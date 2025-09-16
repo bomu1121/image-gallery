@@ -32,11 +32,12 @@
           <div
             class="group-chip"
             :class="{
-              disabled: element.id === 0,
+              disabled: element.id === 0 || element.id === -1,
               selected:
                 isDeleteMode &&
                 selectedIds.includes(element.id) &&
-                element.id !== 0,
+                element.id !== 0 &&
+                element.id !== -1,
             }"
             :key="element.id"
             @click="onChipClick(element)"
@@ -46,7 +47,7 @@
                 ref="renameInputRef"
                 v-model="editingName"
                 class="rename-input inline"
-                :disabled="element.id === 0"
+                :disabled="element.id === 0 || element.id === -1"
                 :style="{ width: editingWidth + 'px' }"
                 @input="onRenameInput"
                 @keyup.enter="confirmRename(element)"
@@ -137,7 +138,7 @@ function toggleDeleteMode() {
 
 function onChipClick(group) {
   if (isDeleteMode.value) {
-    if (group.id === 0) return; // 未分组不可删除
+    if (group.id === 0 || group.id === -1) return; // 未分组和全部分组不可删除
     const idx = selectedIds.value.indexOf(group.id);
     if (idx === -1) selectedIds.value.push(group.id);
     else selectedIds.value.splice(idx, 1);
@@ -147,7 +148,7 @@ function onChipClick(group) {
 }
 
 function startEdit(group) {
-  if (group.id === 0) return;
+  if (group.id === 0 || group.id === -1) return;
   if (isDeleteMode.value) return; // 删除模式下不进入编辑
   editingId.value = group.id;
   editingName.value = group.name;
@@ -164,7 +165,7 @@ function startEdit(group) {
 }
 
 function confirmRename(group) {
-  if (group.id === 0) return;
+  if (group.id === 0 || group.id === -1) return;
   const name = (editingName.value || "").trim();
   editingId.value = null;
   if (!name || name === group.name) return;
