@@ -189,8 +189,8 @@ const activeKey = computed(() => {
 // 导航到主页
 function goToHome() {
   showSettingsPage.value = false;
-  batchDeleteMode.value = false;
-  selectedImages.value.clear();
+  // 注意：不重置 batchDeleteMode 和 selectedImages，保持用户的操作状态
+  // 只有在用户主动退出批量删除模式时才重置这些状态
   router.push("/gallery");
 }
 
