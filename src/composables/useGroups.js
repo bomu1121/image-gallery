@@ -211,10 +211,21 @@ export function useGroups() {
 
       const deletedGroup = editingGroup.value;
 
-      // 从数据库删除分组
+      // 1. 先将该分组内的所有图片移动到未分组
+      const allImages = await getAllImages();
+      const imagesInGroup = allImages.filter(
+        (img) => (img.groupId || 0) === deletedGroup.id
+      );
+
+      // 批量更新图片的分组ID为0（未分组）
+      for (const img of imagesInGroup) {
+        await updateImage(img.id, { groupId: 0 });
+      }
+
+      // 2. 从数据库删除分组
       await deleteGroupFromDB(deletedGroup.id);
 
-      // 更新本地状态
+      // 3. 更新本地状态
       const index = groups.value.findIndex((g) => g.id === deletedGroup.id);
       if (index !== -1) {
         // 将删除分组的图片数量添加到未分组
@@ -224,7 +235,7 @@ export function useGroups() {
         }
 
         groups.value.splice(index, 1);
-        success("分组删除成功");
+        success(`分组删除成功，${imagesInGroup.length} 张图片已移动到未分组`);
 
         if (currentGroupId.value === deletedGroup.id) {
           currentGroupId.value = 0;
@@ -244,12 +255,17 @@ export function useGroups() {
     try {
       // 更新本地顺序字段
       const orderMap = new Map(ordered.map((o) => [o.id, o.order]));
-      
+
       // 确保未分组的order为0，其他分组从1开始
       groups.value = groups.value
         .map((g) => ({
           ...g,
-          order: g.id === 0 ? 0 : (orderMap.has(g.id) ? orderMap.get(g.id) + 1 : g.order),
+          order:
+            g.id === 0
+              ? 0
+              : orderMap.has(g.id)
+              ? orderMap.get(g.id) + 1
+              : g.order,
         }))
         .sort((a, b) => {
           // 未分组始终排在第一位
@@ -286,16 +302,44 @@ export function useGroups() {
   // 批量删除分组（拖拽删除区）
   async function bulkDeleteGroups(ids) {
     try {
+      let totalMovedImages = 0;
+
       for (const id of ids) {
-        if (id === 0) continue;
-        editingGroup.value = { id };
-        // 直接删除，不弹窗（弹窗在 UI 层已确认）
+        if (id === 0) continue; // 跳过未分组
+
+        // 1. 先将该分组内的所有图片移动到未分组
+        const allImages = await getAllImages();
+        const imagesInGroup = allImages.filter(
+          (img) => (img.groupId || 0) === id
+        );
+
+        // 批量更新图片的分组ID为0（未分组）
+        for (const img of imagesInGroup) {
+          await updateImage(img.id, { groupId: 0 });
+        }
+
+        totalMovedImages += imagesInGroup.length;
+
+        // 2. 从数据库删除分组
         await deleteGroupFromDB(id);
+
+        // 3. 从本地状态中移除分组
         const idx = groups.value.findIndex((g) => g.id === id);
-        if (idx !== -1) groups.value.splice(idx, 1);
+        if (idx !== -1) {
+          // 将删除分组的图片数量添加到未分组
+          const ungroupedGroup = groups.value.find((g) => g.id === 0);
+          if (ungroupedGroup) {
+            ungroupedGroup.imageCount += imagesInGroup.length;
+          }
+
+          groups.value.splice(idx, 1);
+        }
       }
-      // 删除后将对应图片移入未分组：这里简化为统计刷新
+
+      // 刷新当前分组图片显示
       await loadGroupImages(currentGroupId.value);
+
+      success(`批量删除成功，${totalMovedImages} 张图片已移动到未分组`);
     } catch (e) {
       console.error("批量删除分组失败:", e);
       error("批量删除分组失败，请重试");
