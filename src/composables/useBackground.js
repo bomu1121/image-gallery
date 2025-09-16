@@ -114,7 +114,6 @@ export function useBackground() {
 
       await saveBackgroundSettings();
       window.dispatchEvent(new CustomEvent("backgroundSettingsChanged"));
-      ElMessage.success("背景图片已移除");
     }
   }
 
