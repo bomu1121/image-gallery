@@ -106,6 +106,7 @@
               type="danger"
               @click="confirmBatchDelete"
               :disabled="selectedImages.size === 0"
+              class="batch-delete-button"
               >删除选中</el-button
             >
           </div>
@@ -1072,6 +1073,28 @@ function showGroupManage() {
 .batch-actions .el-button {
   font-size: 12px;
   padding: 6px 12px;
+}
+
+.batch-delete-button {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%) !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+.batch-delete-button:hover {
+  background: linear-gradient(135deg, #ff5252 0%, #e53935 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.batch-delete-button:disabled {
+  background: #f5f5f5 !important;
+  color: #c0c4cc !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 /* 选中状态样式 */
