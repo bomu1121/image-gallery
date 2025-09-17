@@ -89,13 +89,59 @@
             </div>
           </div>
         </div>
+
+        <!-- 标签区域 -->
+        <div class="info-section-item">
+          <h3 class="section-title">标签</h3>
+          <div class="tags-container">
+            <div class="tags-display">
+              <!-- 现有标签 -->
+              <div
+                v-for="tag in image.tags"
+                :key="tag"
+                class="tag-item"
+                @click="removeTag(tag)"
+              >
+                {{ tag }}
+                <el-icon class="tag-remove"><Delete /></el-icon>
+              </div>
+
+              <!-- 添加标签按钮 -->
+              <div
+                v-if="!isAddingTag"
+                class="add-tag-button"
+                @click="startAddingTag"
+              >
+                <el-icon><Plus /></el-icon>
+              </div>
+
+              <!-- 正在添加的标签输入框 -->
+              <div
+                v-if="isAddingTag"
+                class="tag-item adding-tag"
+                :style="{ width: tagInputWidth + 'px' }"
+              >
+                <input
+                  v-model="newTagInput"
+                  ref="tagInput"
+                  class="tag-input-field"
+                  placeholder="输入标签"
+                  @keyup.enter="confirmAddTag"
+                  @keyup.escape="cancelAddTag"
+                  @blur="confirmAddTag"
+                  @input="adjustTagInputWidth"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   ElButton,
@@ -111,6 +157,7 @@ import {
   View as IconView,
   Edit,
   Delete,
+  Plus,
 } from "@element-plus/icons-vue";
 import { getImageById, deleteImage, updateImage } from "@/utils/idb.js";
 import { useDrawerNotification } from "@/composables/useDrawerNotification.js";
@@ -121,6 +168,10 @@ const image = ref(null);
 const isEditingNotes = ref(false);
 const editingNotes = ref("");
 const notesInput = ref(null);
+const newTagInput = ref("");
+const tagInput = ref(null);
+const isAddingTag = ref(false);
+const tagInputWidth = ref(80); // 默认最小宽度
 const { success, error } = useDrawerNotification();
 
 function revokeObjectUrl(img) {
@@ -234,6 +285,112 @@ async function saveNotes() {
   } catch (err) {
     error("备注保存失败");
     // 保存失败时不退出编辑模式，让用户可以重试
+  }
+}
+
+// 动态调整输入框宽度
+function adjustTagInputWidth() {
+  if (!tagInput.value) return;
+
+  // 使用Canvas API来精确测量文本宽度
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  // 设置字体样式，与CSS中的样式保持一致
+  context.font =
+    '500 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+
+  const text = newTagInput.value || "输入标签";
+  const textWidth = context.measureText(text).width;
+
+  // 设置最小宽度80px，最大宽度200px，并加上一些padding
+  tagInputWidth.value = Math.min(Math.max(textWidth + 24, 80), 200);
+}
+
+// 标签管理函数
+function startAddingTag() {
+  isAddingTag.value = true;
+  newTagInput.value = "";
+  tagInputWidth.value = 80; // 重置为默认宽度
+
+  // 等待DOM更新后聚焦输入框
+  setTimeout(() => {
+    if (tagInput.value) {
+      tagInput.value.focus();
+    }
+  }, 100);
+}
+
+function cancelAddTag() {
+  isAddingTag.value = false;
+  newTagInput.value = "";
+}
+
+async function confirmAddTag() {
+  if (!newTagInput.value.trim()) {
+    cancelAddTag();
+    return;
+  }
+
+  if (!image.value) {
+    cancelAddTag();
+    return;
+  }
+
+  const tag = newTagInput.value.trim();
+
+  // 检查标签是否已存在
+  if (!image.value.tags) {
+    image.value.tags = [];
+  }
+
+  if (image.value.tags.includes(tag)) {
+    error("标签已存在");
+    cancelAddTag();
+    return;
+  }
+
+  try {
+    // 先退出添加模式，避免状态混乱
+    isAddingTag.value = false;
+
+    // 添加标签到本地状态
+    image.value.tags.push(tag);
+
+    // 保存到数据库
+    await updateImage(image.value.id, { tags: image.value.tags });
+
+    success(`标签 "${tag}" 添加成功`);
+
+    // 清空输入框
+    newTagInput.value = "";
+  } catch (err) {
+    error("标签添加失败");
+    // 恢复本地状态
+    image.value.tags.pop();
+    // 重新进入添加模式
+    isAddingTag.value = true;
+  }
+}
+
+async function removeTag(tagToRemove) {
+  if (!image.value || !image.value.tags) return;
+
+  try {
+    // 从本地状态移除标签
+    const index = image.value.tags.indexOf(tagToRemove);
+    if (index > -1) {
+      image.value.tags.splice(index, 1);
+    }
+
+    // 保存到数据库
+    await updateImage(image.value.id, { tags: image.value.tags });
+
+    success(`标签 "${tagToRemove}" 删除成功`);
+  } catch (err) {
+    error("标签删除失败");
+    // 恢复本地状态
+    image.value.tags.push(tagToRemove);
   }
 }
 </script>
@@ -472,6 +629,131 @@ async function saveNotes() {
   outline: none;
 }
 
+/* 标签区域样式 */
+.tags-container {
+  position: relative;
+}
+
+.tags-display {
+  min-height: 80px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.tags-display:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.tag-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+}
+
+.tag-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+.tag-remove {
+  font-size: 12px;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.tag-item:hover .tag-remove {
+  opacity: 1;
+}
+
+.add-tag-section {
+  margin-top: 8px;
+}
+
+.tag-input {
+  width: 100%;
+}
+
+.tag-input :deep(.el-input__wrapper) {
+  border-radius: 20px;
+  border: 1px solid #e0e0e0;
+  background: rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+}
+
+.tag-input :deep(.el-input__wrapper:hover) {
+  border-color: #667eea;
+}
+
+.tag-input :deep(.el-input__wrapper.is-focus) {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+/* 添加标签按钮样式 */
+.add-tag-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(102, 126, 234, 0.1);
+  border: 2px dashed rgba(102, 126, 234, 0.3);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #667eea;
+}
+
+.add-tag-button:hover {
+  background: rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.5);
+  transform: scale(1.05);
+}
+
+.add-tag-button .el-icon {
+  font-size: 16px;
+}
+
+/* 正在添加的标签样式 */
+.adding-tag {
+  background: rgba(102, 126, 234, 0.1) !important;
+  border: 2px solid #667eea !important;
+  min-width: 80px;
+  transition: width 0.2s ease;
+}
+
+.tag-input-field {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #2c3e50;
+  font-size: 13px;
+  font-weight: 500;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.tag-input-field::placeholder {
+  color: #8a9ba8;
+}
+
 .empty {
   display: flex;
   justify-content: center;
@@ -583,6 +865,39 @@ async function saveNotes() {
 
   .notes-input {
     font-size: 14px;
+  }
+
+  .tags-display {
+    min-height: 60px;
+    padding: 12px;
+  }
+
+  .tag-item {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+
+  .existing-tags {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .add-tag-button {
+    width: 28px;
+    height: 28px;
+  }
+
+  .add-tag-button .el-icon {
+    font-size: 14px;
+  }
+
+  .adding-tag {
+    min-width: 60px;
+    transition: width 0.2s ease;
+  }
+
+  .tag-input-field {
+    font-size: 12px;
   }
 }
 </style>
