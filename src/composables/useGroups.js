@@ -437,6 +437,7 @@ export function useGroups() {
         size: raw.size,
         blob,
         groupId: finalGroupId, // 使用实际的分组ID
+        createdAt: Date.now(), // 添加上传时间
         tags: [], // 初始化空的标签数组
       };
       await putImage(record);

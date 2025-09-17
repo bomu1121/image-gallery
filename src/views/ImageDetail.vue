@@ -50,7 +50,7 @@
             </div>
             <div class="info-row">
               <span class="info-label">上传时间</span>
-              <span class="info-value">{{ formatDate(image.id) }}</span>
+              <span class="info-value">{{ formatDate(image.createdAt) }}</span>
             </div>
           </div>
         </div>
@@ -497,7 +497,7 @@ async function removeTag(tagToRemove) {
   display: flex;
   flex-direction: column;
   gap: 32px;
-  padding: 24px 0;
+  padding: 24px;
 }
 
 .info-section-item {

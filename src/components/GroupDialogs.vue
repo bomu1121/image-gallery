@@ -146,7 +146,6 @@ const moveImageToGroup = () => {
 .create-group-content,
 .edit-group-content,
 .image-group-content {
-  padding: 20px 0;
 }
 
 .dialog-footer {

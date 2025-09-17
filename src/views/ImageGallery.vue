@@ -1229,22 +1229,24 @@ function clearSearch() {
   position: fixed;
   background: white;
   border: 1px solid #e0e0e0;
-  border-radius: 6px;
+  border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
-  min-width: 120px;
-  padding: 4px 0;
+  min-width: 100px;
+  padding: 2px 0;
   transition: left 0.15s ease-out, top 0.15s ease-out;
 }
 
 .context-menu-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: 6px;
+  padding: 4px 12px;
   cursor: pointer;
   transition: background-color 0.2s ease;
   color: #333;
+  font-size: 12px;
+  line-height: 1.2;
 }
 
 .context-menu-item:hover {
@@ -1252,14 +1254,14 @@ function clearSearch() {
 }
 
 .context-menu-item .el-icon {
-  font-size: 16px;
+  font-size: 12px;
   color: #666;
 }
 
 .context-menu-divider {
   height: 1px;
   background-color: #e0e0e0;
-  margin: 4px 0;
+  margin: 2px 0;
 }
 
 /* 批量删除状态条样式 */
@@ -1369,7 +1371,7 @@ function clearSearch() {
 /* 选中状态样式 */
 .card.is-selected {
   border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+  /* box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2); */
 }
 
 .selection-overlay {
