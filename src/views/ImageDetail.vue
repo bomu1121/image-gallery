@@ -197,7 +197,12 @@ async function loadImage() {
     revokeObjectUrl(image.value);
     image.value = {
       ...data,
-      objectUrl: data.blob ? URL.createObjectURL(data.blob) : data.url,
+      objectUrl:
+        data.blob && data.blob instanceof Blob
+          ? URL.createObjectURL(data.blob)
+          : data.url,
+      // 确保tags字段存在
+      tags: data.tags || [],
     };
   } catch (err) {
     error("加载图片失败");

@@ -423,7 +423,8 @@ async function load() {
 
   images.value = filteredData.map((r) => ({
     ...r,
-    objectUrl: r.blob ? URL.createObjectURL(r.blob) : r.url,
+    objectUrl:
+      r.blob && r.blob instanceof Blob ? URL.createObjectURL(r.blob) : r.url,
   }));
 }
 
@@ -637,7 +638,10 @@ async function copyImageToClipboard(img) {
           const tempCtx = tempCanvas.getContext("2d");
           const tempImg = document.createElement("img");
 
-          tempImg.src = URL.createObjectURL(imageBlob);
+          tempImg.src =
+            imageBlob instanceof Blob
+              ? URL.createObjectURL(imageBlob)
+              : imageBlob;
           await new Promise((resolve, reject) => {
             tempImg.onload = resolve;
             tempImg.onerror = reject;
@@ -704,7 +708,8 @@ async function copyImageToClipboard(img) {
     tempImg.style.top = "-9999px";
     tempImg.style.width = "1px";
     tempImg.style.height = "1px";
-    tempImg.src = URL.createObjectURL(imageBlob);
+    tempImg.src =
+      imageBlob instanceof Blob ? URL.createObjectURL(imageBlob) : imageBlob;
     document.body.appendChild(tempImg);
 
     // 等待图片加载完成
@@ -831,7 +836,8 @@ async function downloadImage(img) {
     }
 
     // 创建下载链接
-    const url = URL.createObjectURL(imageBlob);
+    const url =
+      imageBlob instanceof Blob ? URL.createObjectURL(imageBlob) : imageBlob;
     const link = document.createElement("a");
     link.href = url;
     link.download = img.name || "image";
@@ -1005,12 +1011,18 @@ function performRealtimeSearch() {
     );
   }
 
-  // 按标签搜索（前缀匹配，暂时使用名称作为标签的替代）
+  // 按标签搜索（前缀匹配）
   if (searchTags.value.length > 0) {
     filteredImages = filteredImages.filter((img) => {
-      return searchTags.value.some((tag) => {
-        const tagLower = tag.toLowerCase();
-        return img.name && img.name.toLowerCase().startsWith(tagLower);
+      return searchTags.value.some((searchTag) => {
+        const searchTagLower = searchTag.toLowerCase();
+        // 检查图片是否有标签，并且标签中包含搜索关键词
+        if (img.tags && Array.isArray(img.tags)) {
+          return img.tags.some((imgTag) =>
+            imgTag.toLowerCase().includes(searchTagLower)
+          );
+        }
+        return false;
       });
     });
   }
@@ -1145,6 +1157,7 @@ function clearSearch() {
   cursor: pointer;
   transition: transform 0.2s ease;
 }
+
 .card.is-deleting img {
   filter: blur(4px);
   pointer-events: none;

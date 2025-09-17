@@ -63,6 +63,7 @@ export async function processPastedImages(files) {
         blob,
         groupId: 0, // 默认归类到"未分组"
         createdAt: Date.now(),
+        tags: [], // 初始化空的标签数组
       };
       
       processedImages.push(record);

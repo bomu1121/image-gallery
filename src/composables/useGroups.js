@@ -139,7 +139,10 @@ export function useGroups() {
       // 为图片创建 objectUrl
       currentGroupImages.value = groupImages.map((img) => ({
         ...img,
-        objectUrl: img.blob ? URL.createObjectURL(img.blob) : img.url,
+        objectUrl:
+          img.blob && img.blob instanceof Blob
+            ? URL.createObjectURL(img.blob)
+            : img.url,
       }));
 
       // 更新分组的图片数量
@@ -434,6 +437,7 @@ export function useGroups() {
         size: raw.size,
         blob,
         groupId: finalGroupId, // 使用实际的分组ID
+        tags: [], // 初始化空的标签数组
       };
       await putImage(record);
 

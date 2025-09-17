@@ -11,7 +11,9 @@
         <div class="option-item">
           <div class="option-info">
             <h5>导出完整数据</h5>
-            <p>将所有图片文件和元数据打包为ZIP文件，包含分组信息和图片数据</p>
+            <p>
+              将所有图片文件和元数据打包为ZIP文件，包含分组信息、图片数据、标签和备注
+            </p>
           </div>
           <el-button type="primary" @click="exportCompleteData">
             <el-icon><Download /></el-icon>
@@ -32,7 +34,9 @@
         <div class="option-item">
           <div class="option-info">
             <h5>导入完整数据</h5>
-            <p>从ZIP文件恢复图片文件和元数据，支持完整的数据迁移</p>
+            <p>
+              从ZIP文件恢复图片文件和元数据，支持完整的数据迁移，包括标签和备注
+            </p>
           </div>
           <el-upload
             ref="zipUploadRef"
@@ -179,16 +183,29 @@ async function exportCompleteData() {
 
     // 创建元数据文件
     const exportData = {
-      version: "1.0",
+      version: "1.1",
       exportTime: new Date().toISOString(),
-      images: images.map((img) => ({
-        id: img.id,
-        name: img.name,
-        type: img.type,
-        size: img.size,
-        groupId: img.groupId || 0,
-        createdAt: img.createdAt,
-      })),
+      images: images.map((img) => {
+        const exportImg = {
+          id: img.id,
+          name: img.name,
+          type: img.type,
+          size: img.size,
+          groupId: img.groupId || 0,
+          createdAt: img.createdAt,
+          tags: img.tags || [], // 包含标签数据
+          notes: img.notes || "", // 包含备注数据
+        };
+
+        // 调试日志
+        console.log(`导出图片: ${img.name}`, {
+          tags: img.tags,
+          notes: img.notes,
+          exportTags: exportImg.tags,
+        });
+
+        return exportImg;
+      }),
       groups: groups
         .filter((group) => group.id !== -1)
         .map((group) => ({
@@ -472,7 +489,16 @@ async function importCompleteData(file) {
           blob,
           groupId: imageData.groupId,
           createdAt: imageData.createdAt,
+          tags: imageData.tags || [], // 导入标签数据
+          notes: imageData.notes || "", // 导入备注数据
         };
+
+        // 调试日志
+        console.log(`导入图片: ${imageData.name}`, {
+          tags: imageData.tags,
+          notes: imageData.notes,
+          recordTags: record.tags,
+        });
 
         await putImage(record);
       } else {

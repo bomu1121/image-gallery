@@ -153,7 +153,25 @@ export async function putImage(image) {
     const tx = db.transaction(STORE_NAME, "readwrite");
     const store = tx.objectStore(STORE_NAME);
     const now = Date.now();
-    const data = { ...image, createdAt: image.createdAt || now };
+
+    // 确保数据可以被IndexedDB克隆
+    const data = {
+      ...image,
+      createdAt: image.createdAt || now,
+      // 确保tags是纯数组
+      tags: image.tags ? [...image.tags] : [],
+    };
+
+    // 调试日志
+    console.log(`putImage: ${image.name}`, {
+      originalTags: image.tags,
+      finalTags: data.tags,
+      notes: data.notes,
+    });
+
+    // 移除可能导致克隆问题的字段
+    delete data.objectUrl;
+
     const req = store.add(data);
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -198,8 +216,21 @@ export async function updateImage(id, updates) {
         return;
       }
 
-      // 合并更新数据
-      const updatedData = { ...existingData, ...updates };
+      // 合并更新数据，确保数据可以被IndexedDB克隆
+      const updatedData = {
+        ...existingData,
+        ...updates,
+        // 确保tags是纯数组，不包含任何复杂对象
+        tags: updates.tags
+          ? [...updates.tags]
+          : existingData.tags
+          ? [...existingData.tags]
+          : [],
+      };
+
+      // 移除可能导致克隆问题的字段
+      delete updatedData.objectUrl;
+
       const putReq = store.put(updatedData);
       putReq.onsuccess = () => resolve(putReq.result);
       putReq.onerror = () => reject(putReq.error);
@@ -287,8 +318,12 @@ export async function updateGroup(id, updates) {
         return;
       }
 
-      // 合并更新数据
+      // 合并更新数据，确保数据可以被IndexedDB克隆
       const updatedData = { ...existingData, ...updates };
+
+      // 移除可能导致克隆问题的字段
+      delete updatedData.objectUrl;
+
       const putReq = store.put(updatedData);
       putReq.onsuccess = () => resolve(putReq.result);
       putReq.onerror = () => reject(putReq.error);
