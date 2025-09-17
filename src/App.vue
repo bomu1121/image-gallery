@@ -9,6 +9,7 @@
         :active="activeKey"
         @go-home="goToHome"
         @show-settings="showSettingsPage = true"
+        @show-ai-logs="goToAILogs"
         @start-batch-delete="startBatchDelete"
       />
 
@@ -108,6 +109,8 @@ import {
   processPastedImages,
 } from "@/utils/modules/paste.js";
 import { putImage } from "@/utils/idb.js";
+import "@/utils/logManager.js"; // 初始化全局日志管理器
+import { aiImageAnalysisService } from "@/services/AIImageAnalysisService.js";
 
 const router = useRouter();
 const systemLang = useSystemLang();
@@ -183,6 +186,7 @@ const {
 // 计算当前侧边栏激活项
 const activeKey = computed(() => {
   if (showSettingsPage.value) return "settings";
+  if (router.currentRoute.value.path === "/ai-logs") return "ai-logs";
   return "home";
 });
 
@@ -192,6 +196,12 @@ function goToHome() {
   // 注意：不重置 batchDeleteMode 和 selectedImages，保持用户的操作状态
   // 只有在用户主动退出批量删除模式时才重置这些状态
   router.push("/gallery");
+}
+
+// 导航到AI日志页面
+function goToAILogs() {
+  showSettingsPage.value = false;
+  router.push("/ai-logs");
 }
 
 // 开始批量删除模式
@@ -402,6 +412,9 @@ onMounted(() => {
 
   // 添加全局粘贴事件监听器，使用 capture 模式
   document.addEventListener("paste", handleGlobalPaste, true);
+
+  // 加载AI服务配置
+  aiImageAnalysisService.loadConfigFromStorage();
 });
 </script>
 

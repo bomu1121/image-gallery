@@ -36,6 +36,18 @@ export const productionRouter = [
     component: () => import("@/views/ImageDetail.vue"),
     meta: { title: "图片详情" },
   },
+  {
+    path: "/settings",
+    name: "Settings",
+    component: () => import("@/components/SettingsPage.vue"),
+    meta: { title: "设置" },
+  },
+  {
+    path: "/ai-logs",
+    name: "AILogViewer",
+    component: () => import("@/views/AILogViewer.vue"),
+    meta: { title: "AI分析日志" },
+  },
 
   // 404
   { path: "/:catchAll(.*)", redirect: { name: "NotFound" } },

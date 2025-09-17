@@ -22,6 +22,14 @@
     <div class="sidebar-bottom">
       <div
         class="sidebar-item"
+        :class="{ active: active === 'ai-logs' }"
+        @click="$emit('showAILogs')"
+        title="AI分析日志"
+      >
+        <el-icon><icon-document /></el-icon>
+      </div>
+      <div
+        class="sidebar-item"
         :class="{ active: active === 'settings' }"
         @click="$emit('showSettings')"
         title="设置"
@@ -37,6 +45,7 @@ import {
   Upload as IconUpload,
   Setting as IconSetting,
   Grid as IconHome,
+  Document as IconDocument,
 } from "@element-plus/icons-vue";
 
 defineProps({
@@ -46,7 +55,7 @@ defineProps({
   },
 });
 
-defineEmits(["showUpload", "goHome", "showSettings"]);
+defineEmits(["showUpload", "goHome", "showSettings", "showAILogs"]);
 </script>
 
 <style scoped>

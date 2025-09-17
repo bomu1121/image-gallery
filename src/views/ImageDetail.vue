@@ -92,7 +92,88 @@
 
         <!-- 标签区域 -->
         <div class="info-section-item">
-          <h3 class="section-title">标签</h3>
+          <div class="section-header">
+            <h3 class="section-title">标签</h3>
+            <div class="tag-actions">
+              <el-button
+                size="small"
+                type="primary"
+                :loading="isAnalyzing"
+                :disabled="!hasValidApiKey"
+                @click="analyzeImageWithAI"
+                class="ai-analyze-button"
+              >
+                <el-icon><Star /></el-icon>
+                AI分析
+              </el-button>
+              <el-button
+                size="small"
+                @click="goToAISettings"
+                class="ai-config-button"
+              >
+                <el-icon><Setting /></el-icon>
+                配置
+              </el-button>
+            </div>
+          </div>
+
+          <!-- AI分析结果 -->
+          <div v-if="aiAnalysisResult.length > 0" class="ai-analysis-result">
+            <div class="ai-result-header">
+              <span class="ai-result-title">AI推荐标签</span>
+              <div class="ai-result-actions">
+                <el-button
+                  size="small"
+                  type="text"
+                  @click="showAILogs"
+                  class="view-logs-button"
+                >
+                  <el-icon><Document /></el-icon>
+                  查看日志
+                </el-button>
+                <el-button
+                  size="small"
+                  type="text"
+                  @click="clearAIAnalysis"
+                  class="clear-ai-button"
+                >
+                  清除
+                </el-button>
+              </div>
+            </div>
+            <div class="ai-tags">
+              <div
+                v-for="aiTag in aiAnalysisResult"
+                :key="aiTag.tag"
+                class="ai-tag-item"
+                :class="{ 'ai-tag-selected': selectedAITags.has(aiTag.tag) }"
+                @click="toggleAITag(aiTag.tag)"
+              >
+                <span class="ai-tag-text">{{ aiTag.tag }}</span>
+                <span class="ai-tag-confidence"
+                  >{{ (aiTag.confidence * 100).toFixed(0) }}%</span
+                >
+                <el-icon
+                  v-if="selectedAITags.has(aiTag.tag)"
+                  class="ai-tag-check"
+                >
+                  <Check />
+                </el-icon>
+              </div>
+            </div>
+            <div class="ai-actions">
+              <el-button
+                size="small"
+                type="primary"
+                :disabled="selectedAITags.size === 0"
+                @click="addSelectedAITags"
+                class="add-ai-tags-button"
+              >
+                添加选中标签 ({{ selectedAITags.size }})
+              </el-button>
+            </div>
+          </div>
+
           <div class="tags-container">
             <div class="tags-display">
               <!-- 现有标签 -->
@@ -154,13 +235,18 @@ import {
 } from "element-plus";
 import {
   ArrowLeft,
-  View as IconView,
+  View,
   Edit,
   Delete,
   Plus,
-} from "@element-plus/icons-vue";
+  Star,
+  Setting,
+  Check,
+  Document,
+} from "@/utils/icons.js";
 import { getImageById, deleteImage, updateImage } from "@/utils/idb.js";
 import { useDrawerNotification } from "@/composables/useDrawerNotification.js";
+import { aiImageAnalysisService } from "@/services/AIImageAnalysisService.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -173,6 +259,47 @@ const tagInput = ref(null);
 const isAddingTag = ref(false);
 const tagInputWidth = ref(80); // 默认最小宽度
 const { success, error } = useDrawerNotification();
+
+// AI分析相关状态
+const isAnalyzing = ref(false);
+const aiAnalysisResult = ref([]);
+const selectedAITags = ref(new Set());
+
+// 获取当前选中的AI服务
+const getCurrentAIService = () => {
+  try {
+    const config = localStorage.getItem("ai-service-config");
+    if (config) {
+      const parsedConfig = JSON.parse(config);
+      return parsedConfig.selectedProvider || null;
+    }
+  } catch (err) {
+    console.warn("获取AI服务配置失败:", err);
+  }
+  return null;
+};
+
+// 计算是否有有效的API密钥
+const hasValidApiKey = computed(() => {
+  const currentService = getCurrentAIService();
+  if (currentService) {
+    return aiImageAnalysisService.isServiceConfigured(currentService);
+  }
+
+  // 如果没有选中服务，检查是否有任何服务可用
+  const status = aiImageAnalysisService.getApiStatus();
+  return (
+    status.openai ||
+    status.googleVision ||
+    status.azureVision ||
+    status.baiduErnie ||
+    status.alibabaQwen ||
+    status.zhipuAI ||
+    status.kimi ||
+    status.doubao ||
+    status.silicoflow
+  );
+});
 
 function revokeObjectUrl(img) {
   if (img && img.objectUrl) {
@@ -398,6 +525,143 @@ async function removeTag(tagToRemove) {
     image.value.tags.push(tagToRemove);
   }
 }
+
+// AI分析相关函数
+async function analyzeImageWithAI() {
+  if (!image.value) {
+    error("图片不存在");
+    return;
+  }
+
+  if (!hasValidApiKey.value) {
+    error("请先配置AI服务API密钥");
+    goToAISettings();
+    return;
+  }
+
+  isAnalyzing.value = true;
+
+  try {
+    // 获取图片的blob数据
+    let imageBlob;
+    if (image.value.blob && image.value.blob instanceof Blob) {
+      imageBlob = image.value.blob;
+    } else if (image.value.objectUrl) {
+      const response = await fetch(image.value.objectUrl);
+      imageBlob = await response.blob();
+    } else {
+      error("无法获取图片数据");
+      return;
+    }
+
+    // 初始化AI服务（如果还未初始化）
+    await aiImageAnalysisService.initialize();
+
+    // 获取当前选中的AI服务
+    const currentService = getCurrentAIService();
+
+    // 分析图片
+    const recommendedTags = await aiImageAnalysisService.analyzeImage(
+      imageBlob,
+      image.value.name,
+      currentService
+    );
+
+    if (recommendedTags.length === 0) {
+      error("AI分析未找到合适的标签");
+      return;
+    }
+
+    // 过滤掉已存在的标签
+    const existingTags = new Set(
+      (image.value.tags || []).map((tag) => tag.toLowerCase())
+    );
+    const newTags = recommendedTags.filter(
+      (tagData) => !existingTags.has(tagData.tag.toLowerCase())
+    );
+
+    if (newTags.length === 0) {
+      error("所有推荐标签都已存在");
+      return;
+    }
+
+    aiAnalysisResult.value = newTags;
+    selectedAITags.value.clear();
+
+    success(`AI分析完成，找到 ${newTags.length} 个推荐标签`);
+  } catch (err) {
+    console.error("AI分析失败:", err);
+    error("AI分析失败，请检查API配置");
+  } finally {
+    isAnalyzing.value = false;
+  }
+}
+
+function toggleAITag(tag) {
+  if (selectedAITags.value.has(tag)) {
+    selectedAITags.value.delete(tag);
+  } else {
+    selectedAITags.value.add(tag);
+  }
+}
+
+async function addSelectedAITags() {
+  if (selectedAITags.value.size === 0) {
+    warning("请先选择要添加的标签");
+    return;
+  }
+
+  if (!image.value) return;
+
+  try {
+    const tagsToAdd = Array.from(selectedAITags.value);
+
+    // 确保tags字段存在
+    if (!image.value.tags) {
+      image.value.tags = [];
+    }
+
+    // 添加新标签（避免重复）
+    const newTags = [...image.value.tags];
+    tagsToAdd.forEach((tag) => {
+      if (!newTags.includes(tag)) {
+        newTags.push(tag);
+      }
+    });
+
+    // 更新本地状态
+    image.value.tags = newTags;
+
+    // 保存到数据库
+    await updateImage(image.value.id, { tags: newTags });
+
+    success(`成功添加 ${tagsToAdd.length} 个AI推荐标签`);
+
+    // 清除AI分析结果
+    clearAIAnalysis();
+  } catch (err) {
+    error("添加标签失败");
+    // 恢复本地状态
+    if (image.value.tags) {
+      image.value.tags = image.value.tags.filter(
+        (tag) => !selectedAITags.value.has(tag)
+      );
+    }
+  }
+}
+
+function clearAIAnalysis() {
+  aiAnalysisResult.value = [];
+  selectedAITags.value.clear();
+}
+
+function goToAISettings() {
+  router.push({ name: "Settings", query: { tab: "ai-config" } });
+}
+
+function showAILogs() {
+  router.push("/ai-logs");
+}
 </script>
 
 <style scoped>
@@ -523,6 +787,40 @@ async function removeTag(tagToRemove) {
   height: 16px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 2px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.tag-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ai-analyze-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  color: white !important;
+}
+
+.ai-analyze-button:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%) !important;
+}
+
+.ai-config-button {
+  background: #f5f5f5 !important;
+  border-color: #d9d9d9 !important;
+  color: #666 !important;
+}
+
+.ai-config-button:hover {
+  background: #e6e6e6 !important;
+  border-color: #d9d9d9 !important;
+  color: #333 !important;
 }
 
 .info-grid {
@@ -757,6 +1055,128 @@ async function removeTag(tagToRemove) {
 
 .tag-input-field::placeholder {
   color: #8a9ba8;
+}
+
+/* AI分析结果样式 */
+.ai-analysis-result {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: rgba(102, 126, 234, 0.05);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 8px;
+}
+
+.ai-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.ai-result-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #667eea;
+}
+
+.ai-result-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.view-logs-button {
+  color: #409eff !important;
+  font-size: 12px !important;
+}
+
+.view-logs-button:hover {
+  color: #337ecc !important;
+}
+
+.clear-ai-button {
+  color: #999 !important;
+  font-size: 12px !important;
+}
+
+.clear-ai-button:hover {
+  color: #666 !important;
+}
+
+.ai-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ai-tag-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 16px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.ai-tag-item:hover {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: rgba(102, 126, 234, 0.5);
+}
+
+.ai-tag-selected {
+  background: rgba(102, 126, 234, 0.2) !important;
+  border-color: #667eea !important;
+  color: #667eea !important;
+}
+
+.ai-tag-text {
+  font-weight: 500;
+}
+
+.ai-tag-confidence {
+  font-size: 11px;
+  color: #999;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+.ai-tag-selected .ai-tag-confidence {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+}
+
+.ai-tag-check {
+  font-size: 12px;
+  color: #667eea;
+}
+
+.ai-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.add-ai-tags-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  color: white !important;
+  font-size: 12px !important;
+  padding: 6px 16px !important;
+}
+
+.add-ai-tags-button:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%) !important;
+}
+
+.add-ai-tags-button:disabled {
+  background: #f5f5f5 !important;
+  color: #c0c4cc !important;
 }
 
 .empty {

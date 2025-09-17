@@ -54,6 +54,9 @@
           @data-exported="$emit('dataExported', $event)"
         />
 
+        <!-- AI设置内容 -->
+        <AISettings v-else-if="activeSetting === 'ai-config'" />
+
         <!-- 其他设置内容可以在这里添加 -->
         <div v-else class="empty-content">
           <el-icon class="empty-icon"><icon-setting /></el-icon>
@@ -65,16 +68,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
-import {
-  Picture as IconPicture,
-  Setting as IconSetting,
-  Upload as IconCloudUpload,
-  Download as IconDownload,
-} from "@element-plus/icons-vue";
+import { ref, computed, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import { Picture, Setting, Upload, Download, Star } from "@/utils/icons.js";
 import BackgroundSettingsContent from "./BackgroundSettingsContent.vue";
 import CloudSyncSettings from "./CloudSyncSettings.vue";
 import ImportExportSettings from "./ImportExportSettings.vue";
+import AISettings from "./AISettings.vue";
 
 const props = defineProps({
   backgroundImage: {
@@ -106,25 +106,43 @@ const settingsItems = [
     key: "background",
     title: "背景设置",
     description: "自定义应用背景图片和透明度",
-    icon: IconPicture,
+    icon: Picture,
   },
   {
     key: "cloud-sync",
     title: "云同步",
     description: "配置云服务器实现数据同步",
-    icon: IconCloudUpload,
+    icon: Upload,
   },
   {
     key: "import-export",
     title: "导入导出",
     description: "图片资源的导入和导出功能",
-    icon: IconDownload,
+    icon: Download,
+  },
+  {
+    key: "ai-config",
+    title: "AI 配置",
+    description: "配置 AI 服务用于图片标签分析",
+    icon: Star,
   },
   // 可以在这里添加更多设置项
 ];
 
+const route = useRoute();
+
 // 当前激活的设置项
 const activeSetting = ref("background");
+
+// 根据URL参数设置激活的标签
+onMounted(() => {
+  if (route.query.tab) {
+    const validTabs = settingsItems.map((item) => item.key);
+    if (validTabs.includes(route.query.tab)) {
+      activeSetting.value = route.query.tab;
+    }
+  }
+});
 
 // 获取当前设置项的标题
 const getCurrentSettingTitle = () => {
