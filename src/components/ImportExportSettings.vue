@@ -480,39 +480,27 @@ async function importCompleteData(file) {
       }
     }
 
-    // 完成导入
-    updateNotificationStatus(
-      progressNotificationId,
-      "success",
-      "导入完成",
-      `成功导入 ${data.groups.length} 个分组和 ${data.images.length} 张图片`
-    );
+    // 完成导入 - 直接关闭进度通知并显示最终成功消息
+    const message =
+      importOptions.value.importMode === "merge"
+        ? `成功导入完整数据（合并模式）：${data.groups.length} 个分组，${data.images.length} 张图片。重复项目已自动跳过。`
+        : `成功导入完整数据（替换模式）：${data.groups.length} 个分组，${data.images.length} 张图片`;
 
-    setTimeout(() => {
-      const message =
-        importOptions.value.importMode === "merge"
-          ? `成功导入完整数据（合并模式）：${data.groups.length} 个分组，${data.images.length} 张图片。重复项目已自动跳过。`
-          : `成功导入完整数据（替换模式）：${data.groups.length} 个分组，${data.images.length} 张图片`;
+    // 关闭进度通知
+    closeNotification(progressNotificationId);
 
-      success(message);
-      emit("dataImported", "complete");
-    }, 1000);
+    // 显示最终成功消息
+    success(message);
+    emit("dataImported", "complete");
   } catch (err) {
     console.error("导入完整数据失败:", err);
 
-    // 更新通知状态为错误
+    // 关闭进度通知并显示错误消息
     if (progressNotificationId) {
-      updateNotificationStatus(
-        progressNotificationId,
-        "exception",
-        "导入失败",
-        err.message
-      );
+      closeNotification(progressNotificationId);
     }
 
-    setTimeout(() => {
-      error("导入完整数据失败");
-    }, 2000);
+    error("导入完整数据失败");
   } finally {
     importing.value = false;
   }
