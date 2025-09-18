@@ -67,8 +67,9 @@ class AIImageAnalysisService {
     this.featureCache = new Map(); // 图片特征缓存 {imageId: featureVector}
 
     // 推荐方法配置
-    this.recommendationMethod = "similarity-based"; // 默认使用基于相似图集的方法
+    this.recommendationMethod = "ai-direct-recommendation"; // 默认使用AI直接推荐
     this.supportedMethods = [
+      "ai-direct-recommendation", // AI直接推荐（主要方法）
       "similarity-based",
       "semantic-analysis",
       "visual-similarity",
@@ -848,11 +849,17 @@ class AIImageAnalysisService {
           imageName,
           preferredService
         );
+      case "ai-direct-recommendation":
+        return await this.analyzeImageWithAIDirectRecommendation(
+          imageBlob,
+          imageName,
+          preferredService
+        );
       default:
         console.warn(
           `❌ 不支持的推荐方法: ${recommendationMethod}，使用默认方法`
         );
-        return await this.analyzeImageWithSimilarityBasedRecommendation(
+        return await this.analyzeImageWithAIDirectRecommendation(
           imageBlob,
           imageName,
           preferredService
@@ -3567,6 +3574,156 @@ class AIImageAnalysisService {
    */
   getSupportedMethods() {
     return [...this.supportedMethods];
+  }
+
+  /**
+   * AI直接推荐标签（不依赖已有标签库）
+   * @param {Blob} imageBlob - 图片数据
+   * @param {string} imageName - 图片名称
+   * @param {string} preferredService - 优先使用的服务（可选）
+   * @returns {Promise<Array>} 推荐的标签列表
+   */
+  async analyzeImageWithAIDirectRecommendation(
+    imageBlob,
+    imageName = "",
+    preferredService = null
+  ) {
+    try {
+      console.log(
+        `\n🎯 ========== 开始AI直接推荐标签: ${imageName} ==========`
+      );
+
+      // 获取当前配置的AI服务
+      const currentService =
+        preferredService || this.getCurrentConfiguredService();
+      if (!currentService) {
+        throw new Error("没有配置AI服务，请先配置API密钥");
+      }
+
+      console.log(`🤖 使用AI服务: ${currentService}`);
+
+      // 调用AI服务直接生成标签推荐
+      const recommendations = await this.generateTagsWithAI(
+        imageBlob,
+        currentService
+      );
+
+      if (!recommendations || recommendations.length === 0) {
+        console.log(`❌ AI未能生成标签推荐`);
+        return [];
+      }
+
+      console.log(`📊 AI生成了 ${recommendations.length} 个标签推荐`);
+
+      // 按置信度排序
+      const finalRecommendations = recommendations
+        .sort((a, b) => b.confidence - a.confidence)
+        .slice(0, 15); // 限制返回前15个推荐
+
+      console.log(`\n🏆 ========== AI直接推荐结果 ==========`);
+      finalRecommendations.forEach((rec, index) => {
+        console.log(
+          `${index + 1}. ${rec.tag} - 置信度: ${(rec.confidence * 100).toFixed(
+            1
+          )}%`
+        );
+      });
+
+      return finalRecommendations;
+    } catch (error) {
+      console.error("❌ AI直接推荐失败:", error);
+      return [];
+    }
+  }
+
+  /**
+   * 使用AI服务生成标签推荐
+   * @param {Blob} imageBlob - 图片数据
+   * @param {string} service - AI服务名
+   * @returns {Promise<Array>} 标签推荐列表
+   */
+  async generateTagsWithAI(imageBlob, service) {
+    const base64 = await this.blobToBase64(imageBlob);
+
+    console.log(`🤖 调用 ${service} 生成标签推荐`);
+
+    const requestBody = {
+      model: this.apiConfig[service].model || "gpt-4-vision-preview",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "请分析这张图片的内容，生成10-15个简洁的中文标签，用逗号分隔。标签应该描述图片中的主要元素、人物特征、颜色、风格等。例如：长发,微笑,白色,可爱,清新",
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${base64}`,
+                detail: "high",
+              },
+            },
+          ],
+        },
+      ],
+      max_tokens: 200,
+      temperature: 0.3,
+    };
+
+    const response = await fetch(this.apiConfig[service].endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.apiConfig[service].apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ ${service} API错误: ${response.status}`, errorText);
+      throw new Error(`${service} API错误: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0]?.message?.content;
+
+    if (!content) {
+      throw new Error(`${service}返回空内容`);
+    }
+
+    // 解析AI返回的标签
+    const recommendations = this.parseSimpleTags(content);
+    console.log(`🎯 解析到的标签推荐:`, recommendations);
+    return recommendations;
+  }
+
+  /**
+   * 解析简单的标签文本
+   * @param {string} content - AI返回的内容
+   * @returns {Array} 标签推荐列表
+   */
+  parseSimpleTags(content) {
+    console.log(`📝 开始解析标签: "${content}"`);
+
+    // 按逗号分割标签
+    const tags = content
+      .split(/[,，、]/)
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length >= 2 && tag.length <= 8)
+      .slice(0, 15); // 限制最多15个标签
+
+    // 转换为推荐格式
+    const recommendations = tags.map((tag, index) => ({
+      tag: tag.toLowerCase(),
+      confidence: Math.max(0.9 - index * 0.05, 0.5), // 递减的置信度
+      reason: "AI直接分析推荐",
+      source: "ai-direct-recommendation",
+    }));
+
+    console.log(`✅ 解析到 ${recommendations.length} 个标签:`, recommendations);
+    return recommendations;
   }
 
   /**

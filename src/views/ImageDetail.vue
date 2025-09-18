@@ -110,6 +110,14 @@
                     </div>
                   </div>
                 </el-option>
+                <el-option label="AI直接推荐" value="ai-direct-recommendation">
+                  <div class="analysis-mode-option">
+                    <div class="mode-title">AI直接推荐</div>
+                    <div class="mode-description">
+                      AI直接分析图片生成新标签（不依赖标签库）
+                    </div>
+                  </div>
+                </el-option>
                 <el-option label="视觉相似性分析" value="visual-similarity">
                   <div class="analysis-mode-option">
                     <div class="mode-title">视觉相似性分析</div>
@@ -136,6 +144,8 @@
                 {{
                   analysisMode === "similarity-based"
                     ? "相似图集分析"
+                    : analysisMode === "ai-direct-recommendation"
+                    ? "AI直接推荐"
                     : analysisMode === "visual-similarity"
                     ? "视觉分析"
                     : "AI分析"
@@ -184,10 +194,21 @@
                 :class="{ 'ai-tag-selected': selectedAITags.has(aiTag.tag) }"
                 @click="toggleAITag(aiTag.tag)"
               >
-                <span class="ai-tag-text">{{ aiTag.tag }}</span>
-                <span class="ai-tag-confidence"
-                  >{{ (aiTag.confidence * 100).toFixed(0) }}%</span
+                <div class="ai-tag-content">
+                  <span class="ai-tag-text">{{ aiTag.tag }}</span>
+                  <span class="ai-tag-confidence"
+                    >{{ (aiTag.confidence * 100).toFixed(0) }}%</span
+                  >
+                </div>
+                <div
+                  v-if="
+                    aiTag.category &&
+                    analysisMode === 'ai-direct-recommendation'
+                  "
+                  class="ai-tag-category"
                 >
+                  {{ aiTag.category }}
+                </div>
                 <el-icon
                   v-if="selectedAITags.has(aiTag.tag)"
                   class="ai-tag-check"
@@ -301,7 +322,7 @@ const { success, error } = useDrawerNotification();
 const isAnalyzing = ref(false);
 const aiAnalysisResult = ref([]);
 const selectedAITags = ref(new Set());
-const analysisMode = ref("similarity-based"); // 分析模式：similarity-based、visual-similarity 或 semantic-analysis
+const analysisMode = ref("ai-direct-recommendation"); // 分析模式：ai-direct-recommendation、similarity-based、visual-similarity 或 semantic-analysis
 
 // 获取当前选中的AI服务
 const getCurrentAIService = () => {
@@ -601,7 +622,15 @@ async function analyzeImageWithAI() {
     let recommendedTags = [];
 
     // 根据分析模式选择不同的分析方法
-    if (analysisMode.value === "similarity-based") {
+    if (analysisMode.value === "ai-direct-recommendation") {
+      console.log("🤖 使用AI直接推荐模式");
+      recommendedTags = await aiImageAnalysisService.analyzeImage(
+        imageBlob,
+        image.value.name,
+        currentService,
+        "ai-direct-recommendation"
+      );
+    } else if (analysisMode.value === "similarity-based") {
       console.log("🎯 使用相似图集分析模式");
       recommendedTags = await aiImageAnalysisService.analyzeImage(
         imageBlob,
@@ -1259,6 +1288,22 @@ function showAILogs() {
 .ai-tag-check {
   font-size: 12px;
   color: #667eea;
+}
+
+.ai-tag-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.ai-tag-category {
+  font-size: 10px;
+  color: #8a9ba8;
+  background: rgba(138, 155, 168, 0.1);
+  padding: 2px 6px;
+  border-radius: 6px;
+  margin-left: 4px;
 }
 
 .ai-actions {
