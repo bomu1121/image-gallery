@@ -4,6 +4,8 @@
  */
 
 import analysisLogger from "@/utils/analysisLogger.js";
+import { visualFeatureExtractor } from "./VisualFeatureExtractor.js";
+import { visualSimilarityCalculator } from "./VisualSimilarityCalculator.js";
 
 class AIImageAnalysisService {
   constructor() {
@@ -61,8 +63,24 @@ class AIImageAnalysisService {
 
     this.existingTags = new Set(); // 存储现有标签
     this.tagFeatureDatabase = new Map(); // 标签特征数据库 {tag: {features: [], images: []}}
-    this.similarityThreshold = 0.7; // 相似度阈值
+    this.similarityThreshold = 0.5; // 相似度阈值（宽松匹配）
     this.featureCache = new Map(); // 图片特征缓存 {imageId: featureVector}
+
+    // 推荐方法配置
+    this.recommendationMethod = "similarity-based"; // 默认使用基于相似图集的方法
+    this.supportedMethods = [
+      "similarity-based",
+      "semantic-analysis",
+      "visual-similarity",
+    ];
+
+    // 新增：视觉相似性分析相关
+    this.tagVisualDatabase = new Map(); // 标签视觉特征数据库 {tag: {visualFeatures: [], images: []}}
+    this.visualSimilarityThreshold = 0.5; // 视觉相似度阈值（宽松匹配）
+    this.visualFeatureCache = new Map(); // 图片视觉特征缓存 {imageId: visualFeatureVector}
+
+    // 初始化时加载用户配置
+    this.loadConfigFromStorage();
   }
 
   /**
@@ -794,13 +812,349 @@ class AIImageAnalysisService {
   }
 
   /**
-   * 分析图片内容并推荐标签
+   * 分析图片内容并推荐标签（支持多种推荐方法）
+   * @param {Blob} imageBlob - 图片数据
+   * @param {string} imageName - 图片名称
+   * @param {string} preferredService - 优先使用的服务（可选）
+   * @param {string} method - 推荐方法（可选，默认使用配置的方法）
+   * @returns {Promise<Array>} 推荐的标签列表
+   */
+  async analyzeImage(
+    imageBlob,
+    imageName = "",
+    preferredService = null,
+    method = null
+  ) {
+    const recommendationMethod = method || this.recommendationMethod;
+
+    console.log(`🎯 使用推荐方法: ${recommendationMethod}`);
+
+    switch (recommendationMethod) {
+      case "similarity-based":
+        return await this.analyzeImageWithSimilarityBasedRecommendation(
+          imageBlob,
+          imageName,
+          preferredService
+        );
+      case "semantic-analysis":
+        return await this.analyzeImageWithSemanticAnalysis(
+          imageBlob,
+          imageName,
+          preferredService
+        );
+      case "visual-similarity":
+        return await this.analyzeImageWithVisualSimilarity(
+          imageBlob,
+          imageName,
+          preferredService
+        );
+      default:
+        console.warn(
+          `❌ 不支持的推荐方法: ${recommendationMethod}，使用默认方法`
+        );
+        return await this.analyzeImageWithSimilarityBasedRecommendation(
+          imageBlob,
+          imageName,
+          preferredService
+        );
+    }
+  }
+
+  /**
+   * 基于相似图集的标签推荐（新方法）
    * @param {Blob} imageBlob - 图片数据
    * @param {string} imageName - 图片名称
    * @param {string} preferredService - 优先使用的服务（可选）
    * @returns {Promise<Array>} 推荐的标签列表
    */
-  async analyzeImage(imageBlob, imageName = "", preferredService = null) {
+  async analyzeImageWithSimilarityBasedRecommendation(
+    imageBlob,
+    imageName = "",
+    preferredService = null
+  ) {
+    // 开始记录分析日志
+    const analysisId = await analysisLogger.startAnalysis({
+      imageName,
+      imageId: null,
+      aiService: preferredService || this.getCurrentConfiguredService(),
+      analysisType: "similarity-based-recommendation",
+    });
+
+    try {
+      console.log(
+        `\n🎯 ========== 开始基于相似图集的标签推荐: ${imageName} ==========`
+      );
+
+      analysisLogger.addStep(analysisId, "开始相似图集推荐", {
+        imageName,
+        method: "similarity-based-recommendation",
+      });
+
+      // 获取当前配置的AI服务
+      const currentService =
+        preferredService || this.getCurrentConfiguredService();
+      if (!currentService) {
+        throw new Error("没有配置AI服务，请先配置API密钥");
+      }
+
+      console.log(`🤖 使用AI服务: ${currentService}`);
+      analysisLogger.addStep(analysisId, "选择AI服务", {
+        service: currentService,
+      });
+
+      // 1. 提取当前图片的视觉特征
+      console.log(`🔄 开始提取当前图片视觉特征...`);
+      const currentImageFeatures =
+        await visualFeatureExtractor.extractVisualFeatures(
+          imageBlob,
+          currentService
+        );
+
+      if (!currentImageFeatures || currentImageFeatures.length === 0) {
+        throw new Error("无法提取图片视觉特征");
+      }
+
+      console.log(`✅ 当前图片视觉特征提取成功:`, currentImageFeatures);
+      analysisLogger.addStep(analysisId, "视觉特征提取完成", {
+        featuresCount: currentImageFeatures.length,
+        features: currentImageFeatures,
+      });
+
+      // 2. 搜索相似图片
+      console.log(`🔍 开始搜索相似图片...`);
+      const similarImages = await this.findSimilarImages(
+        currentImageFeatures,
+        currentService
+      );
+
+      console.log(`📊 找到 ${similarImages.length} 张相似图片`);
+      analysisLogger.addStep(analysisId, "相似图片搜索完成", {
+        similarImagesCount: similarImages.length,
+        similarImages: similarImages.slice(0, 5).map((img) => ({
+          id: img.id,
+          name: img.name,
+          similarity: img.similarity,
+          tags: img.tags,
+        })),
+      });
+
+      if (similarImages.length === 0) {
+        console.log(`❌ 没有找到相似图片，无法推荐标签`);
+        await analysisLogger.completeAnalysis(analysisId, [], {
+          reason: "没有找到相似图片",
+          analysisType: "similarity-based-recommendation",
+        });
+        return [];
+      }
+
+      // 3. 收集相似图片的标签
+      console.log(`🏷️ 开始收集相似图片的标签...`);
+      const tagRecommendations =
+        this.collectTagsFromSimilarImages(similarImages);
+
+      console.log(`📊 收集到 ${tagRecommendations.length} 个标签推荐`);
+      analysisLogger.addStep(analysisId, "标签收集完成", {
+        tagRecommendationsCount: tagRecommendations.length,
+        tagRecommendations: tagRecommendations.slice(0, 10),
+      });
+
+      // 4. 按相似度和标签频率排序
+      const finalRecommendations = tagRecommendations
+        .sort((a, b) => {
+          // 先按相似度排序，再按标签频率排序
+          if (Math.abs(a.confidence - b.confidence) < 0.01) {
+            return b.tagCount - a.tagCount;
+          }
+          return b.confidence - a.confidence;
+        })
+        .slice(0, 10); // 限制返回前10个推荐
+
+      console.log(`\n🏆 ========== 最终推荐结果 ==========`);
+      finalRecommendations.forEach((rec, index) => {
+        console.log(
+          `${index + 1}. ${rec.tag} - 相似度: ${(rec.confidence * 100).toFixed(
+            1
+          )}% - 出现次数: ${rec.tagCount}`
+        );
+      });
+
+      // 完成分析日志记录
+      await analysisLogger.completeAnalysis(analysisId, finalRecommendations, {
+        featuresExtracted: currentImageFeatures.length,
+        similarImagesFound: similarImages.length,
+        recommendationsGenerated: finalRecommendations.length,
+        analysisType: "similarity-based-recommendation",
+      });
+
+      return finalRecommendations;
+    } catch (error) {
+      console.error("❌ 基于相似图集的标签推荐失败:", error);
+      await analysisLogger.failAnalysis(analysisId, error);
+      return [];
+    }
+  }
+
+  /**
+   * 搜索相似图片
+   * @param {Array} currentFeatures - 当前图片的特征向量
+   * @param {string} service - AI服务名
+   * @returns {Promise<Array>} 相似图片列表
+   */
+  async findSimilarImages(currentFeatures, service) {
+    try {
+      const { getAllImages } = await import("@/utils/idb.js");
+      const allImages = await getAllImages();
+
+      console.log(`📚 开始与 ${allImages.length} 张现有图片进行相似度比较`);
+
+      const similarImages = [];
+      const similarityThreshold = this.visualSimilarityThreshold || 0.3; // 降低阈值以找到更多相似图片
+
+      for (const image of allImages) {
+        try {
+          // 检查图片是否有标签（只对有标签的图片进行相似度比较）
+          if (!image.tags || image.tags.length === 0) {
+            continue;
+          }
+
+          // 获取图片的视觉特征（优先使用缓存）
+          let imageFeatures;
+          if (this.visualFeatureCache.has(image.id)) {
+            imageFeatures = this.visualFeatureCache.get(image.id);
+            console.log(`💾 使用缓存特征: ${image.name || image.id}`);
+          } else {
+            // 提取图片特征
+            const imageBlob = await this.getImageBlob(image);
+            if (!imageBlob) continue;
+
+            imageFeatures = await visualFeatureExtractor.extractVisualFeatures(
+              imageBlob,
+              service
+            );
+
+            if (imageFeatures && imageFeatures.length > 0) {
+              // 缓存特征
+              this.visualFeatureCache.set(image.id, imageFeatures);
+            } else {
+              continue;
+            }
+          }
+
+          // 计算相似度
+          const similarity =
+            visualSimilarityCalculator.calculateVisualSimilarity(
+              currentFeatures,
+              imageFeatures
+            );
+
+          console.log(
+            `🔍 图片 ${image.name || image.id} 相似度: ${(
+              similarity * 100
+            ).toFixed(1)}%`
+          );
+
+          if (similarity >= similarityThreshold) {
+            similarImages.push({
+              ...image,
+              similarity,
+            });
+            console.log(`✅ 图片 ${image.name || image.id} 通过相似度检查！`);
+          }
+        } catch (error) {
+          console.warn(`❌ 处理图片 ${image.name || image.id} 失败:`, error);
+        }
+      }
+
+      // 按相似度排序
+      similarImages.sort((a, b) => b.similarity - a.similarity);
+
+      console.log(
+        `🎯 相似图片搜索完成，找到 ${similarImages.length} 张相似图片`
+      );
+
+      return similarImages;
+    } catch (error) {
+      console.error("❌ 搜索相似图片失败:", error);
+      return [];
+    }
+  }
+
+  /**
+   * 从相似图片中收集标签推荐
+   * @param {Array} similarImages - 相似图片列表
+   * @returns {Array} 标签推荐列表
+   */
+  collectTagsFromSimilarImages(similarImages) {
+    const tagMap = new Map(); // {tag: {count: number, totalSimilarity: number, images: []}}
+
+    console.log(`🏷️ 开始从 ${similarImages.length} 张相似图片收集标签`);
+
+    for (const image of similarImages) {
+      if (image.tags && Array.isArray(image.tags)) {
+        for (const tag of image.tags) {
+          const normalizedTag = tag.toLowerCase();
+
+          if (!tagMap.has(normalizedTag)) {
+            tagMap.set(normalizedTag, {
+              count: 0,
+              totalSimilarity: 0,
+              images: [],
+            });
+          }
+
+          const tagData = tagMap.get(normalizedTag);
+          tagData.count++;
+          tagData.totalSimilarity += image.similarity;
+          tagData.images.push({
+            id: image.id,
+            name: image.name,
+            similarity: image.similarity,
+          });
+        }
+      }
+    }
+
+    // 转换为推荐格式
+    const recommendations = [];
+    for (const [tag, data] of tagMap) {
+      const averageSimilarity = data.totalSimilarity / data.count;
+      const confidence = Math.min(averageSimilarity, 1.0); // 确保不超过1
+
+      recommendations.push({
+        tag,
+        confidence,
+        tagCount: data.count,
+        reason: `在 ${data.count} 张相似图片中发现，平均相似度: ${(
+          averageSimilarity * 100
+        ).toFixed(1)}%`,
+        source: "similarity-based",
+        similarImages: data.images.slice(0, 3), // 只保留前3张相似图片的信息
+      });
+
+      console.log(
+        `📊 标签 "${tag}": 出现 ${data.count} 次，平均相似度: ${(
+          averageSimilarity * 100
+        ).toFixed(1)}%`
+      );
+    }
+
+    console.log(`✅ 标签收集完成，共收集到 ${recommendations.length} 个标签`);
+
+    return recommendations;
+  }
+
+  /**
+   * 分析图片内容并推荐标签（原有方法，保留作为备用）
+   * @param {Blob} imageBlob - 图片数据
+   * @param {string} imageName - 图片名称
+   * @param {string} preferredService - 优先使用的服务（可选）
+   * @returns {Promise<Array>} 推荐的标签列表
+   */
+  async analyzeImageWithSemanticAnalysis(
+    imageBlob,
+    imageName = "",
+    preferredService = null
+  ) {
     // 开始记录分析日志
     const analysisId = await analysisLogger.startAnalysis({
       imageName,
@@ -2667,7 +3021,7 @@ class AIImageAnalysisService {
   }
 
   /**
-   * 获取硅基流动可用模型列表
+   * 获取硅基流动可用模型列表（视觉模型）
    * @returns {Promise<Array>} 模型列表
    */
   async getSilicoflowModels() {
@@ -2676,6 +3030,7 @@ class AIImageAnalysisService {
     }
 
     try {
+      // 获取所有可用模型列表
       const response = await fetch("https://api.siliconflow.cn/v1/models", {
         method: "GET",
         headers: {
@@ -2695,30 +3050,10 @@ class AIImageAnalysisService {
 
       const data = await response.json();
 
-      // 过滤出多模态模型（支持图像分析的模型）
-      const visionModels =
-        data.data?.filter(
-          (model) =>
-            model.id &&
-            (model.id.includes("VL") || // Vision-Language模型
-              model.id.includes("vl") ||
-              model.id.includes("Vision") ||
-              model.id.includes("vision") ||
-              model.id.includes("Image") || // 图像相关模型
-              model.id.includes("image") ||
-              model.id.includes("GLM-4") || // 智谱多模态
-              model.id.includes("GLM-4.1V") ||
-              model.id.includes("GLM-4.5V") ||
-              model.id.includes("Qwen2-VL") || // 通义千问多模态
-              model.id.includes("Qwen2.5-VL") ||
-              model.id.includes("Qwen-Image") ||
-              model.id.includes("deepseek-vl") || // DeepSeek多模态
-              model.id.includes("DeepSeek-VL") ||
-              model.id.includes("DeepSeek-V3") || // DeepSeek V3支持多模态
-              model.id.includes("DeepSeek-V3.1"))
-        ) || [];
+      // 直接返回所有模型，不再进行过滤
+      const models = data.data || [];
 
-      return visionModels.map((model) => ({
+      return models.map((model) => ({
         id: model.id,
         name: model.id.split("/").pop() || model.id,
         description: model.description || model.id,
@@ -2788,6 +3123,485 @@ class AIImageAnalysisService {
           errorData.error?.message || response.statusText
         }`
       );
+    }
+  }
+
+  // ==================== 新增：视觉相似性分析功能 ====================
+
+  /**
+   * 初始化视觉标签数据库
+   */
+  async initializeVisualTagDatabase() {
+    try {
+      const { getAllImages } = await import("@/utils/idb.js");
+      const images = await getAllImages();
+
+      console.log(`🚀 开始构建视觉标签数据库，共 ${images.length} 张图片`);
+
+      // 按标签分组图片
+      const tagGroups = new Map();
+      images.forEach((image) => {
+        if (image.tags && Array.isArray(image.tags)) {
+          image.tags.forEach((tag) => {
+            const normalizedTag = tag.toLowerCase();
+            if (!tagGroups.has(normalizedTag)) {
+              tagGroups.set(normalizedTag, []);
+            }
+            tagGroups.get(normalizedTag).push(image);
+          });
+        }
+      });
+
+      console.log(`📊 发现 ${tagGroups.size} 个标签组`);
+
+      // 为每个标签组提取视觉特征
+      for (const [tag, tagImages] of tagGroups) {
+        if (tagImages.length >= 1) {
+          // 降低要求，单张图片也可以构建特征库
+          console.log(`🔍 处理标签 "${tag}"，包含 ${tagImages.length} 张图片`);
+
+          try {
+            const visualFeatures = await this.extractTagVisualFeatures(
+              tag,
+              tagImages
+            );
+
+            this.tagVisualDatabase.set(tag, {
+              visualFeatures,
+              images: tagImages,
+              count: tagImages.length,
+              lastUpdated: Date.now(),
+            });
+
+            console.log(`✅ 标签 "${tag}" 视觉特征提取成功`);
+          } catch (error) {
+            console.warn(`❌ 构建标签 "${tag}" 视觉特征库失败:`, error);
+          }
+        }
+      }
+
+      console.log(`🎉 视觉标签数据库构建完成！`);
+    } catch (error) {
+      console.error("视觉标签数据库初始化失败:", error);
+    }
+  }
+
+  /**
+   * 为标签组提取视觉特征
+   */
+  async extractTagVisualFeatures(tag, images) {
+    const visualFeatures = [];
+    const currentService = this.getCurrentConfiguredService();
+
+    if (!currentService) {
+      throw new Error("没有配置AI服务");
+    }
+
+    // 限制处理图片数量，避免API调用过多
+    const imagesToProcess = images.slice(0, 5);
+
+    for (const image of imagesToProcess) {
+      try {
+        console.log(`🔄 提取图片视觉特征: ${image.name || image.id}`);
+
+        const imageBlob = await this.getImageBlob(image);
+        if (!imageBlob) continue;
+
+        const features = await visualFeatureExtractor.extractVisualFeatures(
+          imageBlob,
+          currentService
+        );
+
+        if (features && features.length > 0) {
+          visualFeatures.push(features);
+          console.log(`✅ 图片 ${image.name || image.id} 视觉特征提取成功`);
+        }
+      } catch (error) {
+        console.warn(
+          `❌ 提取图片 ${image.name || image.id} 视觉特征失败:`,
+          error
+        );
+      }
+    }
+
+    return visualFeatures;
+  }
+
+  /**
+   * 获取图片Blob数据
+   */
+  async getImageBlob(image) {
+    if (image.blob && image.blob instanceof Blob) {
+      return image.blob;
+    } else if (image.objectUrl) {
+      const response = await fetch(image.objectUrl);
+      return await response.blob();
+    }
+    return null;
+  }
+
+  /**
+   * 基于视觉相似性分析图片并推荐标签
+   * @param {Blob} imageBlob - 图片数据
+   * @param {string} imageName - 图片名称
+   * @param {string} preferredService - 优先使用的服务（可选）
+   * @returns {Promise<Array>} 推荐的标签列表
+   */
+  async analyzeImageWithVisualSimilarity(
+    imageBlob,
+    imageName = "",
+    preferredService = null
+  ) {
+    // 开始记录分析日志
+    const analysisId = await analysisLogger.startAnalysis({
+      imageName,
+      imageId: null,
+      aiService: preferredService || this.getCurrentConfiguredService(),
+      analysisType: "visual-similarity",
+    });
+
+    try {
+      console.log(
+        `\n🎯 ========== 开始视觉相似性分析: ${imageName} ==========`
+      );
+
+      analysisLogger.addStep(analysisId, "开始视觉相似性分析", {
+        imageName,
+        tagDatabaseSize: this.tagVisualDatabase.size,
+      });
+
+      // 初始化视觉标签数据库（如果还未初始化）
+      if (this.tagVisualDatabase.size === 0) {
+        await this.initializeVisualTagDatabase();
+      }
+
+      // 获取当前配置的AI服务
+      const currentService =
+        preferredService || this.getCurrentConfiguredService();
+      if (!currentService) {
+        throw new Error("没有配置AI服务，请先配置API密钥");
+      }
+
+      console.log(`🤖 使用AI服务: ${currentService}`);
+      analysisLogger.addStep(analysisId, "选择AI服务", {
+        service: currentService,
+      });
+
+      // 提取当前图片的视觉特征
+      console.log(`🔄 开始提取当前图片视觉特征...`);
+      const currentImageFeatures =
+        await visualFeatureExtractor.extractVisualFeatures(
+          imageBlob,
+          currentService
+        );
+
+      if (!currentImageFeatures || currentImageFeatures.length === 0) {
+        throw new Error("无法提取图片视觉特征");
+      }
+
+      console.log(`✅ 当前图片视觉特征提取成功:`, currentImageFeatures);
+      analysisLogger.addStep(analysisId, "视觉特征提取完成", {
+        featuresCount: currentImageFeatures.length,
+        features: currentImageFeatures,
+      });
+
+      // 与标签视觉数据库进行相似度比较
+      const recommendations = [];
+      const comparisonDetails = [];
+
+      console.log(
+        `🔍 开始与 ${this.tagVisualDatabase.size} 个标签进行视觉相似度比较...`
+      );
+
+      for (const [tag, tagData] of this.tagVisualDatabase) {
+        if (tagData.visualFeatures.length === 0) {
+          console.log(`⏭️ 跳过标签 "${tag}"，视觉特征库为空`);
+          continue;
+        }
+
+        console.log(`\n🔍 ========== 比较标签: "${tag}" ==========`);
+        console.log(`📸 该标签包含 ${tagData.count} 张图片`);
+        console.log(
+          `🎯 该标签的视觉特征数量: ${tagData.visualFeatures.length}`
+        );
+
+        // 计算与标签视觉特征库的最大相似度
+        let maxSimilarity = 0;
+        let bestMatchIndex = -1;
+
+        for (let i = 0; i < tagData.visualFeatures.length; i++) {
+          const similarity =
+            visualSimilarityCalculator.calculateVisualSimilarity(
+              currentImageFeatures,
+              tagData.visualFeatures[i]
+            );
+
+          if (similarity > maxSimilarity) {
+            maxSimilarity = similarity;
+            bestMatchIndex = i;
+          }
+        }
+
+        console.log(`📊 最大视觉相似度: ${(maxSimilarity * 100).toFixed(2)}%`);
+        console.log(
+          `🎚️ 阈值要求: ${(this.visualSimilarityThreshold * 100).toFixed(1)}%`
+        );
+
+        const comparisonDetail = {
+          tag,
+          similarity: maxSimilarity,
+          threshold: this.visualSimilarityThreshold,
+          passed: maxSimilarity >= this.visualSimilarityThreshold,
+          tagCount: tagData.count,
+          featureCount: tagData.visualFeatures.length,
+          bestMatchIndex,
+        };
+
+        comparisonDetails.push(comparisonDetail);
+
+        if (maxSimilarity >= this.visualSimilarityThreshold) {
+          console.log(`✅ 标签 "${tag}" 通过视觉相似度检查！`);
+          recommendations.push({
+            tag: tag,
+            confidence: maxSimilarity,
+            reason: `与标签"${tag}"的视觉特征相似度: ${(
+              maxSimilarity * 100
+            ).toFixed(1)}%`,
+            source: "visual-similarity",
+            tagCount: tagData.count,
+          });
+
+          analysisLogger.addStep(analysisId, `标签通过: ${tag}`, {
+            similarity: maxSimilarity,
+            similarityPercent: (maxSimilarity * 100).toFixed(2),
+            threshold: this.visualSimilarityThreshold,
+            thresholdPercent: (this.visualSimilarityThreshold * 100).toFixed(1),
+            passed: true,
+          });
+        } else {
+          console.log(`❌ 标签 "${tag}" 视觉相似度不足，跳过`);
+
+          analysisLogger.addStep(analysisId, `标签未通过: ${tag}`, {
+            similarity: maxSimilarity,
+            similarityPercent: (maxSimilarity * 100).toFixed(2),
+            threshold: this.visualSimilarityThreshold,
+            thresholdPercent: (this.visualSimilarityThreshold * 100).toFixed(1),
+            passed: false,
+            reason: "视觉相似度不足",
+          });
+        }
+      }
+
+      // 按相似度排序
+      recommendations.sort((a, b) => b.confidence - a.confidence);
+
+      console.log(`\n🏆 ========== 最终推荐结果 ==========`);
+      const finalRecommendations = recommendations.slice(0, 10);
+      finalRecommendations.forEach((rec, index) => {
+        console.log(
+          `${index + 1}. ${rec.tag} - 视觉相似度: ${(
+            rec.confidence * 100
+          ).toFixed(1)}%`
+        );
+      });
+
+      // 完成分析日志记录
+      await analysisLogger.completeAnalysis(analysisId, finalRecommendations, {
+        featuresExtracted: currentImageFeatures.length,
+        similarityComparisons: comparisonDetails.length,
+        recommendationsGenerated: finalRecommendations.length,
+        tagDatabaseSize: this.tagVisualDatabase.size,
+        analysisType: "visual-similarity",
+      });
+
+      return finalRecommendations;
+    } catch (error) {
+      console.error("❌ 视觉相似性分析失败:", error);
+      await analysisLogger.failAnalysis(analysisId, error);
+      return [];
+    }
+  }
+
+  /**
+   * 更新标签的视觉特征库
+   */
+  async updateTagVisualFeatures(tag, newImage) {
+    const normalizedTag = tag.toLowerCase();
+
+    if (!this.tagVisualDatabase.has(normalizedTag)) {
+      this.tagVisualDatabase.set(normalizedTag, {
+        visualFeatures: [],
+        images: [],
+        count: 0,
+        lastUpdated: Date.now(),
+      });
+    }
+
+    const tagData = this.tagVisualDatabase.get(normalizedTag);
+
+    try {
+      const imageBlob = await this.getImageBlob(newImage);
+      if (!imageBlob) return;
+
+      const currentService = this.getCurrentConfiguredService();
+      if (!currentService) return;
+
+      const features = await visualFeatureExtractor.extractVisualFeatures(
+        imageBlob,
+        currentService
+      );
+
+      if (features && features.length > 0) {
+        tagData.visualFeatures.push(features);
+        tagData.images.push(newImage);
+        tagData.count++;
+        tagData.lastUpdated = Date.now();
+
+        console.log(`✅ 标签 "${tag}" 视觉特征库已更新`);
+      }
+    } catch (error) {
+      console.warn(`❌ 更新标签 "${tag}" 视觉特征库失败:`, error);
+    }
+  }
+
+  /**
+   * 设置视觉相似度阈值
+   */
+  setVisualSimilarityThreshold(threshold) {
+    this.visualSimilarityThreshold = threshold;
+    visualSimilarityCalculator.setSimilarityThreshold(threshold);
+    console.log(`🎚️ 视觉相似度阈值已设置为: ${(threshold * 100).toFixed(1)}%`);
+  }
+
+  /**
+   * 获取视觉相似度阈值
+   */
+  getVisualSimilarityThreshold() {
+    return this.visualSimilarityThreshold;
+  }
+
+  /**
+   * 获取视觉标签数据库信息
+   */
+  getVisualTagDatabaseInfo() {
+    const info = {
+      totalTags: this.tagVisualDatabase.size,
+      tags: [],
+      totalImages: 0,
+      totalFeatures: 0,
+    };
+
+    for (const [tag, data] of this.tagVisualDatabase) {
+      info.tags.push({
+        tag,
+        imageCount: data.count,
+        featureCount: data.visualFeatures.length,
+        lastUpdated: data.lastUpdated,
+      });
+      info.totalImages += data.count;
+      info.totalFeatures += data.visualFeatures.length;
+    }
+
+    return info;
+  }
+
+  /**
+   * 清空视觉标签数据库
+   */
+  clearVisualTagDatabase() {
+    this.tagVisualDatabase.clear();
+    this.visualFeatureCache.clear();
+    console.log("🔄 视觉标签数据库已清空");
+  }
+
+  /**
+   * 获取图片的Blob数据
+   * @param {Object} image - 图片对象
+   * @returns {Promise<Blob|null>} 图片Blob数据
+   */
+  async getImageBlob(image) {
+    try {
+      if (image.blob && image.blob instanceof Blob) {
+        return image.blob;
+      } else if (image.objectUrl) {
+        const response = await fetch(image.objectUrl);
+        return await response.blob();
+      } else {
+        console.warn(`❌ 无法获取图片数据: ${image.name || image.id}`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`❌ 获取图片Blob失败: ${image.name || image.id}`, error);
+      return null;
+    }
+  }
+
+  /**
+   * 设置推荐方法
+   * @param {string} method - 推荐方法
+   */
+  setRecommendationMethod(method) {
+    if (this.supportedMethods.includes(method)) {
+      this.recommendationMethod = method;
+      console.log(`🎯 推荐方法已设置为: ${method}`);
+    } else {
+      console.warn(
+        `❌ 不支持的推荐方法: ${method}，支持的方法: ${this.supportedMethods.join(
+          ", "
+        )}`
+      );
+    }
+  }
+
+  /**
+   * 获取当前推荐方法
+   * @returns {string} 当前推荐方法
+   */
+  getRecommendationMethod() {
+    return this.recommendationMethod;
+  }
+
+  /**
+   * 获取支持的推荐方法列表
+   * @returns {Array} 支持的推荐方法列表
+   */
+  getSupportedMethods() {
+    return [...this.supportedMethods];
+  }
+
+  /**
+   * 获取当前配置的AI服务
+   * @returns {string|null} 当前选中的AI服务名称
+   */
+  getCurrentConfiguredService() {
+    try {
+      // 每次调用时都从localStorage加载最新配置
+      this.loadConfigFromStorage();
+
+      const config = localStorage.getItem("ai-service-config");
+      if (config) {
+        const parsedConfig = JSON.parse(config);
+        const selectedProvider = parsedConfig.selectedProvider;
+
+        // 确保选中的服务确实已配置
+        if (selectedProvider && this.isServiceConfigured(selectedProvider)) {
+          console.log(`🎯 当前选中的AI服务: ${selectedProvider}`);
+          return selectedProvider;
+        }
+      }
+
+      // 如果没有选中服务或选中的服务未配置，返回第一个可用的服务
+      const availableServices = this.getAvailableServices();
+      if (availableServices.length > 0) {
+        console.log(`🔧 使用第一个可用的AI服务: ${availableServices[0]}`);
+        return availableServices[0];
+      }
+
+      console.warn("❌ 没有可用的AI服务");
+      return null;
+    } catch (err) {
+      console.warn("❌ 获取AI服务配置失败:", err);
+      return null;
     }
   }
 }

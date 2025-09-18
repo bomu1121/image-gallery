@@ -95,6 +95,35 @@
           <div class="section-header">
             <h3 class="section-title">标签</h3>
             <div class="tag-actions">
+              <!-- 分析模式选择 -->
+              <el-select
+                v-model="analysisMode"
+                size="small"
+                class="analysis-mode-select"
+                placeholder="选择分析模式"
+              >
+                <el-option label="相似图集分析" value="similarity-based">
+                  <div class="analysis-mode-option">
+                    <div class="mode-title">相似图集分析</div>
+                    <div class="mode-description">
+                      基于相似图片的标签推荐（推荐）
+                    </div>
+                  </div>
+                </el-option>
+                <el-option label="视觉相似性分析" value="visual-similarity">
+                  <div class="analysis-mode-option">
+                    <div class="mode-title">视觉相似性分析</div>
+                    <div class="mode-description">基于视觉特征识别相似图片</div>
+                  </div>
+                </el-option>
+                <el-option label="语义分析" value="semantic-analysis">
+                  <div class="analysis-mode-option">
+                    <div class="mode-title">语义分析</div>
+                    <div class="mode-description">基于语义特征分析图片内容</div>
+                  </div>
+                </el-option>
+              </el-select>
+
               <el-button
                 size="small"
                 type="primary"
@@ -104,7 +133,13 @@
                 class="ai-analyze-button"
               >
                 <el-icon><Star /></el-icon>
-                AI分析
+                {{
+                  analysisMode === "similarity-based"
+                    ? "相似图集分析"
+                    : analysisMode === "visual-similarity"
+                    ? "视觉分析"
+                    : "AI分析"
+                }}
               </el-button>
               <el-button
                 size="small"
@@ -232,6 +267,8 @@ import {
   ElInput,
   ElIcon,
   ElMessageBox,
+  ElSelect,
+  ElOption,
 } from "element-plus";
 import {
   ArrowLeft,
@@ -264,6 +301,7 @@ const { success, error } = useDrawerNotification();
 const isAnalyzing = ref(false);
 const aiAnalysisResult = ref([]);
 const selectedAITags = ref(new Set());
+const analysisMode = ref("similarity-based"); // 分析模式：similarity-based、visual-similarity 或 semantic-analysis
 
 // 获取当前选中的AI服务
 const getCurrentAIService = () => {
@@ -554,18 +592,40 @@ async function analyzeImageWithAI() {
       return;
     }
 
-    // 初始化AI服务（如果还未初始化）
-    await aiImageAnalysisService.initialize();
-
     // 获取当前选中的AI服务
     const currentService = getCurrentAIService();
 
-    // 分析图片
-    const recommendedTags = await aiImageAnalysisService.analyzeImage(
-      imageBlob,
-      image.value.name,
-      currentService
-    );
+    // 初始化AI服务（如果还未初始化）
+    await aiImageAnalysisService.initialize();
+
+    let recommendedTags = [];
+
+    // 根据分析模式选择不同的分析方法
+    if (analysisMode.value === "similarity-based") {
+      console.log("🎯 使用相似图集分析模式");
+      recommendedTags = await aiImageAnalysisService.analyzeImage(
+        imageBlob,
+        image.value.name,
+        currentService,
+        "similarity-based"
+      );
+    } else if (analysisMode.value === "visual-similarity") {
+      console.log("🎯 使用视觉相似性分析模式");
+      recommendedTags =
+        await aiImageAnalysisService.analyzeImageWithVisualSimilarity(
+          imageBlob,
+          image.value.name,
+          currentService
+        );
+    } else {
+      console.log("🧠 使用语义分析模式");
+      recommendedTags = await aiImageAnalysisService.analyzeImage(
+        imageBlob,
+        image.value.name,
+        currentService,
+        "semantic-analysis"
+      );
+    }
 
     if (recommendedTags.length === 0) {
       error("AI分析未找到合适的标签");
@@ -588,7 +648,13 @@ async function analyzeImageWithAI() {
     aiAnalysisResult.value = newTags;
     selectedAITags.value.clear();
 
-    success(`AI分析完成，找到 ${newTags.length} 个推荐标签`);
+    const modeText =
+      analysisMode.value === "similarity-based"
+        ? "相似图集"
+        : analysisMode.value === "visual-similarity"
+        ? "视觉相似性"
+        : "语义";
+    success(`${modeText}分析完成，找到 ${newTags.length} 个推荐标签`);
   } catch (err) {
     console.error("AI分析失败:", err);
     error("AI分析失败，请检查API配置");
@@ -799,6 +865,44 @@ function showAILogs() {
 .tag-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
+}
+
+/* 分析模式选择器样式 */
+.analysis-mode-select {
+  min-width: 200px;
+}
+
+.analysis-mode-select :deep(.el-input__wrapper) {
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  background: rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+}
+
+.analysis-mode-select :deep(.el-input__wrapper:hover) {
+  border-color: #667eea;
+}
+
+.analysis-mode-select :deep(.el-input__wrapper.is-focus) {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.analysis-mode-option {
+  padding: 4px 0;
+}
+
+.mode-title {
+  font-weight: 500;
+  color: #2c3e50;
+  font-size: 13px;
+}
+
+.mode-description {
+  font-size: 11px;
+  color: #8a9ba8;
+  margin-top: 2px;
 }
 
 .ai-analyze-button {
@@ -1323,6 +1427,23 @@ function showAILogs() {
 
   .tag-input-field {
     font-size: 12px;
+  }
+
+  /* 移动端分析模式选择器样式 */
+  .tag-actions {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .analysis-mode-select {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .ai-analyze-button,
+  .ai-config-button {
+    width: 100%;
   }
 }
 </style>
