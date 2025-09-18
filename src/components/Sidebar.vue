@@ -22,8 +22,8 @@
     <div class="sidebar-bottom">
       <div
         class="sidebar-item"
-        :class="{ active: active === 'ai-logs' }"
-        @click="$emit('showAILogs')"
+        :class="{ active: active === 'ai-analysis-logs' }"
+        @click="handleAILogsClick"
         title="AI分析日志"
       >
         <el-icon><icon-document /></el-icon>
@@ -47,6 +47,7 @@ import {
   Grid as IconHome,
   Document as IconDocument,
 } from "@element-plus/icons-vue";
+import { useRouter } from "vue-router";
 
 defineProps({
   active: {
@@ -55,7 +56,32 @@ defineProps({
   },
 });
 
-defineEmits(["showUpload", "goHome", "showSettings", "showAILogs"]);
+const emit = defineEmits([
+  "showUpload",
+  "goHome",
+  "showSettings",
+  "showAIAnalysisLogs",
+]);
+
+const router = useRouter();
+
+function handleAILogsClick() {
+  console.log("📋 侧边栏AI日志按钮被点击");
+  console.log("📤 准备发射事件: showAIAnalysisLogs");
+  emit("showAIAnalysisLogs");
+  console.log("✅ 事件已发射");
+
+  // 直接测试路由跳转
+  console.log("🚀 直接测试路由跳转");
+  router
+    .push("/ai-analysis-logs")
+    .then(() => {
+      console.log("✅ 直接路由跳转成功");
+    })
+    .catch((error) => {
+      console.error("❌ 直接路由跳转失败:", error);
+    });
+}
 </script>
 
 <style scoped>

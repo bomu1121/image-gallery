@@ -660,7 +660,7 @@ function goToAISettings() {
 }
 
 function showAILogs() {
-  router.push("/ai-logs");
+  router.push("/ai-analysis-logs");
 }
 </script>
 

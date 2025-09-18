@@ -43,9 +43,9 @@ export const productionRouter = [
     meta: { title: "设置" },
   },
   {
-    path: "/ai-logs",
-    name: "AILogViewer",
-    component: () => import("@/views/AILogViewer.vue"),
+    path: "/ai-analysis-logs",
+    name: "AIAnalysisLogs",
+    component: () => import("@/views/AIAnalysisLogs.vue"),
     meta: { title: "AI分析日志" },
   },
 

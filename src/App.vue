@@ -9,7 +9,7 @@
         :active="activeKey"
         @go-home="goToHome"
         @show-settings="showSettingsPage = true"
-        @show-ai-logs="goToAILogs"
+        @showAIAnalysisLogs="goToAIAnalysisLogs"
         @start-batch-delete="startBatchDelete"
       />
 
@@ -186,7 +186,8 @@ const {
 // 计算当前侧边栏激活项
 const activeKey = computed(() => {
   if (showSettingsPage.value) return "settings";
-  if (router.currentRoute.value.path === "/ai-logs") return "ai-logs";
+  if (router.currentRoute.value.path === "/ai-analysis-logs")
+    return "ai-analysis-logs";
   return "home";
 });
 
@@ -199,9 +200,18 @@ function goToHome() {
 }
 
 // 导航到AI日志页面
-function goToAILogs() {
+function goToAIAnalysisLogs() {
+  console.log("🚀 点击AI分析日志按钮，准备跳转");
+  console.log("📍 当前路由:", router.currentRoute.value.path);
   showSettingsPage.value = false;
-  router.push("/ai-logs");
+  router
+    .push("/ai-analysis-logs")
+    .then(() => {
+      console.log("✅ 路由跳转完成，新路由:", router.currentRoute.value.path);
+    })
+    .catch((error) => {
+      console.error("❌ 路由跳转失败:", error);
+    });
 }
 
 // 开始批量删除模式
@@ -430,7 +440,7 @@ onMounted(() => {
 
 .main-content {
   flex: 1;
-  overflow-y: hidden; /* 右侧整体不滚动，交给内部列表滚动 */
+  overflow-y: auto; /* 允许垂直滚动 */
   min-height: 0;
   position: relative;
   z-index: 2;

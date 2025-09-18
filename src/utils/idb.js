@@ -5,6 +5,7 @@ const DB_NAME = "image_gallery_db";
 const STORE_NAME = "images";
 const GROUPS_STORE_NAME = "groups";
 const BACKGROUND_STORE_NAME = "background";
+const ANALYSIS_LOGS_STORE_NAME = "analysis_logs";
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -40,6 +41,27 @@ function openDB() {
         backgroundStore.createIndex("createdAt", "createdAt", {
           unique: false,
         });
+      }
+
+      // 创建AI分析日志存储
+      if (!db.objectStoreNames.contains(ANALYSIS_LOGS_STORE_NAME)) {
+        const analysisLogsStore = db.createObjectStore(
+          ANALYSIS_LOGS_STORE_NAME,
+          {
+            keyPath: "id",
+            autoIncrement: true,
+          }
+        );
+        analysisLogsStore.createIndex("timestamp", "timestamp", {
+          unique: false,
+        });
+        analysisLogsStore.createIndex("imageName", "imageName", {
+          unique: false,
+        });
+        analysisLogsStore.createIndex("aiService", "aiService", {
+          unique: false,
+        });
+        analysisLogsStore.createIndex("status", "status", { unique: false });
       }
     };
     request.onblocked = () => {
@@ -397,4 +419,216 @@ export async function deleteBackground() {
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
   });
+}
+
+// ==================== AI分析日志相关方法 ====================
+
+/**
+ * 保存AI分析日志
+ * @param {Object} analysisLog - 分析日志对象
+ * @returns {Promise<number>} 返回保存的日志ID
+ */
+export async function putAnalysisLog(analysisLog) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ANALYSIS_LOGS_STORE_NAME, "readwrite");
+    const store = tx.objectStore(ANALYSIS_LOGS_STORE_NAME);
+
+    // 确保timestamp是Date对象
+    const logToSave = {
+      ...analysisLog,
+      timestamp:
+        analysisLog.timestamp instanceof Date
+          ? analysisLog.timestamp
+          : new Date(analysisLog.timestamp),
+      savedAt: new Date(),
+    };
+
+    const req = store.put(logToSave);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * 批量保存AI分析日志
+ * @param {Array} analysisLogs - 分析日志数组
+ * @returns {Promise<Array>} 返回保存的日志ID数组
+ */
+export async function putAnalysisLogs(analysisLogs) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ANALYSIS_LOGS_STORE_NAME, "readwrite");
+    const store = tx.objectStore(ANALYSIS_LOGS_STORE_NAME);
+
+    const promises = analysisLogs.map((log) => {
+      const logToSave = {
+        ...log,
+        timestamp:
+          log.timestamp instanceof Date
+            ? log.timestamp
+            : new Date(log.timestamp),
+        savedAt: new Date(),
+      };
+      return new Promise((resolveItem, rejectItem) => {
+        const req = store.put(logToSave);
+        req.onsuccess = () => resolveItem(req.result);
+        req.onerror = () => rejectItem(req.error);
+      });
+    });
+
+    Promise.all(promises)
+      .then((results) => resolve(results))
+      .catch((error) => reject(error));
+  });
+}
+
+/**
+ * 获取所有AI分析日志
+ * @returns {Promise<Array>} 返回所有分析日志
+ */
+export async function getAllAnalysisLogs() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ANALYSIS_LOGS_STORE_NAME, "readonly");
+    const store = tx.objectStore(ANALYSIS_LOGS_STORE_NAME);
+    const req = store.getAll();
+    req.onsuccess = () => {
+      const logs = req.result.map((log) => ({
+        ...log,
+        timestamp: new Date(log.timestamp),
+      }));
+      // 按时间戳倒序排列（最新的在前）
+      logs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      resolve(logs);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * 根据ID获取AI分析日志
+ * @param {string} logId - 日志ID
+ * @returns {Promise<Object|null>} 返回分析日志或null
+ */
+export async function getAnalysisLogById(logId) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ANALYSIS_LOGS_STORE_NAME, "readonly");
+    const store = tx.objectStore(ANALYSIS_LOGS_STORE_NAME);
+    const req = store.get(logId);
+    req.onsuccess = () => {
+      const log = req.result;
+      if (log) {
+        log.timestamp = new Date(log.timestamp);
+      }
+      resolve(log);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * 根据图片名称搜索分析日志
+ * @param {string} imageName - 图片名称
+ * @returns {Promise<Array>} 返回匹配的分析日志
+ */
+export async function getAnalysisLogsByImageName(imageName) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ANALYSIS_LOGS_STORE_NAME, "readonly");
+    const store = tx.objectStore(ANALYSIS_LOGS_STORE_NAME);
+    const index = store.index("imageName");
+    const req = index.getAll(imageName);
+    req.onsuccess = () => {
+      const logs = req.result.map((log) => ({
+        ...log,
+        timestamp: new Date(log.timestamp),
+      }));
+      logs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      resolve(logs);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * 根据AI服务搜索分析日志
+ * @param {string} aiService - AI服务名称
+ * @returns {Promise<Array>} 返回匹配的分析日志
+ */
+export async function getAnalysisLogsByAIService(aiService) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ANALYSIS_LOGS_STORE_NAME, "readonly");
+    const store = tx.objectStore(ANALYSIS_LOGS_STORE_NAME);
+    const index = store.index("aiService");
+    const req = index.getAll(aiService);
+    req.onsuccess = () => {
+      const logs = req.result.map((log) => ({
+        ...log,
+        timestamp: new Date(log.timestamp),
+      }));
+      logs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      resolve(logs);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * 删除AI分析日志
+ * @param {string} logId - 日志ID
+ * @returns {Promise<void>}
+ */
+export async function deleteAnalysisLog(logId) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ANALYSIS_LOGS_STORE_NAME, "readwrite");
+    const store = tx.objectStore(ANALYSIS_LOGS_STORE_NAME);
+    const req = store.delete(logId);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * 清空所有AI分析日志
+ * @returns {Promise<void>}
+ */
+export async function clearAllAnalysisLogs() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ANALYSIS_LOGS_STORE_NAME, "readwrite");
+    const store = tx.objectStore(ANALYSIS_LOGS_STORE_NAME);
+    const req = store.clear();
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * 获取分析日志统计信息
+ * @returns {Promise<Object>} 返回统计信息
+ */
+export async function getAnalysisLogsStatistics() {
+  const logs = await getAllAnalysisLogs();
+  const total = logs.length;
+  const completed = logs.filter((log) => log.status === "completed").length;
+  const failed = logs.filter((log) => log.status === "failed").length;
+  const processing = logs.filter((log) => log.status === "processing").length;
+
+  const avgDuration =
+    total > 0
+      ? logs.reduce((sum, log) => sum + (log.duration || 0), 0) / total
+      : 0;
+
+  return {
+    total,
+    completed,
+    failed,
+    processing,
+    avgDuration: avgDuration / 1000, // 转换为秒
+    successRate: total > 0 ? ((completed / total) * 100).toFixed(1) : 0,
+  };
 }

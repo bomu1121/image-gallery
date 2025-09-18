@@ -3,6 +3,8 @@
  * 提供图片内容识别和标签推荐功能
  */
 
+import analysisLogger from "@/utils/analysisLogger.js";
+
 class AIImageAnalysisService {
   constructor() {
     this.apiConfig = {
@@ -799,10 +801,23 @@ class AIImageAnalysisService {
    * @returns {Promise<Array>} 推荐的标签列表
    */
   async analyzeImage(imageBlob, imageName = "", preferredService = null) {
+    // 开始记录分析日志
+    const analysisId = await analysisLogger.startAnalysis({
+      imageName,
+      imageId: null, // 可以后续添加图片ID
+      aiService: preferredService || this.getCurrentConfiguredService(),
+    });
+
     try {
       console.log(`\n🎯 ========== 开始分析图片: ${imageName} ==========`);
       console.log(`📊 当前相似度阈值: ${this.similarityThreshold}`);
       console.log(`🗄️ 标签特征库大小: ${this.tagFeatureDatabase.size} 个标签`);
+
+      analysisLogger.addStep(analysisId, "开始分析", {
+        imageName,
+        similarityThreshold: this.similarityThreshold,
+        tagDatabaseSize: this.tagFeatureDatabase.size,
+      });
 
       // 获取当前配置的AI服务
       const currentService =
@@ -812,6 +827,9 @@ class AIImageAnalysisService {
       }
 
       console.log(`🤖 使用AI服务: ${currentService}`);
+      analysisLogger.addStep(analysisId, "选择AI服务", {
+        service: currentService,
+      });
 
       // 提取待分析图片的特征向量
       console.log(`🔄 开始提取当前图片特征...`);
@@ -824,9 +842,19 @@ class AIImageAnalysisService {
       }
 
       console.log(`✅ 当前图片特征提取成功:`, currentImageFeatures);
+      analysisLogger.addStep(analysisId, "特征提取完成", {
+        featuresCount: currentImageFeatures.length,
+        features: currentImageFeatures,
+      });
+
       console.log(
         `🔍 开始与 ${this.tagFeatureDatabase.size} 个标签进行相似度比较...\n`
       );
+
+      analysisLogger.addStep(analysisId, "开始相似度比较", {
+        totalTags: this.tagFeatureDatabase.size,
+        currentImageFeatures: currentImageFeatures,
+      });
 
       // 与标签特征数据库进行相似度比较
       const recommendations = [];
@@ -835,12 +863,26 @@ class AIImageAnalysisService {
       for (const [tag, tagData] of this.tagFeatureDatabase) {
         if (tagData.features.length === 0) {
           console.log(`⏭️ 跳过标签 "${tag}"，特征库为空`);
+          analysisLogger.addStep(analysisId, `跳过标签: ${tag}`, {
+            reason: "特征库为空",
+            tagData: {
+              count: tagData.count,
+              featuresCount: tagData.features.length,
+            },
+          });
           continue;
         }
 
         console.log(`\n🔍 ========== 比较标签: "${tag}" ==========`);
         console.log(`📸 该标签包含 ${tagData.count} 张图片`);
         console.log(`🎯 该标签的特征向量数量: ${tagData.features.length}`);
+
+        // 记录开始比较这个标签
+        analysisLogger.addStep(analysisId, `开始比较标签: ${tag}`, {
+          tagCount: tagData.count,
+          tagFeaturesCount: tagData.features.length,
+          tagFeatures: tagData.features.slice(0, 5), // 只记录前5个特征避免日志过长
+        });
 
         // 计算与标签特征库的相似度
         const similarity = this.calculateFeatureSimilarity(
@@ -875,8 +917,34 @@ class AIImageAnalysisService {
             source: "feature-similarity",
             tagCount: tagData.count,
           });
+
+          // 记录标签通过
+          analysisLogger.addStep(analysisId, `标签通过: ${tag}`, {
+            similarity: similarity,
+            similarityPercent: (similarity * 100).toFixed(2),
+            threshold: this.similarityThreshold,
+            thresholdPercent: (this.similarityThreshold * 100).toFixed(1),
+            passed: true,
+            recommendation: {
+              tag: tag,
+              confidence: similarity,
+              reason: `与标签"${tag}"的${tagData.count}张图片特征相似度: ${(
+                similarity * 100
+              ).toFixed(1)}%`,
+            },
+          });
         } else {
           console.log(`❌ 标签 "${tag}" 相似度不足，跳过`);
+
+          // 记录标签未通过
+          analysisLogger.addStep(analysisId, `标签未通过: ${tag}`, {
+            similarity: similarity,
+            similarityPercent: (similarity * 100).toFixed(2),
+            threshold: this.similarityThreshold,
+            thresholdPercent: (this.similarityThreshold * 100).toFixed(1),
+            passed: false,
+            reason: "相似度不足",
+          });
         }
       }
 
@@ -890,6 +958,23 @@ class AIImageAnalysisService {
         );
       });
 
+      // 记录相似度比较总结
+      analysisLogger.addStep(analysisId, "相似度比较总结", {
+        totalComparisons: comparisonDetails.length,
+        passedComparisons: comparisonDetails.filter((d) => d.passed).length,
+        failedComparisons: comparisonDetails.filter((d) => !d.passed).length,
+        comparisons: comparisonDetails.map((detail) => ({
+          tag: detail.tag,
+          similarity: detail.similarity,
+          similarityPercent: (detail.similarity * 100).toFixed(1),
+          threshold: detail.threshold,
+          thresholdPercent: (detail.threshold * 100).toFixed(1),
+          passed: detail.passed,
+          tagCount: detail.tagCount,
+          featureCount: detail.featureCount,
+        })),
+      });
+
       console.log(`\n🎯 推荐结果排序前: ${recommendations.length} 个标签`);
       recommendations.forEach((rec, index) => {
         console.log(
@@ -897,6 +982,18 @@ class AIImageAnalysisService {
             1
           )}%`
         );
+      });
+
+      // 记录排序前的推荐结果
+      analysisLogger.addStep(analysisId, "推荐结果排序前", {
+        totalRecommendations: recommendations.length,
+        recommendations: recommendations.map((rec) => ({
+          tag: rec.tag,
+          confidence: rec.confidence,
+          confidencePercent: (rec.confidence * 100).toFixed(1),
+          reason: rec.reason,
+          tagCount: rec.tagCount,
+        })),
       });
 
       // 按相似度排序
@@ -912,12 +1009,35 @@ class AIImageAnalysisService {
         );
       });
 
+      // 记录最终推荐结果
+      analysisLogger.addStep(analysisId, "最终推荐结果", {
+        totalRecommendations: recommendations.length,
+        finalRecommendationsCount: finalRecommendations.length,
+        finalRecommendations: finalRecommendations.map((rec, index) => ({
+          rank: index + 1,
+          tag: rec.tag,
+          confidence: rec.confidence,
+          confidencePercent: (rec.confidence * 100).toFixed(1),
+          reason: rec.reason,
+          tagCount: rec.tagCount,
+        })),
+      });
+
       console.log(`\n🎉 ========== 图片分析完成 ==========\n`);
+
+      // 完成分析日志记录
+      await analysisLogger.completeAnalysis(analysisId, finalRecommendations, {
+        featuresExtracted: currentImageFeatures.length,
+        similarityComparisons: comparisonDetails.length,
+        recommendationsGenerated: finalRecommendations.length,
+        tagDatabaseSize: this.tagFeatureDatabase.size,
+      });
 
       // 限制返回数量
       return finalRecommendations;
     } catch (error) {
       console.error("❌ 图片分析失败:", error);
+      await analysisLogger.failAnalysis(analysisId, error);
       return [];
     }
   }
@@ -1927,6 +2047,52 @@ class AIImageAnalysisService {
     if (this.apiConfig[service]) {
       this.apiConfig[service] = { ...this.apiConfig[service], ...config };
     }
+  }
+
+  /**
+   * 获取分析日志
+   * @returns {Array} 分析日志列表
+   */
+  getAnalysisLogs() {
+    return analysisLogger.getAllLogs();
+  }
+
+  /**
+   * 获取指定分析日志
+   * @param {string} analysisId - 分析ID
+   * @returns {Object|null} 分析日志
+   */
+  getAnalysisLog(analysisId) {
+    return analysisLogger.getLog(analysisId);
+  }
+
+  /**
+   * 导出分析日志
+   * @param {string} analysisId - 分析ID，如果为空则导出所有日志
+   * @param {string} format - 导出格式：'json' 或 'text'
+   * @returns {string} 导出的日志数据
+   */
+  exportAnalysisLogs(analysisId = null, format = "text") {
+    if (format === "json") {
+      return analysisLogger.exportLogs(analysisId);
+    } else {
+      return analysisLogger.exportLogsAsText(analysisId);
+    }
+  }
+
+  /**
+   * 清空分析日志
+   */
+  clearAnalysisLogs() {
+    analysisLogger.clearLogs();
+  }
+
+  /**
+   * 获取分析统计信息
+   * @returns {Object} 统计信息
+   */
+  getAnalysisStatistics() {
+    return analysisLogger.getStatistics();
   }
 
   /**
