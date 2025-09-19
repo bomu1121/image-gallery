@@ -129,7 +129,6 @@
         <div v-if="showSearchArea" class="search-area">
           <div class="search-form">
             <div class="search-field">
-              <label class="search-label">按名称搜索：</label>
               <el-input
                 v-model="searchName"
                 placeholder="输入图片名称"
@@ -139,30 +138,60 @@
               />
             </div>
             <div class="search-field">
-              <label class="search-label">按标签搜索：</label>
-              <el-input
-                v-model="searchTagsInput"
-                placeholder="输入标签，按回车或失焦添加"
-                clearable
-                @keyup.enter="addTagFromInput"
-                @blur="addTagFromInput"
-                @clear="onSearchChange"
-              />
-              <div v-if="searchTags.length > 0" class="selected-tags">
-                <div
-                  v-for="tag in searchTags"
-                  :key="tag"
-                  class="tag-item"
-                  @click="removeTag(tag)"
-                >
-                  {{ tag }}
-                  <el-icon class="tag-remove"><icon-delete /></el-icon>
+              <div class="tags-container">
+                <div class="tags-display">
+                  <!-- 现有搜索标签 -->
+                  <div
+                    v-for="tag in searchTags"
+                    :key="tag"
+                    class="tag-item"
+                    @click="removeTag(tag)"
+                  >
+                    {{ tag }}
+                    <el-icon class="tag-remove"><icon-delete /></el-icon>
+                  </div>
+
+                  <!-- 添加标签按钮 -->
+                  <div
+                    v-if="!isAddingSearchTag"
+                    class="add-tag-button"
+                    @click="startAddingSearchTag"
+                  >
+                    <el-icon><icon-plus /></el-icon>
+                  </div>
+
+                  <!-- 提示文字（当没有标签时显示） -->
+                  <div
+                    v-if="searchTags.length === 0 && !isAddingSearchTag"
+                    class="tag-hint-text"
+                  >
+                    按标签搜索
+                  </div>
+
+                  <!-- 正在添加的标签输入框 -->
+                  <div
+                    v-if="isAddingSearchTag"
+                    class="tag-item adding-tag"
+                    :style="{ width: searchTagInputWidth + 'px' }"
+                  >
+                    <input
+                      v-model="newSearchTagInput"
+                      ref="searchTagInput"
+                      class="tag-input-field"
+                      placeholder="输入标签"
+                      @keyup.enter="confirmAddSearchTag"
+                      @keyup.escape="cancelAddSearchTag"
+                      @blur="confirmAddSearchTag"
+                      @input="adjustSearchTagInputWidth"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-            <div class="search-actions">
+            <!-- 暂时隐藏清空搜索按钮区域 -->
+            <!-- <div class="search-actions">
               <el-button @click="clearSearch" size="small">清空搜索</el-button>
-            </div>
+            </div> -->
           </div>
         </div>
       </div>
@@ -358,6 +387,12 @@ const searchTagsInput = ref("");
 const searchTags = ref([]);
 const isSearchActive = ref(false);
 const originalImages = ref([]); // 保存原始图片列表，用于搜索后恢复
+
+// 搜索标签添加相关状态
+const isAddingSearchTag = ref(false);
+const newSearchTagInput = ref("");
+const searchTagInput = ref(null);
+const searchTagInputWidth = ref(80); // 默认最小宽度
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -977,6 +1012,70 @@ function addTagFromInput() {
   }
 }
 
+// 搜索标签管理函数
+function startAddingSearchTag() {
+  isAddingSearchTag.value = true;
+  newSearchTagInput.value = "";
+  searchTagInputWidth.value = 80; // 重置为默认宽度
+
+  // 等待DOM更新后聚焦输入框
+  setTimeout(() => {
+    if (searchTagInput.value) {
+      searchTagInput.value.focus();
+    }
+  }, 100);
+}
+
+function cancelAddSearchTag() {
+  isAddingSearchTag.value = false;
+  newSearchTagInput.value = "";
+}
+
+function confirmAddSearchTag() {
+  if (!newSearchTagInput.value.trim()) {
+    cancelAddSearchTag();
+    return;
+  }
+
+  const tag = newSearchTagInput.value.trim();
+
+  // 检查标签是否已存在
+  if (searchTags.value.includes(tag)) {
+    error("标签已存在");
+    cancelAddSearchTag();
+    return;
+  }
+
+  // 添加标签到搜索列表
+  searchTags.value.push(tag);
+
+  // 清空输入框并退出添加模式
+  newSearchTagInput.value = "";
+  isAddingSearchTag.value = false;
+
+  // 触发搜索
+  performRealtimeSearch();
+}
+
+// 动态调整搜索标签输入框宽度
+function adjustSearchTagInputWidth() {
+  if (!searchTagInput.value) return;
+
+  // 使用Canvas API来精确测量文本宽度
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  // 设置字体样式，与CSS中的样式保持一致
+  context.font =
+    '500 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+
+  const text = newSearchTagInput.value || "输入标签";
+  const textWidth = context.measureText(text).width;
+
+  // 设置最小宽度80px，最大宽度200px，并加上一些padding
+  searchTagInputWidth.value = Math.min(Math.max(textWidth + 24, 80), 200);
+}
+
 function removeTag(tag) {
   const index = searchTags.value.indexOf(tag);
   if (index > -1) {
@@ -1036,6 +1135,10 @@ function clearSearch() {
   searchTagsInput.value = "";
   searchTags.value = [];
   isSearchActive.value = false;
+
+  // 清理搜索标签添加状态
+  isAddingSearchTag.value = false;
+  newSearchTagInput.value = "";
 
   // 恢复原始图片列表
   if (originalImages.value.length > 0) {
@@ -1680,39 +1783,114 @@ function clearSearch() {
   width: 100%;
 }
 
-.selected-tags {
+/* 搜索标签容器样式 */
+.tags-container {
+  position: relative;
+}
+
+.tags-display {
+  min-height: 60px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 8px;
+  align-items: center;
+}
+
+.tags-display:hover {
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .tag-item {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 8px;
-  background: #e0e0e0;
-  border: 1px solid #d9d9d9;
-  border-radius: 12px;
-  font-size: 12px;
-  color: #333;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
 }
 
 .tag-item:hover {
-  background: #d9d9d9;
-  border-color: #ccc;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
 }
 
 .tag-remove {
-  font-size: 10px;
-  color: #999;
+  font-size: 12px;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
 }
 
-.tag-remove:hover {
-  color: #ff6b6b;
+.tag-item:hover .tag-remove {
+  opacity: 1;
+}
+
+/* 添加标签按钮样式 */
+.add-tag-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(102, 126, 234, 0.1);
+  border: 2px dashed rgba(102, 126, 234, 0.3);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #667eea;
+}
+
+.add-tag-button:hover {
+  background: rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.5);
+  transform: scale(1.05);
+}
+
+.add-tag-button .el-icon {
+  font-size: 16px;
+}
+
+/* 提示文字样式 */
+.tag-hint-text {
+  color: #8a9ba8;
+  font-size: 13px;
+  font-style: italic;
+  margin-left: 8px;
+  user-select: none;
+}
+
+/* 正在添加的标签样式 */
+.adding-tag {
+  background: rgba(102, 126, 234, 0.1) !important;
+  border: 2px solid #667eea !important;
+  min-width: 80px;
+  transition: width 0.2s ease;
+}
+
+.tag-input-field {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #2c3e50;
+  font-size: 13px;
+  font-weight: 500;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.tag-input-field::placeholder {
+  color: #8a9ba8;
 }
 
 .search-actions {
