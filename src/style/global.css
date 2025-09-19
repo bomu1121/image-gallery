@@ -80,3 +80,9 @@ body {
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
 }
+
+/* 修复 Element Plus 弹窗导致的布局问题 */
+.el-popup-parent--hidden {
+  width: 100% !important;
+  padding-right: 0 !important;
+}
