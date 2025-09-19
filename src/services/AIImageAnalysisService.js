@@ -89,6 +89,10 @@ class AIImageAnalysisService {
    */
   async initialize() {
     try {
+      // 首先初始化分析日志记录器
+      await analysisLogger.initialize();
+      console.log("✅ AI分析日志记录器初始化完成");
+
       const { getAllImages } = await import("@/utils/idb.js");
       const images = await getAllImages();
 
@@ -818,13 +822,15 @@ class AIImageAnalysisService {
    * @param {string} imageName - 图片名称
    * @param {string} preferredService - 优先使用的服务（可选）
    * @param {string} method - 推荐方法（可选，默认使用配置的方法）
+   * @param {number} imageId - 图片ID（可选）
    * @returns {Promise<Array>} 推荐的标签列表
    */
   async analyzeImage(
     imageBlob,
     imageName = "",
     preferredService = null,
-    method = null
+    method = null,
+    imageId = null
   ) {
     const recommendationMethod = method || this.recommendationMethod;
 
@@ -835,25 +841,29 @@ class AIImageAnalysisService {
         return await this.analyzeImageWithSimilarityBasedRecommendation(
           imageBlob,
           imageName,
-          preferredService
+          preferredService,
+          imageId
         );
       case "semantic-analysis":
         return await this.analyzeImageWithSemanticAnalysis(
           imageBlob,
           imageName,
-          preferredService
+          preferredService,
+          imageId
         );
       case "visual-similarity":
         return await this.analyzeImageWithVisualSimilarity(
           imageBlob,
           imageName,
-          preferredService
+          preferredService,
+          imageId
         );
       case "ai-direct-recommendation":
         return await this.analyzeImageWithAIDirectRecommendation(
           imageBlob,
           imageName,
-          preferredService
+          preferredService,
+          imageId
         );
       default:
         console.warn(
@@ -862,7 +872,8 @@ class AIImageAnalysisService {
         return await this.analyzeImageWithAIDirectRecommendation(
           imageBlob,
           imageName,
-          preferredService
+          preferredService,
+          imageId
         );
     }
   }
@@ -872,18 +883,24 @@ class AIImageAnalysisService {
    * @param {Blob} imageBlob - 图片数据
    * @param {string} imageName - 图片名称
    * @param {string} preferredService - 优先使用的服务（可选）
+   * @param {number} imageId - 图片ID（可选）
    * @returns {Promise<Array>} 推荐的标签列表
    */
   async analyzeImageWithSimilarityBasedRecommendation(
     imageBlob,
     imageName = "",
-    preferredService = null
+    preferredService = null,
+    imageId = null
   ) {
     // 开始记录分析日志
+    const currentService =
+      preferredService || this.getCurrentConfiguredService();
+    const currentModel = this.getCurrentModelName();
     const analysisId = await analysisLogger.startAnalysis({
       imageName,
-      imageId: null,
-      aiService: preferredService || this.getCurrentConfiguredService(),
+      imageId: imageId,
+      aiService: currentService,
+      modelName: currentModel,
       analysisType: "similarity-based-recommendation",
     });
 
@@ -1155,18 +1172,25 @@ class AIImageAnalysisService {
    * @param {Blob} imageBlob - 图片数据
    * @param {string} imageName - 图片名称
    * @param {string} preferredService - 优先使用的服务（可选）
+   * @param {number} imageId - 图片ID（可选）
    * @returns {Promise<Array>} 推荐的标签列表
    */
   async analyzeImageWithSemanticAnalysis(
     imageBlob,
     imageName = "",
-    preferredService = null
+    preferredService = null,
+    imageId = null
   ) {
     // 开始记录分析日志
+    const currentService =
+      preferredService || this.getCurrentConfiguredService();
+    const currentModel = this.getCurrentModelName();
     const analysisId = await analysisLogger.startAnalysis({
       imageName,
-      imageId: null, // 可以后续添加图片ID
-      aiService: preferredService || this.getCurrentConfiguredService(),
+      imageId: imageId,
+      aiService: currentService,
+      modelName: currentModel,
+      analysisType: "similarity-based",
     });
 
     try {
@@ -2549,6 +2573,32 @@ class AIImageAnalysisService {
   }
 
   /**
+   * 获取当前配置的AI服务
+   */
+  getCurrentConfiguredService() {
+    for (const [service, config] of Object.entries(this.apiConfig)) {
+      if (config.apiKey && config.apiKey.trim() !== "") {
+        return service;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * 获取当前选择的模型名称
+   */
+  getCurrentModelName() {
+    const currentService = this.getCurrentConfiguredService();
+    if (!currentService) return null;
+
+    const config = this.apiConfig[currentService];
+    if (config && config.model) {
+      return config.model;
+    }
+    return null;
+  }
+
+  /**
    * 检查指定服务是否已配置
    * @param {string} serviceName - 服务名称
    * @returns {boolean} 是否已配置
@@ -3252,18 +3302,24 @@ class AIImageAnalysisService {
    * @param {Blob} imageBlob - 图片数据
    * @param {string} imageName - 图片名称
    * @param {string} preferredService - 优先使用的服务（可选）
+   * @param {number} imageId - 图片ID（可选）
    * @returns {Promise<Array>} 推荐的标签列表
    */
   async analyzeImageWithVisualSimilarity(
     imageBlob,
     imageName = "",
-    preferredService = null
+    preferredService = null,
+    imageId = null
   ) {
     // 开始记录分析日志
+    const currentService =
+      preferredService || this.getCurrentConfiguredService();
+    const currentModel = this.getCurrentModelName();
     const analysisId = await analysisLogger.startAnalysis({
       imageName,
-      imageId: null,
-      aiService: preferredService || this.getCurrentConfiguredService(),
+      imageId: imageId,
+      aiService: currentService,
+      modelName: currentModel,
       analysisType: "visual-similarity",
     });
 
@@ -3581,17 +3637,36 @@ class AIImageAnalysisService {
    * @param {Blob} imageBlob - 图片数据
    * @param {string} imageName - 图片名称
    * @param {string} preferredService - 优先使用的服务（可选）
+   * @param {number} imageId - 图片ID（可选）
    * @returns {Promise<Array>} 推荐的标签列表
    */
   async analyzeImageWithAIDirectRecommendation(
     imageBlob,
     imageName = "",
-    preferredService = null
+    preferredService = null,
+    imageId = null
   ) {
+    // 开始记录分析日志
+    const currentService =
+      preferredService || this.getCurrentConfiguredService();
+    const currentModel = this.getCurrentModelName();
+    const analysisId = await analysisLogger.startAnalysis({
+      imageName,
+      imageId: imageId,
+      aiService: currentService,
+      modelName: currentModel,
+      analysisType: "ai-direct-recommendation",
+    });
+
     try {
       console.log(
         `\n🎯 ========== 开始AI直接推荐标签: ${imageName} ==========`
       );
+
+      analysisLogger.addStep(analysisId, "开始AI直接推荐", {
+        imageName,
+        method: "ai-direct-recommendation",
+      });
 
       // 获取当前配置的AI服务
       const currentService =
@@ -3601,8 +3676,12 @@ class AIImageAnalysisService {
       }
 
       console.log(`🤖 使用AI服务: ${currentService}`);
+      analysisLogger.addStep(analysisId, "选择AI服务", {
+        service: currentService,
+      });
 
       // 调用AI服务直接生成标签推荐
+      console.log(`🔄 开始调用AI服务生成标签推荐...`);
       const recommendations = await this.generateTagsWithAI(
         imageBlob,
         currentService
@@ -3610,10 +3689,18 @@ class AIImageAnalysisService {
 
       if (!recommendations || recommendations.length === 0) {
         console.log(`❌ AI未能生成标签推荐`);
+        await analysisLogger.completeAnalysis(analysisId, [], {
+          reason: "AI未能生成标签推荐",
+          analysisType: "ai-direct-recommendation",
+        });
         return [];
       }
 
       console.log(`📊 AI生成了 ${recommendations.length} 个标签推荐`);
+      analysisLogger.addStep(analysisId, "AI标签生成完成", {
+        recommendationsCount: recommendations.length,
+        recommendations: recommendations.slice(0, 10), // 只记录前10个避免日志过长
+      });
 
       // 按置信度排序
       const finalRecommendations = recommendations
@@ -3629,9 +3716,30 @@ class AIImageAnalysisService {
         );
       });
 
+      // 记录最终推荐结果
+      analysisLogger.addStep(analysisId, "最终推荐结果", {
+        totalRecommendations: recommendations.length,
+        finalRecommendationsCount: finalRecommendations.length,
+        finalRecommendations: finalRecommendations.map((rec, index) => ({
+          rank: index + 1,
+          tag: rec.tag,
+          confidence: rec.confidence,
+          confidencePercent: (rec.confidence * 100).toFixed(1),
+          reason: rec.reason,
+          source: rec.source,
+        })),
+      });
+
+      // 完成分析日志记录
+      await analysisLogger.completeAnalysis(analysisId, finalRecommendations, {
+        recommendationsGenerated: finalRecommendations.length,
+        analysisType: "ai-direct-recommendation",
+      });
+
       return finalRecommendations;
     } catch (error) {
       console.error("❌ AI直接推荐失败:", error);
+      await analysisLogger.failAnalysis(analysisId, error);
       return [];
     }
   }
@@ -3760,6 +3868,54 @@ class AIImageAnalysisService {
       console.warn("❌ 获取AI服务配置失败:", err);
       return null;
     }
+  }
+
+  /**
+   * 获取AI分析日志列表
+   * @returns {Array} 分析日志列表
+   */
+  getAnalysisLogs() {
+    return analysisLogger.getAllLogs();
+  }
+
+  /**
+   * 获取AI分析统计信息
+   * @param {boolean} fromDatabase - 是否从数据库获取完整统计信息
+   * @returns {Promise<Object>} 统计信息
+   */
+  async getAnalysisStatistics(fromDatabase = false) {
+    return await analysisLogger.getStatistics(fromDatabase);
+  }
+
+  /**
+   * 导出AI分析日志
+   * @param {string|null} analysisId - 分析ID，如果为空则导出所有日志
+   * @param {string} format - 导出格式：'json' 或 'text'
+   * @returns {string} 导出的日志数据
+   */
+  exportAnalysisLogs(analysisId = null, format = "json") {
+    if (format === "text") {
+      return analysisLogger.exportLogsAsText(analysisId);
+    } else {
+      return analysisLogger.exportLogs(analysisId);
+    }
+  }
+
+  /**
+   * 清空AI分析日志
+   * @returns {Promise<void>}
+   */
+  async clearAnalysisLogs() {
+    await analysisLogger.clearLogs();
+  }
+
+  /**
+   * 测试AI分析日志保存功能
+   * @returns {Promise<void>}
+   */
+  async testAnalysisLogSave() {
+    console.log("🧪 开始测试AI分析日志保存功能...");
+    await analysisLogger.testSave();
   }
 }
 

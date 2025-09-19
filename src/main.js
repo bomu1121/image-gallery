@@ -5,6 +5,9 @@ import ElementPlus from "element-plus";
 import * as ElementPlusIconsVue from "@element-plus/icons-vue";
 import "element-plus/dist/index.css";
 
+// 全局样式
+import "@/style/global.css";
+
 // 全局组件
 import { setGlobalComponents } from "@/components/global.js";
 

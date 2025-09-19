@@ -48,6 +48,12 @@ export const productionRouter = [
     component: () => import("@/views/AIAnalysisLogs.vue"),
     meta: { title: "AI分析日志" },
   },
+  {
+    path: "/ai-analysis-logs/:id",
+    name: "AIAnalysisLogDetail",
+    component: () => import("@/views/AIAnalysisLogDetail.vue"),
+    meta: { title: "AI分析日志详情" },
+  },
 
   // 404
   { path: "/:catchAll(.*)", redirect: { name: "NotFound" } },

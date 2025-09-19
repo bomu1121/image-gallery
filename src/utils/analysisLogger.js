@@ -48,7 +48,15 @@ class AnalysisLogger {
    * 自动保存到IndexedDB
    */
   async autoSave() {
-    if (!this.autoSaveEnabled || !this.isInitialized) return;
+    if (!this.autoSaveEnabled || !this.isInitialized) {
+      console.warn(
+        "❌ 自动保存跳过: autoSaveEnabled=",
+        this.autoSaveEnabled,
+        "isInitialized=",
+        this.isInitialized
+      );
+      return;
+    }
 
     try {
       // 只保存最新的日志（避免保存过多数据）
@@ -56,7 +64,12 @@ class AnalysisLogger {
         0,
         Math.min(this.analysisLogs.length, 50)
       );
+
+      console.log(
+        `💾 开始自动保存 ${logsToSave.length} 条AI分析日志到IndexedDB`
+      );
       await putAnalysisLogs(logsToSave);
+      console.log(`✅ 自动保存AI分析日志成功`);
     } catch (error) {
       console.warn("❌ 自动保存AI分析日志失败:", error);
     }
@@ -72,12 +85,21 @@ class AnalysisLogger {
       .toString(36)
       .substr(2, 9)}`;
 
+    console.log("📝 开始记录分析日志:", {
+      analysisId,
+      params,
+      imageId: params.imageId,
+      imageName: params.imageName,
+    });
+
     const log = {
       id: analysisId,
       timestamp: new Date(),
       imageName: params.imageName || "未知图片",
       imageId: params.imageId || null,
       aiService: params.aiService || "未知服务",
+      modelName: params.modelName || null,
+      analysisType: params.analysisType || null,
       status: "processing", // processing, completed, failed
       steps: [],
       results: null,
@@ -95,6 +117,7 @@ class AnalysisLogger {
       },
     };
 
+    console.log("📝 创建的日志对象:", log);
     this.analysisLogs.unshift(log);
 
     // 限制日志数量
@@ -341,15 +364,82 @@ class AnalysisLogger {
    * 手动保存所有日志到数据库
    */
   async saveAllLogs() {
-    if (!this.isInitialized) return;
+    if (!this.isInitialized) {
+      console.warn("❌ 分析日志记录器未初始化，无法保存");
+      return;
+    }
 
     try {
+      console.log(
+        `💾 开始手动保存 ${this.analysisLogs.length} 条AI分析日志到数据库`
+      );
       await putAnalysisLogs(this.analysisLogs);
       console.log(
         `✅ 已手动保存 ${this.analysisLogs.length} 条AI分析日志到数据库`
       );
     } catch (error) {
       console.warn("❌ 手动保存AI分析日志失败:", error);
+    }
+  }
+
+  /**
+   * 测试保存功能 - 保存一条测试日志
+   */
+  async testSave() {
+    console.log("🧪 开始测试保存功能...");
+
+    const testLog = {
+      id: `test_${Date.now()}`,
+      timestamp: new Date(),
+      imageName: "测试图片",
+      imageId: null,
+      aiService: "test-service",
+      status: "completed",
+      steps: [
+        {
+          timestamp: new Date(),
+          step: "测试步骤",
+          data: { test: true },
+          duration: 0,
+        },
+      ],
+      results: [
+        {
+          tag: "测试标签",
+          confidence: 0.95,
+          reason: "测试原因",
+          source: "test",
+        },
+      ],
+      error: null,
+      duration: 1000,
+      statistics: {
+        totalImages: 1,
+        processedImages: 1,
+        tagGroups: 1,
+        successfulTags: 1,
+        failedTags: 0,
+        featuresExtracted: 1,
+        similarityComparisons: 0,
+        recommendationsGenerated: 1,
+      },
+    };
+
+    try {
+      console.log("🧪 保存测试日志:", testLog);
+      await putAnalysisLogs([testLog]);
+      console.log("✅ 测试日志保存成功");
+
+      // 立即读取验证
+      const savedLogs = await getAllAnalysisLogs();
+      const foundTestLog = savedLogs.find((log) => log.id === testLog.id);
+      if (foundTestLog) {
+        console.log("✅ 测试日志读取成功:", foundTestLog);
+      } else {
+        console.error("❌ 测试日志读取失败，未找到保存的日志");
+      }
+    } catch (error) {
+      console.error("❌ 测试保存失败:", error);
     }
   }
 

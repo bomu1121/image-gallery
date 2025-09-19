@@ -2,9 +2,9 @@
   <div class="settings-page">
     <!-- 左侧设置项列表 -->
     <div class="settings-sidebar">
-      <div class="settings-header">
+      <!-- <div class="settings-header">
         <h2>设置</h2>
-      </div>
+      </div> -->
 
       <div class="settings-menu">
         <div
@@ -166,7 +166,7 @@ const getCurrentSettingDescription = () => {
 
 /* 左侧设置项列表 */
 .settings-sidebar {
-  width: 280px;
+  width: 220px;
   background: white;
   border-right: 1px solid #e0e0e0;
   display: flex;

@@ -404,9 +404,9 @@ async function handleGlobalPaste(event) {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadBackgroundSettings();
-  initializeGroups();
+  await initializeGroups();
 
   // 监听来自图片库的显示分组对话框事件
   window.addEventListener("showImageGroupDialog", (event) => {
@@ -423,8 +423,10 @@ onMounted(() => {
   // 添加全局粘贴事件监听器，使用 capture 模式
   document.addEventListener("paste", handleGlobalPaste, true);
 
-  // 加载AI服务配置
+  // 加载AI服务配置并初始化
   aiImageAnalysisService.loadConfigFromStorage();
+  await aiImageAnalysisService.initialize();
+  console.log("✅ AI分析服务初始化完成");
 });
 </script>
 

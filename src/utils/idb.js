@@ -169,6 +169,60 @@ async function ensureBackgroundStoreExists() {
   });
 }
 
+// 确保AI分析日志对象仓库存在（若缺失则触发一次版本升级创建之）
+async function ensureAnalysisLogsStoreExists() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME);
+    req.onsuccess = () => {
+      const db = req.result;
+      if (db.objectStoreNames.contains(ANALYSIS_LOGS_STORE_NAME)) {
+        db.close();
+        resolve();
+        return;
+      }
+
+      const nextVersion = db.version + 1;
+      db.close();
+
+      const upgradeReq = indexedDB.open(DB_NAME, nextVersion);
+      upgradeReq.onupgradeneeded = () => {
+        const udb = upgradeReq.result;
+        if (!udb.objectStoreNames.contains(ANALYSIS_LOGS_STORE_NAME)) {
+          const analysisLogsStore = udb.createObjectStore(
+            ANALYSIS_LOGS_STORE_NAME,
+            {
+              keyPath: "id",
+              autoIncrement: true,
+            }
+          );
+          analysisLogsStore.createIndex("timestamp", "timestamp", {
+            unique: false,
+          });
+          analysisLogsStore.createIndex("imageName", "imageName", {
+            unique: false,
+          });
+          analysisLogsStore.createIndex("aiService", "aiService", {
+            unique: false,
+          });
+          analysisLogsStore.createIndex("status", "status", { unique: false });
+        }
+      };
+      upgradeReq.onblocked = () => {
+        console.warn("[idb] ensureAnalysisLogsStoreExists upgrade blocked");
+      };
+      upgradeReq.onsuccess = () => {
+        upgradeReq.result.close();
+        resolve();
+      };
+      upgradeReq.onerror = () => reject(upgradeReq.error);
+    };
+    req.onblocked = () => {
+      console.warn("[idb] ensureAnalysisLogsStoreExists open blocked");
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
 export async function putImage(image) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -456,12 +510,18 @@ export async function putAnalysisLog(analysisLog) {
  * @returns {Promise<Array>} 返回保存的日志ID数组
  */
 export async function putAnalysisLogs(analysisLogs) {
+  console.log(`📝 putAnalysisLogs: 准备保存 ${analysisLogs.length} 条日志`);
+
+  // 确保analysis_logs表存在
+  await ensureAnalysisLogsStoreExists();
+  console.log(`✅ 确保analysis_logs表存在`);
+
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(ANALYSIS_LOGS_STORE_NAME, "readwrite");
     const store = tx.objectStore(ANALYSIS_LOGS_STORE_NAME);
 
-    const promises = analysisLogs.map((log) => {
+    const promises = analysisLogs.map((log, index) => {
       const logToSave = {
         ...log,
         timestamp:
@@ -470,16 +530,36 @@ export async function putAnalysisLogs(analysisLogs) {
             : new Date(log.timestamp),
         savedAt: new Date(),
       };
+
+      console.log(`📝 保存日志 ${index + 1}:`, {
+        id: logToSave.id,
+        imageName: logToSave.imageName,
+        status: logToSave.status,
+        timestamp: logToSave.timestamp,
+      });
+
       return new Promise((resolveItem, rejectItem) => {
         const req = store.put(logToSave);
-        req.onsuccess = () => resolveItem(req.result);
-        req.onerror = () => rejectItem(req.error);
+        req.onsuccess = () => {
+          console.log(`✅ 日志 ${index + 1} 保存成功，ID: ${req.result}`);
+          resolveItem(req.result);
+        };
+        req.onerror = () => {
+          console.error(`❌ 日志 ${index + 1} 保存失败:`, req.error);
+          rejectItem(req.error);
+        };
       });
     });
 
     Promise.all(promises)
-      .then((results) => resolve(results))
-      .catch((error) => reject(error));
+      .then((results) => {
+        console.log(`✅ 所有 ${analysisLogs.length} 条日志保存成功`);
+        resolve(results);
+      })
+      .catch((error) => {
+        console.error(`❌ 批量保存日志失败:`, error);
+        reject(error);
+      });
   });
 }
 
@@ -488,6 +568,12 @@ export async function putAnalysisLogs(analysisLogs) {
  * @returns {Promise<Array>} 返回所有分析日志
  */
 export async function getAllAnalysisLogs() {
+  console.log(`📖 getAllAnalysisLogs: 开始从IndexedDB获取所有AI分析日志`);
+
+  // 确保analysis_logs表存在
+  await ensureAnalysisLogsStoreExists();
+  console.log(`✅ 确保analysis_logs表存在`);
+
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(ANALYSIS_LOGS_STORE_NAME, "readonly");
@@ -500,9 +586,25 @@ export async function getAllAnalysisLogs() {
       }));
       // 按时间戳倒序排列（最新的在前）
       logs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+      console.log(
+        `📖 getAllAnalysisLogs: 从IndexedDB获取到 ${logs.length} 条日志`
+      );
+      if (logs.length > 0) {
+        console.log(`📖 最新的日志:`, {
+          id: logs[0].id,
+          imageName: logs[0].imageName,
+          status: logs[0].status,
+          timestamp: logs[0].timestamp,
+        });
+      }
+
       resolve(logs);
     };
-    req.onerror = () => reject(req.error);
+    req.onerror = () => {
+      console.error(`❌ getAllAnalysisLogs失败:`, req.error);
+      reject(req.error);
+    };
   });
 }
 

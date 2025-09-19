@@ -48,3 +48,35 @@ body {
 .clearfix {
   zoom: 1;
 }
+
+/* 全局滚动条样式 - 统一使用gallery-scroll样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  background: transparent;
+  /* 确保滚动条始终占用空间 */
+  scrollbar-gutter: stable;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  /* 最小高度，确保滚动条可见性 */
+  min-height: 20px;
+}
+
+/* 滚动条悬停时更明显 */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Firefox 滚动条样式 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}

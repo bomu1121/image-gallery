@@ -628,7 +628,8 @@ async function analyzeImageWithAI() {
         imageBlob,
         image.value.name,
         currentService,
-        "ai-direct-recommendation"
+        "ai-direct-recommendation",
+        image.value.id
       );
     } else if (analysisMode.value === "similarity-based") {
       console.log("🎯 使用相似图集分析模式");
@@ -636,7 +637,8 @@ async function analyzeImageWithAI() {
         imageBlob,
         image.value.name,
         currentService,
-        "similarity-based"
+        "similarity-based",
+        image.value.id
       );
     } else if (analysisMode.value === "visual-similarity") {
       console.log("🎯 使用视觉相似性分析模式");
@@ -644,7 +646,8 @@ async function analyzeImageWithAI() {
         await aiImageAnalysisService.analyzeImageWithVisualSimilarity(
           imageBlob,
           image.value.name,
-          currentService
+          currentService,
+          image.value.id
         );
     } else {
       console.log("🧠 使用语义分析模式");
@@ -652,7 +655,8 @@ async function analyzeImageWithAI() {
         imageBlob,
         image.value.name,
         currentService,
-        "semantic-analysis"
+        "semantic-analysis",
+        image.value.id
       );
     }
 
