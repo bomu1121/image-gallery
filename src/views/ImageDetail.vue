@@ -95,62 +95,111 @@
           <div class="section-header">
             <h3 class="section-title">标签</h3>
             <div class="tag-actions">
-              <!-- 分析模式选择 -->
-              <el-select
-                v-model="analysisMode"
-                size="small"
-                class="analysis-mode-select"
-                placeholder="选择分析模式"
-              >
-                <el-option label="相似图集分析" value="similarity-based">
-                  <div class="analysis-mode-option">
-                    <div class="mode-title">相似图集分析</div>
-                    <div class="mode-description">
-                      基于相似图片的标签推荐（推荐）
-                    </div>
-                  </div>
-                </el-option>
-                <el-option label="AI直接推荐" value="ai-direct-recommendation">
-                  <div class="analysis-mode-option">
-                    <div class="mode-title">AI直接推荐</div>
-                    <div class="mode-description">
-                      AI直接分析图片生成新标签（不依赖标签库）
-                    </div>
-                  </div>
-                </el-option>
-                <el-option label="视觉相似性分析" value="visual-similarity">
-                  <div class="analysis-mode-option">
-                    <div class="mode-title">视觉相似性分析</div>
-                    <div class="mode-description">基于视觉特征识别相似图片</div>
-                  </div>
-                </el-option>
-                <el-option label="语义分析" value="semantic-analysis">
-                  <div class="analysis-mode-option">
-                    <div class="mode-title">语义分析</div>
-                    <div class="mode-description">基于语义特征分析图片内容</div>
-                  </div>
-                </el-option>
-              </el-select>
+              <!-- AI分析按钮和模式选择面板 -->
+              <div class="ai-analyze-container">
+                <el-button
+                  size="small"
+                  type="primary"
+                  :loading="isAnalyzing"
+                  :disabled="!hasValidApiKey"
+                  @click="analyzeImageWithAI"
+                  @mouseenter="showAnalysisModePanelNow"
+                  @mouseleave="hideAnalysisModePanel"
+                  class="ai-analyze-button"
+                >
+                  <el-icon><Star /></el-icon>
+                  AI分析
+                </el-button>
 
-              <el-button
-                size="small"
-                type="primary"
-                :loading="isAnalyzing"
-                :disabled="!hasValidApiKey"
-                @click="analyzeImageWithAI"
-                class="ai-analyze-button"
-              >
-                <el-icon><Star /></el-icon>
-                {{
-                  analysisMode === "similarity-based"
-                    ? "相似图集分析"
-                    : analysisMode === "ai-direct-recommendation"
-                    ? "AI直接推荐"
-                    : analysisMode === "visual-similarity"
-                    ? "视觉分析"
-                    : "AI分析"
-                }}
-              </el-button>
+                <!-- 分析模式选择面板 -->
+                <div
+                  v-show="showAnalysisModePanel"
+                  @mouseenter="showAnalysisModePanelNow"
+                  @mouseleave="hideAnalysisModePanel"
+                  class="analysis-mode-panel"
+                >
+                  <!-- 连接桥梁，确保鼠标移动过程中不会中断 -->
+                  <div class="hover-bridge"></div>
+                  <div class="panel-header">
+                    <span class="panel-title">选择分析模式</span>
+                  </div>
+                  <div class="mode-options">
+                    <label
+                      class="mode-option"
+                      :class="{ active: analysisMode === 'similarity-based' }"
+                    >
+                      <input
+                        type="radio"
+                        v-model="analysisMode"
+                        value="similarity-based"
+                        class="mode-radio"
+                      />
+                      <div class="mode-content">
+                        <div class="mode-title">相似图集分析</div>
+                        <div class="mode-description">
+                          基于相似图片的标签推荐（推荐）
+                        </div>
+                      </div>
+                    </label>
+
+                    <label
+                      class="mode-option"
+                      :class="{
+                        active: analysisMode === 'ai-direct-recommendation',
+                      }"
+                    >
+                      <input
+                        type="radio"
+                        v-model="analysisMode"
+                        value="ai-direct-recommendation"
+                        class="mode-radio"
+                      />
+                      <div class="mode-content">
+                        <div class="mode-title">AI直接推荐</div>
+                        <div class="mode-description">
+                          AI直接分析图片生成新标签（不依赖标签库）
+                        </div>
+                      </div>
+                    </label>
+
+                    <label
+                      class="mode-option"
+                      :class="{ active: analysisMode === 'visual-similarity' }"
+                    >
+                      <input
+                        type="radio"
+                        v-model="analysisMode"
+                        value="visual-similarity"
+                        class="mode-radio"
+                      />
+                      <div class="mode-content">
+                        <div class="mode-title">视觉相似性分析</div>
+                        <div class="mode-description">
+                          基于视觉特征识别相似图片
+                        </div>
+                      </div>
+                    </label>
+
+                    <label
+                      class="mode-option"
+                      :class="{ active: analysisMode === 'semantic-analysis' }"
+                    >
+                      <input
+                        type="radio"
+                        v-model="analysisMode"
+                        value="semantic-analysis"
+                        class="mode-radio"
+                      />
+                      <div class="mode-content">
+                        <div class="mode-title">语义分析</div>
+                        <div class="mode-description">
+                          基于语义特征分析图片内容
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
               <el-button
                 size="small"
                 @click="goToAISettings"
@@ -288,8 +337,6 @@ import {
   ElInput,
   ElIcon,
   ElMessageBox,
-  ElSelect,
-  ElOption,
 } from "element-plus";
 import {
   ArrowLeft,
@@ -322,7 +369,33 @@ const { success, error } = useDrawerNotification();
 const isAnalyzing = ref(false);
 const aiAnalysisResult = ref([]);
 const selectedAITags = ref(new Set());
+const showAnalysisModePanel = ref(false);
 const analysisMode = ref("ai-direct-recommendation"); // 分析模式：ai-direct-recommendation、similarity-based、visual-similarity 或 semantic-analysis
+
+// 面板显示控制方法
+let hideTimer = null;
+
+function hideAnalysisModePanel() {
+  // 清除之前的定时器
+  if (hideTimer) {
+    clearTimeout(hideTimer);
+  }
+
+  // 设置新的延迟隐藏定时器
+  hideTimer = setTimeout(() => {
+    showAnalysisModePanel.value = false;
+    hideTimer = null;
+  }, 300); // 增加延迟时间，给用户更多时间移动到面板上
+}
+
+function showAnalysisModePanelNow() {
+  // 清除隐藏定时器
+  if (hideTimer) {
+    clearTimeout(hideTimer);
+    hideTimer = null;
+  }
+  showAnalysisModePanel.value = true;
+}
 
 // 获取当前选中的AI服务
 const getCurrentAIService = () => {
@@ -901,41 +974,106 @@ function showAILogs() {
   align-items: center;
 }
 
-/* 分析模式选择器样式 */
-.analysis-mode-select {
-  min-width: 200px;
+/* AI分析容器和面板样式 */
+.ai-analyze-container {
+  position: relative;
+  display: inline-block;
 }
 
-.analysis-mode-select :deep(.el-input__wrapper) {
-  border-radius: 6px;
+.analysis-mode-panel {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 8px;
+  background: white;
   border: 1px solid #e0e0e0;
-  background: rgba(255, 255, 255, 0.8);
-  transition: all 0.2s ease;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  width: 240px;
+  overflow: hidden;
+  animation: fadeInUp 0.2s ease-out;
 }
 
-.analysis-mode-select :deep(.el-input__wrapper:hover) {
-  border-color: #667eea;
+.hover-bridge {
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: transparent;
 }
 
-.analysis-mode-select :deep(.el-input__wrapper.is-focus) {
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.analysis-mode-option {
+.panel-header {
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.panel-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.mode-options {
   padding: 4px 0;
+}
+
+.mode-option {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+
+.mode-option:hover {
+  background: #f0f4ff;
+}
+
+.mode-option.active {
+  background: #e6f0ff;
+  border-left: 3px solid #667eea;
+}
+
+.mode-radio {
+  margin: 0 8px 0 0;
+  margin-top: 2px;
+  cursor: pointer;
+  transform: scale(0.9);
+}
+
+.mode-content {
+  flex: 1;
 }
 
 .mode-title {
   font-weight: 500;
   color: #2c3e50;
-  font-size: 13px;
+  font-size: 12px;
+  margin-bottom: 1px;
 }
 
 .mode-description {
-  font-size: 11px;
+  font-size: 10px;
   color: #8a9ba8;
-  margin-top: 2px;
+  line-height: 1.3;
 }
 
 .ai-analyze-button {
@@ -1485,9 +1623,19 @@ function showAILogs() {
     align-items: stretch;
   }
 
-  .analysis-mode-select {
-    min-width: auto;
+  .ai-analyze-container {
     width: 100%;
+  }
+
+  .analysis-mode-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 320px;
+    margin: 0;
+    z-index: 2000;
   }
 
   .ai-analyze-button,
