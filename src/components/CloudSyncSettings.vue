@@ -4,7 +4,7 @@
     <div class="servers-section">
       <div class="section-header">
         <h4>云服务器配置</h4>
-        <el-button type="primary" @click="showAddDialog = true">
+        <el-button class="btn-outline" @click="showAddDialog = true">
           <el-icon><Plus /></el-icon>
           添加服务器
         </el-button>
@@ -180,7 +180,7 @@
 
         <el-form-item label="连接测试">
           <el-button
-            type="info"
+            class="btn-outline"
             :loading="testingConnection"
             @click="testConnection"
           >
@@ -194,7 +194,7 @@
 
       <template #footer>
         <el-button @click="showAddDialog = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="saveServer">
+        <el-button class="btn-outline" :loading="saving" @click="saveServer">
           {{ saving ? "保存中..." : "保存" }}
         </el-button>
       </template>
@@ -270,7 +270,7 @@ const getServerIcon = (type) => {
     http: Grid,
     nas: Setting,
     router: Setting,
-    'free-cloud': Upload,
+    "free-cloud": Upload,
     custom: Setting,
   };
   return iconMap[type] || Setting;

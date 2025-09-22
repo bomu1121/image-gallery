@@ -308,8 +308,7 @@
           :loading="testingCurrent"
           :disabled="!isCurrentProviderConfigured"
           @click="testCurrentProvider"
-          type="primary"
-          class="test-button"
+          class="btn-outline test-button"
         >
           <el-icon v-if="!testingCurrent"><Setting /></el-icon>
           测试连接
@@ -347,13 +346,15 @@
     <!-- 操作按钮 -->
     <div class="action-buttons">
       <el-button
-        type="primary"
+        class="btn-outline"
         @click="saveConfig"
         :disabled="!selectedProvider"
       >
         保存配置
       </el-button>
-      <el-button @click="resetConfig">重置配置</el-button>
+      <el-button class="btn-outline-gray" @click="resetConfig"
+        >重置配置</el-button
+      >
       <el-button @click="showProcessingStats" type="info">
         查看处理统计
       </el-button>

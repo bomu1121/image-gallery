@@ -7,7 +7,7 @@
         <p class="page-description">查看和管理AI图片分析的详细记录</p>
       </div>
       <div class="header-actions">
-        <el-button @click="refreshLogs" :loading="loading" type="primary">
+        <!-- <el-button @click="refreshLogs" :loading="loading" type="primary">
           <el-icon><Refresh /></el-icon>
           刷新
         </el-button>
@@ -18,7 +18,7 @@
         <el-button @click="clearAllLogs" :disabled="logs.length === 0">
           <el-icon><Delete /></el-icon>
           清空日志
-        </el-button>
+        </el-button> -->
       </div>
     </div>
 

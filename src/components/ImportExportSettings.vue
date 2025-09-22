@@ -15,7 +15,7 @@
               将所有图片文件和元数据打包为ZIP文件，包含分组信息、图片数据、标签和备注
             </p>
           </div>
-          <el-button type="primary" @click="exportCompleteData">
+          <el-button class="btn-outline" @click="exportCompleteData">
             <el-icon><Download /></el-icon>
             导出完整数据
           </el-button>
@@ -46,7 +46,7 @@
             :on-change="handleZipFileChange"
             :before-upload="beforeZipUpload"
           >
-            <el-button type="primary">
+            <el-button class="btn-outline">
               <el-icon><Upload /></el-icon>
               选择备份文件
             </el-button>
@@ -622,4 +622,6 @@ async function importCompleteData(file) {
 :deep(.el-upload .el-button) {
   margin: 0;
 }
+
+/* 自定义按钮样式已移至全局样式 global.css 中的 .btn-outline 类 */
 </style>

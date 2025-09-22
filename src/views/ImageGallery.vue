@@ -1388,6 +1388,7 @@ function clearSearch() {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background-color: rgba(255, 255, 255, 0.8);
 }
 
 .batch-info {
@@ -1601,6 +1602,7 @@ function clearSearch() {
 /* 上传区域样式 */
 .upload-area {
   border-top: 1px solid #e0e0e0;
+  background-color: rgba(255, 255, 255, 0.8);
   padding: 16px;
   height: 120px; /* 固定高度 */
   display: flex;
@@ -1682,6 +1684,7 @@ function clearSearch() {
 .group-selector {
   border-top: 1px solid #e0e0e0;
   padding: 8px 16px; /* 缩小上下内边距，避免顶栏被挤压 */
+  background-color: rgba(255, 255, 255, 0.8);
 }
 
 .group-selector-title {
@@ -1758,7 +1761,7 @@ function clearSearch() {
 .search-area {
   border-top: 1px solid #e0e0e0;
   padding: 16px;
-  background: rgba(245, 245, 245, 0.9);
+  background-color: rgba(255, 255, 255, 0.8);
 }
 
 .search-form {

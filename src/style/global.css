@@ -86,3 +86,106 @@ body {
   width: 100% !important;
   padding-right: 0 !important;
 }
+
+/* 全局按钮样式变量 */
+:root {
+  --btn-primary-color: rgb(0, 122, 255);
+  --btn-primary-hover-bg: rgba(0, 122, 255, 0.04);
+  --btn-secondary-color: #666666;
+  --btn-secondary-hover-bg: rgba(102, 102, 102, 0.04);
+  --btn-secondary-hover-color: #333333;
+  --btn-border-radius: 6px;
+  --btn-padding: 8px 16px;
+  --btn-font-weight: 500;
+  --btn-transition: all 0.3s ease;
+}
+
+/* 通用按钮样式类 */
+.btn-outline {
+  background-color: white !important;
+  border: 1px solid var(--btn-primary-color) !important;
+  color: var(--btn-primary-color) !important;
+  border-radius: var(--btn-border-radius) !important;
+  padding: var(--btn-padding) !important;
+  font-weight: var(--btn-font-weight) !important;
+  transition: var(--btn-transition) !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+  outline: none;
+  user-select: none;
+}
+
+.btn-outline:hover {
+  background-color: var(--btn-primary-hover-bg) !important;
+  border-color: var(--btn-primary-color) !important;
+  color: var(--btn-primary-color) !important;
+}
+
+.btn-outline:focus {
+  background-color: white !important;
+  border-color: var(--btn-primary-color) !important;
+  color: var(--btn-primary-color) !important;
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2) !important;
+}
+
+.btn-outline:active {
+  background-color: var(--btn-primary-hover-bg) !important;
+  border-color: var(--btn-primary-color) !important;
+  color: var(--btn-primary-color) !important;
+}
+
+.btn-outline:disabled {
+  background-color: #f5f5f5 !important;
+  border-color: #d9d9d9 !important;
+  color: #bfbfbf !important;
+  cursor: not-allowed !important;
+}
+
+/* 灰色主题按钮样式类 */
+.btn-outline-gray {
+  background-color: white !important;
+  border: 1px solid var(--btn-secondary-color) !important;
+  color: var(--btn-secondary-color) !important;
+  border-radius: var(--btn-border-radius) !important;
+  padding: var(--btn-padding) !important;
+  font-weight: var(--btn-font-weight) !important;
+  transition: var(--btn-transition) !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+  outline: none;
+  user-select: none;
+}
+
+.btn-outline-gray:hover {
+  background-color: var(--btn-secondary-hover-bg) !important;
+  border-color: var(--btn-secondary-hover-color) !important;
+  color: var(--btn-secondary-hover-color) !important;
+}
+
+.btn-outline-gray:focus {
+  background-color: white !important;
+  border-color: var(--btn-secondary-hover-color) !important;
+  color: var(--btn-secondary-hover-color) !important;
+  box-shadow: 0 0 0 2px rgba(102, 102, 102, 0.2) !important;
+}
+
+.btn-outline-gray:active {
+  background-color: var(--btn-secondary-hover-bg) !important;
+  border-color: var(--btn-secondary-hover-color) !important;
+  color: var(--btn-secondary-hover-color) !important;
+}
+
+.btn-outline-gray:disabled {
+  background-color: #f5f5f5 !important;
+  border-color: #d9d9d9 !important;
+  color: #bfbfbf !important;
+  cursor: not-allowed !important;
+}
