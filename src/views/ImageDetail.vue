@@ -97,23 +97,34 @@
             <div class="tag-actions">
               <!-- AI分析按钮和模式选择面板 -->
               <div class="ai-analyze-container">
-                <el-button
-                  size="small"
-                  type="primary"
-                  :loading="isAnalyzing"
-                  :disabled="!hasValidApiKey"
-                  @click="analyzeImageWithAI"
-                  @mouseenter="showAnalysisModePanelNow"
-                  @mouseleave="hideAnalysisModePanel"
-                  class="ai-analyze-button"
+                <el-tooltip
+                  :content="hasValidApiKey ? '' : '请先进行模型配置'"
+                  :disabled="hasValidApiKey"
+                  placement="top"
                 >
-                  <el-icon><Star /></el-icon>
-                  AI分析
-                </el-button>
+                  <el-button
+                    size="small"
+                    type="primary"
+                    :loading="isAnalyzing"
+                    :disabled="!hasValidApiKey"
+                    @click="analyzeImageWithAI"
+                    @mouseenter="
+                      hasValidApiKey ? showAnalysisModePanelNow() : null
+                    "
+                    @mouseleave="
+                      hasValidApiKey ? hideAnalysisModePanel() : null
+                    "
+                    class="ai-analyze-button"
+                    :class="{ 'ai-analyze-button-disabled': !hasValidApiKey }"
+                  >
+                    <el-icon><Star /></el-icon>
+                    AI分析
+                  </el-button>
+                </el-tooltip>
 
                 <!-- 分析模式选择面板 -->
                 <div
-                  v-show="showAnalysisModePanel"
+                  v-show="showAnalysisModePanel && hasValidApiKey"
                   @mouseenter="showAnalysisModePanelNow"
                   @mouseleave="hideAnalysisModePanel"
                   class="analysis-mode-panel"
@@ -337,6 +348,7 @@ import {
   ElInput,
   ElIcon,
   ElMessageBox,
+  ElTooltip,
 } from "element-plus";
 import {
   ArrowLeft,
@@ -1084,6 +1096,17 @@ function showAILogs() {
 
 .ai-analyze-button:hover {
   background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%) !important;
+}
+
+.ai-analyze-button-disabled {
+  background: #f5f5f5 !important;
+  color: #c0c4cc !important;
+  cursor: not-allowed !important;
+}
+
+.ai-analyze-button-disabled:hover {
+  background: #f5f5f5 !important;
+  color: #c0c4cc !important;
 }
 
 .ai-config-button {
