@@ -355,9 +355,6 @@
       <el-button class="btn-outline-gray" @click="resetConfig"
         >重置配置</el-button
       >
-      <el-button @click="showProcessingStats" type="info">
-        查看处理统计
-      </el-button>
     </div>
   </div>
 </template>
@@ -749,60 +746,6 @@ function resetConfig() {
   localStorage.removeItem("ai-service-config");
 
   success("配置已重置");
-}
-
-// 显示处理统计
-function showProcessingStats() {
-  const stats = aiImageAnalysisService.getProcessingStats();
-  const dbInfo = aiImageAnalysisService.getTagFeatureDatabaseInfo();
-
-  const message = `
-📊 AI图片处理统计报告
-
-🚀 处理概览:
-• 总图片数: ${stats.totalImages}
-• 已处理图片: ${stats.processedImages}
-• 失败图片: ${stats.failedImages}
-• 处理时长: ${
-    stats.duration ? (stats.duration / 1000).toFixed(2) + "秒" : "未开始"
-  }
-
-🏷️ 标签特征库:
-• 标签组数: ${dbInfo.totalTags}
-• 总图片数: ${dbInfo.totalImages}
-• 总特征数: ${dbInfo.totalFeatures}
-
-📈 成功率:
-• 图片处理成功率: ${
-    stats.totalImages > 0
-      ? ((stats.processedImages / stats.totalImages) * 100).toFixed(1)
-      : 0
-  }%
-• 标签构建成功率: ${
-    stats.tagGroups > 0
-      ? ((stats.successfulTags / stats.tagGroups) * 100).toFixed(1)
-      : 0
-  }%
-
-${
-  stats.details && stats.details.length > 0
-    ? `
-❌ 失败详情:
-${stats.details
-  .map((d) => `• ${d.tag}: ${d.error} (${d.imageCount}张图片)`)
-  .join("\n")}
-`
-    : ""
-}
-
-💡 提示: 打开浏览器控制台可查看详细的处理日志
-  `;
-
-  ElMessageBox.alert(message, "处理统计报告", {
-    confirmButtonText: "确定",
-    type: "info",
-    dangerouslyUseHTMLString: false,
-  });
 }
 
 // 监听硅基流动API Key变化
