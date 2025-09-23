@@ -45,6 +45,14 @@
           >
             <el-icon><icon-search /></el-icon>
           </div>
+          <div
+            class="menu-action-item"
+            :class="{ active: albumMode }"
+            @click="onStartAlbumMode"
+            title="组图"
+          >
+            <el-icon><icon-folder /></el-icon>
+          </div>
         </div>
 
         <!-- 分组选择区域 -->
@@ -94,8 +102,8 @@
           </el-upload>
         </div>
 
-        <!-- 批量删除操作（集成到折叠区域） -->
-        <div v-if="batchDeleteMode" class="menu-batch-bar">
+        <!-- 批量删除/组图模式操作（共用面板，互斥显示） -->
+        <div v-if="batchDeleteMode || albumMode" class="menu-batch-bar">
           <div class="batch-info">
             <span class="selected-count"
               >已选择 {{ selectedImages.size }} 张图片</span
@@ -114,14 +122,25 @@
               class="gray-button"
               >取消选择</el-button
             >
-            <el-button
-              @click="confirmBatchDelete"
-              :disabled="selectedImages.size === 0"
-              class="batch-delete-icon-button"
-              circle
-            >
-              <el-icon><icon-delete /></el-icon>
-            </el-button>
+            <template v-if="batchDeleteMode">
+              <el-button
+                @click="confirmBatchDelete"
+                :disabled="selectedImages.size === 0"
+                class="batch-delete-icon-button"
+                circle
+              >
+                <el-icon><icon-delete /></el-icon>
+              </el-button>
+            </template>
+            <template v-else>
+              <el-button
+                type="primary"
+                :disabled="selectedImages.size === 0"
+                @click="emit('createAlbumFromSelection')"
+              >
+                添加到组图
+              </el-button>
+            </template>
           </div>
         </div>
 
@@ -213,7 +232,8 @@
           class="card"
           :class="{
             'is-deleting': isDeleting(img.id),
-            'is-selected': batchDeleteMode && selectedImages.has(img.id),
+            'is-selected':
+              (batchDeleteMode || albumMode) && selectedImages.has(img.id),
           }"
         >
           <img
@@ -221,15 +241,19 @@
             :alt="img.name"
             @click="onCardClick(img)"
             @contextmenu.prevent="
-              !batchDeleteMode && onCardContextMenu($event, img)
+              !(batchDeleteMode || albumMode) && onCardContextMenu($event, img)
             "
           />
+          <div v-if="coverCounts[img.id] > 0" class="album-count-badge">
+            +{{ coverCounts[img.id] }}
+          </div>
+
           <div v-if="isDeleting(img.id)" class="deleting-overlay">
             <div class="spinner" />
           </div>
           <!-- 选中状态遮罩 -->
           <div
-            v-if="batchDeleteMode && selectedImages.has(img.id)"
+            v-if="(batchDeleteMode || albumMode) && selectedImages.has(img.id)"
             class="selection-overlay"
             @click="onCardClick(img)"
           >
@@ -322,7 +346,7 @@ import {
   Setting as IconSetting,
   Search as IconSearch,
 } from "@element-plus/icons-vue";
-import { getAllImages, deleteImage } from "@/utils/idb.js";
+import { getAllImages, deleteImage, getChildrenImages } from "@/utils/idb.js";
 
 // Props
 const props = defineProps({
@@ -333,6 +357,10 @@ const props = defineProps({
   selectedImages: {
     type: Set,
     default: () => new Set(),
+  },
+  albumMode: {
+    type: Boolean,
+    default: false,
   },
   groups: {
     type: Array,
@@ -364,12 +392,17 @@ const emit = defineEmits([
   "showGroupManage",
   "toggleUploadMode",
   "fileChange",
+  "startAlbumMode",
+  "createAlbumFromSelection",
 ]);
 
 const router = useRouter();
 const { success, error, warning, info } = useDrawerNotification();
 
 const images = ref([]);
+const coverCounts = ref({}); // { [imageId]: number }
+const hiddenImageIds = ref(new Set()); // 需要在主列表隐藏的图片（相册内非封面）
+// 移除小卡展开所需的本地状态
 const viewerVisible = ref(false);
 const current = ref(null);
 const deletingIds = ref([]);
@@ -451,11 +484,32 @@ async function load() {
     }
   }
 
-  images.value = filteredData.map((r) => ({
+  // 基于 parentImageId 统计：附图隐藏，主图显示 +N
+  const newCoverCounts = {};
+  const newHidden = new Set();
+  for (const img of filteredData) {
+    if (img.parentImageId !== null && img.parentImageId !== undefined) {
+      newHidden.add(img.id);
+      const pid = img.parentImageId;
+      newCoverCounts[pid] = (newCoverCounts[pid] || 0) + 1;
+    }
+  }
+  coverCounts.value = newCoverCounts;
+  hiddenImageIds.value = newHidden;
+
+  // 仅显示主图
+  const visibleData = filteredData.filter(
+    (r) => r.parentImageId === null || r.parentImageId === undefined
+  );
+
+  images.value = visibleData.map((r) => ({
     ...r,
     objectUrl:
       r.blob && r.blob instanceof Blob ? URL.createObjectURL(r.blob) : r.url,
   }));
+
+  expandedRoots.value = new Set();
+  childrenMap.value = {};
 
   // 如果当前处于搜索状态，则基于新的分组数据重新应用搜索条件
   if (isSearchActive.value) {
@@ -519,8 +573,8 @@ function goToDetail(img) {
 function onCardClick(img) {
   if (isDeleting(img.id)) return;
 
-  if (props.batchDeleteMode) {
-    // 批量删除模式下，切换选中状态
+  if (props.batchDeleteMode || props.albumMode) {
+    // 批量删除 / 组图模式 下，切换选中状态
     emit("toggleImageSelection", img.id);
   } else {
     // 正常模式下，跳转到详情页
@@ -980,6 +1034,10 @@ function showCreateGroup() {
 
 function showGroupManage() {
   emit("showGroupManage");
+}
+
+function onStartAlbumMode() {
+  emit("startAlbumMode");
 }
 
 // 搜索相关函数
@@ -1483,6 +1541,19 @@ function clearSearch() {
   align-items: center;
   justify-content: center;
   border-radius: 6px;
+}
+
+/* 组图数量徽标 */
+.album-count-badge {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
 }
 
 .check-icon {

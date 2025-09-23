@@ -32,6 +32,7 @@
         <div v-else class="content-scroll">
           <router-view
             :batch-delete-mode="batchDeleteMode"
+            :album-mode="albumMode"
             :selected-images="selectedImages"
             :groups="groups"
             :selected-group-id="selectedGroupId"
@@ -41,12 +42,14 @@
             @clear-selection="clearSelection"
             @batch-delete="handleBatchDelete"
             @start-batch-delete="startBatchDelete"
+            @start-album-mode="toggleAlbumMode"
             @show-group-selector="toggleGroupSelector"
             @select-group="handleSelectGroup"
             @show-create-group="showCreateGroupDialog = true"
             @show-group-manage="showGroupManageDialog = true"
             @toggle-upload-mode="toggleUploadMode"
             @file-change="(file) => onFileChange(file, selectedGroupId)"
+            @create-album-from-selection="createAlbumFromSelection"
           ></router-view>
         </div>
       </div>
@@ -79,6 +82,36 @@
 
     <!-- 通知容器 -->
     <NotificationContainer />
+
+    <!-- 组图选择/新建弹窗 -->
+    <el-dialog v-model="showAlbumDialog" title="添加到组图" width="420px">
+      <div class="album-dialog-body">
+        <div class="field">
+          <div class="label">选择已有相册</div>
+          <el-select
+            v-model="selectedAlbumId"
+            placeholder="选择相册"
+            clearable
+            style="width: 100%"
+          >
+            <el-option
+              v-for="a in albumList"
+              :key="a.id"
+              :label="a.name"
+              :value="a.id"
+            />
+          </el-select>
+        </div>
+        <div class="field">
+          <div class="label">或新建相册</div>
+          <el-input v-model="newAlbumName" placeholder="输入新相册名称" />
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="cancelAlbumDialog">取消</el-button>
+        <el-button type="primary" @click="confirmAddToAlbum">确定</el-button>
+      </template>
+    </el-dialog>
   </el-config-provider>
 </template>
 
@@ -109,6 +142,7 @@ import {
   processPastedImages,
 } from "@/utils/modules/paste.js";
 import { putImage } from "@/utils/idb.js";
+import { updateImage, getImageById } from "@/utils/idb.js";
 import "@/utils/logManager.js"; // 初始化全局日志管理器
 import { aiImageAnalysisService } from "@/services/AIImageAnalysisService.js";
 
@@ -138,6 +172,9 @@ const showCreateGroupDialog = ref(false);
 const showEditGroupDialog = ref(false);
 const showImageGroupDialog = ref(false);
 const showGroupManageDialog = ref(false);
+// 模式：批量删除 or 组图模式（互斥）
+const albumMode = ref(false);
+// 取消选择相册弹窗逻辑，改为直接创建相册
 
 // 批量删除相关状态
 const batchDeleteMode = ref(false);
@@ -222,7 +259,21 @@ function startBatchDelete() {
     selectedImages.value.clear();
     batchDeleteMode.value = false;
   } else {
+    albumMode.value = false; // 互斥
     batchDeleteMode.value = true;
+    selectedImages.value.clear();
+    router.push("/gallery");
+  }
+}
+// 切换组图模式（与批量删除互斥，共用面板区域）
+function toggleAlbumMode() {
+  showSettingsPage.value = false;
+  if (albumMode.value) {
+    selectedImages.value.clear();
+    albumMode.value = false;
+  } else {
+    batchDeleteMode.value = false; // 互斥
+    albumMode.value = true;
     selectedImages.value.clear();
     router.push("/gallery");
   }
@@ -428,6 +479,41 @@ onMounted(async () => {
   await aiImageAnalysisService.initialize();
   console.log("✅ AI分析服务初始化完成");
 });
+// 直接创建相册：封面=第一张、继承其分组
+async function createAlbumFromSelection() {
+  if (selectedImages.value.size === 0) {
+    warning("请先选择图片");
+    return;
+  }
+  try {
+    const ids = Array.from(selectedImages.value);
+    const coverImageId = ids[0];
+    // 读取封面图，继承其分组与标签
+    const coverImg = await getImageById(coverImageId);
+    const groupId = coverImg?.groupId ?? null;
+    const tags = Array.isArray(coverImg?.tags) ? [...coverImg.tags] : [];
+
+    // 将其余图片挂到主图下，并继承分组与标签
+    const children = ids.slice(1);
+    if (children.length > 0) {
+      await Promise.all(
+        children.map((id) =>
+          updateImage(id, { parentImageId: coverImageId, groupId, tags })
+        )
+      );
+    }
+
+    success("组图已创建");
+    // 退出组图模式并清空选择
+    albumMode.value = false;
+    selectedImages.value.clear();
+    // 刷新用于徽标的计数（触发列表刷新）
+    window.dispatchEvent(new CustomEvent("imageAdded"));
+  } catch (e) {
+    console.error(e);
+    error("创建组图失败");
+  }
+}
 </script>
 
 <style scoped>

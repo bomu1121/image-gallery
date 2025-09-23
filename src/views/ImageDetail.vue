@@ -28,6 +28,22 @@
             @click="openViewer"
           />
         </div>
+        <!-- 附图折叠栏（仅当存在附图时显示） -->
+        <div v-if="childrenCount > 0" class="children-toggle">
+          <span class="children-toggle-text" @click="toggleChildren">
+            {{ showChildren ? "收起" : "查看更多" }}（{{ childrenCount }}）
+          </span>
+        </div>
+        <!-- 附图纵向列表（展开时显示） -->
+        <div v-if="showChildren" class="children-list">
+          <div class="child-item" v-for="child in children" :key="child.id">
+            <img
+              :src="child.objectUrl || child.url"
+              :alt="child.name"
+              @click="openChildViewer(child)"
+            />
+          </div>
+        </div>
       </div>
 
       <!-- 右侧信息区域 -->
@@ -361,13 +377,21 @@ import {
   Check,
   Document,
 } from "@/utils/icons.js";
-import { getImageById, deleteImage, updateImage } from "@/utils/idb.js";
+import {
+  getImageById,
+  deleteImage,
+  updateImage,
+  getChildrenImages,
+} from "@/utils/idb.js";
 import { useDrawerNotification } from "@/composables/useDrawerNotification.js";
 import { aiImageAnalysisService } from "@/services/AIImageAnalysisService.js";
 
 const route = useRoute();
 const router = useRouter();
 const image = ref(null);
+const children = ref([]);
+const childrenCount = ref(0);
+const showChildren = ref(false);
 const isEditingNotes = ref(false);
 const editingNotes = ref("");
 const notesInput = ref(null);
@@ -459,10 +483,16 @@ async function loadImage() {
   }
 
   try {
-    const data = await getImageById(parseInt(imageId));
+    let data = await getImageById(parseInt(imageId));
     if (!data) {
       error("图片不存在");
       return;
+    }
+
+    // 若是附图，自动切换到其主图详情
+    if (data.parentImageId !== null && data.parentImageId !== undefined) {
+      const parent = await getImageById(data.parentImageId);
+      if (parent) data = parent;
     }
 
     revokeObjectUrl(image.value);
@@ -475,13 +505,35 @@ async function loadImage() {
       // 确保tags字段存在
       tags: data.tags || [],
     };
+
+    // 附图计数（仅针对主图展示）
+    try {
+      const childList = await getChildrenImages(image.value.id);
+      childrenCount.value = childList.length;
+      // 初始不展开；重置已加载的 children
+      showChildren.value = false;
+      // 释放旧 children 的 objectUrl
+      children.value.forEach(
+        (c) => c.objectUrl && URL.revokeObjectURL(c.objectUrl)
+      );
+      children.value = [];
+    } catch (e) {
+      childrenCount.value = 0;
+      showChildren.value = false;
+      children.value = [];
+    }
   } catch (err) {
     error("加载图片失败");
   }
 }
 
 onMounted(loadImage);
-onBeforeUnmount(() => revokeObjectUrl(image.value));
+onBeforeUnmount(() => {
+  revokeObjectUrl(image.value);
+  children.value.forEach(
+    (c) => c.objectUrl && URL.revokeObjectURL(c.objectUrl)
+  );
+});
 
 function goBack() {
   router.push("/gallery");
@@ -519,6 +571,35 @@ function openViewer() {
   const src = image.value.objectUrl || image.value.url;
   if (src) {
     window.open(src, "_blank");
+  }
+}
+
+// 打开子图
+function openChildViewer(child) {
+  const src = child.objectUrl || child.url;
+  if (src) window.open(src, "_blank");
+}
+
+// 展开/收起附图
+async function toggleChildren() {
+  if (!image.value) return;
+  if (showChildren.value) {
+    showChildren.value = false;
+    return;
+  }
+  try {
+    const list = await getChildrenImages(image.value.id);
+    // 生成 objectUrl
+    const normalized = list.map((r) => ({
+      ...r,
+      objectUrl:
+        r.blob && r.blob instanceof Blob ? URL.createObjectURL(r.blob) : r.url,
+    }));
+    children.value = normalized;
+    showChildren.value = true;
+  } catch (e) {
+    children.value = [];
+    showChildren.value = false;
   }
 }
 
@@ -937,6 +1018,41 @@ function showAILogs() {
   height: auto;
   object-fit: contain;
   cursor: pointer;
+}
+
+/* 附图折叠与列表样式 */
+.children-toggle {
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.children-toggle-text {
+  font-size: 13px;
+  color: #667eea;
+  cursor: pointer;
+  user-select: none;
+}
+
+.children-toggle-text:hover {
+  text-decoration: underline;
+}
+
+.children-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.child-item img {
+  max-width: 700px;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 /* 右侧信息区域 */

@@ -6,6 +6,8 @@ const STORE_NAME = "images";
 const GROUPS_STORE_NAME = "groups";
 const BACKGROUND_STORE_NAME = "background";
 const ANALYSIS_LOGS_STORE_NAME = "analysis_logs";
+const ALBUMS_STORE_NAME = "albums";
+const ALBUM_ITEMS_STORE_NAME = "album_items";
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -21,6 +23,10 @@ function openDB() {
           autoIncrement: true,
         });
         store.createIndex("createdAt", "createdAt", { unique: false });
+        // 新增索引：parentImageId（附图模式）
+        store.createIndex("parentImageId", "parentImageId", {
+          unique: false,
+        });
       }
 
       // 创建分组存储
@@ -62,6 +68,35 @@ function openDB() {
           unique: false,
         });
         analysisLogsStore.createIndex("status", "status", { unique: false });
+      }
+
+      // 创建相册（组图）存储
+      if (!db.objectStoreNames.contains(ALBUMS_STORE_NAME)) {
+        const albumsStore = db.createObjectStore(ALBUMS_STORE_NAME, {
+          keyPath: "id",
+          autoIncrement: true,
+        });
+        albumsStore.createIndex("updatedAt", "updatedAt", { unique: false });
+        albumsStore.createIndex("name", "name", { unique: false });
+      }
+
+      // 创建相册项（组图-图片关联）存储
+      if (!db.objectStoreNames.contains(ALBUM_ITEMS_STORE_NAME)) {
+        const albumItemsStore = db.createObjectStore(ALBUM_ITEMS_STORE_NAME, {
+          keyPath: "id",
+          autoIncrement: true,
+        });
+        albumItemsStore.createIndex("albumId", "albumId", { unique: false });
+        albumItemsStore.createIndex("imageId", "imageId", { unique: false });
+        // 复合索引用于唯一性校验（同一图片不可重复加入同一相册）
+        albumItemsStore.createIndex("albumId_imageId", ["albumId", "imageId"], {
+          unique: true,
+        });
+        albumItemsStore.createIndex(
+          "albumId_sortOrder",
+          ["albumId", "sortOrder"],
+          { unique: false }
+        );
       }
     };
     request.onblocked = () => {
@@ -223,6 +258,374 @@ async function ensureAnalysisLogsStoreExists() {
   });
 }
 
+// 确保相册与相册项对象仓库存在
+async function ensureAlbumsStoresExist() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME);
+    req.onsuccess = () => {
+      const db = req.result;
+      const needAlbums = !db.objectStoreNames.contains(ALBUMS_STORE_NAME);
+      const needAlbumItems = !db.objectStoreNames.contains(
+        ALBUM_ITEMS_STORE_NAME
+      );
+      if (!needAlbums && !needAlbumItems) {
+        db.close();
+        resolve();
+        return;
+      }
+
+      const nextVersion = db.version + 1;
+      db.close();
+
+      const upgradeReq = indexedDB.open(DB_NAME, nextVersion);
+      upgradeReq.onupgradeneeded = () => {
+        const udb = upgradeReq.result;
+        if (!udb.objectStoreNames.contains(ALBUMS_STORE_NAME)) {
+          const albumsStore = udb.createObjectStore(ALBUMS_STORE_NAME, {
+            keyPath: "id",
+            autoIncrement: true,
+          });
+          albumsStore.createIndex("updatedAt", "updatedAt", { unique: false });
+          albumsStore.createIndex("name", "name", { unique: false });
+        }
+        if (!udb.objectStoreNames.contains(ALBUM_ITEMS_STORE_NAME)) {
+          const albumItemsStore = udb.createObjectStore(
+            ALBUM_ITEMS_STORE_NAME,
+            {
+              keyPath: "id",
+              autoIncrement: true,
+            }
+          );
+          albumItemsStore.createIndex("albumId", "albumId", { unique: false });
+          albumItemsStore.createIndex("imageId", "imageId", { unique: false });
+          albumItemsStore.createIndex(
+            "albumId_imageId",
+            ["albumId", "imageId"],
+            { unique: true }
+          );
+          albumItemsStore.createIndex(
+            "albumId_sortOrder",
+            ["albumId", "sortOrder"],
+            { unique: false }
+          );
+        }
+      };
+      upgradeReq.onblocked = () => {
+        console.warn("[idb] ensureAlbumsStoresExist upgrade blocked");
+      };
+      upgradeReq.onsuccess = () => {
+        upgradeReq.result.close();
+        resolve();
+      };
+      upgradeReq.onerror = () => reject(upgradeReq.error);
+    };
+    req.onblocked = () => {
+      console.warn("[idb] ensureAlbumsStoresExist open blocked");
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// ==================== 相册（组图）相关 API ====================
+export async function createAlbum(album) {
+  await ensureAlbumsStoresExist();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ALBUMS_STORE_NAME, "readwrite");
+    const store = tx.objectStore(ALBUMS_STORE_NAME);
+    const now = Date.now();
+    const data = {
+      name: album.name?.trim() || "未命名相册",
+      description: album.description || "",
+      coverImageId: album.coverImageId ?? null,
+      groupId: album.groupId ?? null,
+      itemCount: album.itemCount ?? 0,
+      tags: album.tags ? [...album.tags] : [],
+      createdAt: album.createdAt || now,
+      updatedAt: album.updatedAt || now,
+    };
+    const req = store.add(data);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function getAllAlbums() {
+  await ensureAlbumsStoresExist();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ALBUMS_STORE_NAME, "readonly");
+    const store = tx.objectStore(ALBUMS_STORE_NAME);
+    const req = store.getAll();
+    req.onsuccess = () =>
+      resolve(req.result.sort((a, b) => b.updatedAt - a.updatedAt));
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function updateAlbum(id, updates) {
+  await ensureAlbumsStoresExist();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ALBUMS_STORE_NAME, "readwrite");
+    const store = tx.objectStore(ALBUMS_STORE_NAME);
+    const getReq = store.get(id);
+    getReq.onsuccess = () => {
+      const existed = getReq.result;
+      if (!existed) {
+        reject(new Error("Album not found"));
+        return;
+      }
+      const data = { ...existed };
+      // 处理计数增量
+      if (typeof updates.itemCountDelta === "number") {
+        data.itemCount = Math.max(
+          0,
+          (data.itemCount || 0) + updates.itemCountDelta
+        );
+      }
+      // 其他字段合并
+      Object.keys(updates).forEach((k) => {
+        if (k === "itemCountDelta") return;
+        if (k === "tags") {
+          data.tags = updates.tags ? [...updates.tags] : data.tags || [];
+        } else {
+          data[k] = updates[k];
+        }
+      });
+      data.updatedAt = Date.now();
+      const putReq = store.put(data);
+      putReq.onsuccess = () => resolve(putReq.result);
+      putReq.onerror = () => reject(putReq.error);
+    };
+    getReq.onerror = () => reject(getReq.error);
+  });
+}
+
+export async function deleteAlbum(id) {
+  await ensureAlbumsStoresExist();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(
+      [ALBUMS_STORE_NAME, ALBUM_ITEMS_STORE_NAME],
+      "readwrite"
+    );
+    const albumsStore = tx.objectStore(ALBUMS_STORE_NAME);
+    const itemsStore = tx.objectStore(ALBUM_ITEMS_STORE_NAME);
+
+    // 删除 album_items 内的关联
+    const idx = itemsStore.index("albumId");
+    const range = IDBKeyRange.only(id);
+    const toDelete = [];
+    idx.openCursor(range).onsuccess = (e) => {
+      const cursor = e.target.result;
+      if (cursor) {
+        toDelete.push(cursor.primaryKey);
+        cursor.continue();
+      } else {
+        toDelete.forEach((pk) => itemsStore.delete(pk));
+        // 删除相册本身
+        albumsStore.delete(id);
+      }
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
+// 相册项（图片加入/移除/排序）
+export async function addImagesToAlbum(
+  albumId,
+  imageIds,
+  { baseOrder = 0 } = {}
+) {
+  await ensureAlbumsStoresExist();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(
+      [ALBUMS_STORE_NAME, ALBUM_ITEMS_STORE_NAME],
+      "readwrite"
+    );
+    const albumsStore = tx.objectStore(ALBUMS_STORE_NAME);
+    const itemsStore = tx.objectStore(ALBUM_ITEMS_STORE_NAME);
+
+    let added = 0;
+    const now = Date.now();
+
+    const addOne = (imageId, index) => {
+      const data = {
+        albumId,
+        imageId,
+        sortOrder: baseOrder + (index + 1) * 1000,
+        caption: "",
+        addedAt: now,
+      };
+      const req = itemsStore.add(data);
+      req.onsuccess = () => {
+        added += 1;
+      };
+      req.onerror = () => {
+        // 若违反唯一约束（已存在），忽略即可
+        if (req.error && req.error.name === "ConstraintError") {
+          return;
+        }
+      };
+    };
+
+    imageIds.forEach((id, i) => addOne(id, i));
+
+    tx.oncomplete = () => {
+      // 更新计数与更新时间
+      updateAlbum(albumId, { itemCountDelta: added }).finally(resolve);
+    };
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
+export async function getAlbumItems(albumId) {
+  await ensureAlbumsStoresExist();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ALBUM_ITEMS_STORE_NAME, "readonly");
+    const store = tx.objectStore(ALBUM_ITEMS_STORE_NAME);
+    const idx = store.index("albumId_sortOrder");
+    const range = IDBKeyRange.bound([albumId, -Infinity], [albumId, Infinity]);
+    const list = [];
+    idx.openCursor(range).onsuccess = (e) => {
+      const cursor = e.target.result;
+      if (cursor) {
+        list.push(cursor.value);
+        cursor.continue();
+      } else {
+        resolve(list);
+      }
+    };
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+export async function removeImageFromAlbum(albumId, imageId) {
+  await ensureAlbumsStoresExist();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(
+      [ALBUMS_STORE_NAME, ALBUM_ITEMS_STORE_NAME],
+      "readwrite"
+    );
+    const itemsStore = tx.objectStore(ALBUM_ITEMS_STORE_NAME);
+    const idx = itemsStore.index("albumId_imageId");
+    idx.get([albumId, imageId]).onsuccess = (e) => {
+      const row = e.target.result;
+      if (row) {
+        itemsStore.delete(row.id);
+      }
+    };
+    tx.oncomplete = () => {
+      updateAlbum(albumId, { itemCountDelta: -1 }).finally(resolve);
+    };
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
+export async function getAlbumsByImageId(imageId) {
+  await ensureAlbumsStoresExist();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ALBUM_ITEMS_STORE_NAME, "readonly");
+    const store = tx.objectStore(ALBUM_ITEMS_STORE_NAME);
+    const idx = store.index("imageId");
+    const range = IDBKeyRange.only(imageId);
+    const albumIds = new Set();
+    idx.openCursor(range).onsuccess = (e) => {
+      const cursor = e.target.result;
+      if (cursor) {
+        albumIds.add(cursor.value.albumId);
+        cursor.continue();
+      } else {
+        resolve(Array.from(albumIds));
+      }
+    };
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+export async function updateAlbumItem(id, updates) {
+  await ensureAlbumsStoresExist();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ALBUM_ITEMS_STORE_NAME, "readwrite");
+    const store = tx.objectStore(ALBUM_ITEMS_STORE_NAME);
+    const getReq = store.get(id);
+    getReq.onsuccess = () => {
+      const existed = getReq.result;
+      if (!existed) {
+        reject(new Error("AlbumItem not found"));
+        return;
+      }
+      const data = { ...existed, ...updates };
+      const putReq = store.put(data);
+      putReq.onsuccess = () => resolve(putReq.result);
+      putReq.onerror = () => reject(putReq.error);
+    };
+    getReq.onerror = () => reject(getReq.error);
+  });
+}
+
+// 删除图片时的级联清理：供外部在删除图片前调用
+export async function cascadeDeleteAlbumItemsByImageId(imageId) {
+  await ensureAlbumsStoresExist();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(
+      [ALBUMS_STORE_NAME, ALBUM_ITEMS_STORE_NAME],
+      "readwrite"
+    );
+    const itemsStore = tx.objectStore(ALBUM_ITEMS_STORE_NAME);
+    const idx = itemsStore.index("imageId");
+    const range = IDBKeyRange.only(imageId);
+    const affectedAlbumIds = new Map();
+    idx.openCursor(range).onsuccess = (e) => {
+      const cursor = e.target.result;
+      if (cursor) {
+        const val = cursor.value;
+        affectedAlbumIds.set(
+          val.albumId,
+          (affectedAlbumIds.get(val.albumId) || 0) + 1
+        );
+        itemsStore.delete(val.id);
+        cursor.continue();
+      }
+    };
+    tx.oncomplete = async () => {
+      // 批量更新相册计数，并处理封面回退
+      const entries = Array.from(affectedAlbumIds.entries());
+      for (const [aid, cnt] of entries) {
+        try {
+          // 先更新计数
+          await updateAlbum(aid, { itemCountDelta: -cnt });
+          // 检查封面是否需要回退
+          const albums = await getAllAlbums();
+          const album = albums.find((a) => a.id === aid);
+          if (album && album.coverImageId === imageId) {
+            // 找该相册剩余的第一张图片作为新封面
+            const items = await getAlbumItems(aid);
+            const newCover = items.length > 0 ? items[0].imageId : null;
+            await updateAlbum(aid, { coverImageId: newCover });
+          }
+        } catch (e) {
+          console.warn("[idb] update album after cascade failed", e);
+        }
+      }
+      resolve();
+    };
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
 export async function putImage(image) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -234,6 +637,10 @@ export async function putImage(image) {
     const data = {
       ...image,
       createdAt: image.createdAt || now,
+      parentImageId:
+        image.parentImageId === null || image.parentImageId === undefined
+          ? null
+          : image.parentImageId,
       // 确保tags是纯数组
       tags: image.tags ? [...image.tags] : [],
     };
@@ -260,9 +667,97 @@ export async function getAllImages() {
     const tx = db.transaction(STORE_NAME, "readonly");
     const store = tx.objectStore(STORE_NAME);
     const req = store.getAll();
-    req.onsuccess = () =>
-      resolve(req.result.sort((a, b) => b.createdAt - a.createdAt));
+    req.onsuccess = () => {
+      const list = req.result.map((r) => ({
+        ...r,
+        parentImageId:
+          r.parentImageId === null || r.parentImageId === undefined
+            ? null
+            : r.parentImageId,
+      }));
+      resolve(list.sort((a, b) => b.createdAt - a.createdAt));
+    };
     req.onerror = () => reject(req.error);
+  });
+}
+
+// 确保 images 表存在 parentImageId 索引（旧库升级）
+async function ensureParentIndexOnImages() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME);
+    req.onsuccess = () => {
+      const db = req.result;
+      // 若 images 表不存在，交给 onupgradeneeded 创建
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.close();
+        // 触发一次升级创建
+        const upgradeReq = indexedDB.open(DB_NAME, db.version + 1);
+        upgradeReq.onupgradeneeded = () => {
+          const udb = upgradeReq.result;
+          if (!udb.objectStoreNames.contains(STORE_NAME)) {
+            const store = udb.createObjectStore(STORE_NAME, {
+              keyPath: "id",
+              autoIncrement: true,
+            });
+            store.createIndex("createdAt", "createdAt", { unique: false });
+            store.createIndex("parentImageId", "parentImageId", {
+              unique: false,
+            });
+          }
+        };
+        upgradeReq.onsuccess = () => {
+          upgradeReq.result.close();
+          resolve();
+        };
+        upgradeReq.onerror = () => reject(upgradeReq.error);
+        return;
+      }
+
+      // 检查索引是否已存在
+      let needUpgrade = false;
+      try {
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        // 访问索引名；若不存在会抛错
+        store.index("parentImageId");
+      } catch (e) {
+        needUpgrade = true;
+      }
+
+      if (!needUpgrade) {
+        db.close();
+        resolve();
+        return;
+      }
+
+      const nextVersion = db.version + 1;
+      db.close();
+      const upgradeReq = indexedDB.open(DB_NAME, nextVersion);
+      upgradeReq.onupgradeneeded = (ev) => {
+        const tx = upgradeReq.transaction;
+        const store = tx.objectStore(STORE_NAME);
+        try {
+          store.createIndex("parentImageId", "parentImageId", {
+            unique: false,
+          });
+          console.log("[idb] parentImageId index created during upgrade");
+        } catch (e) {
+          console.warn(
+            "[idb] createIndex parentImageId failed (maybe exists)",
+            e
+          );
+        }
+      };
+      upgradeReq.onsuccess = () => {
+        upgradeReq.result.close();
+        resolve();
+      };
+      upgradeReq.onerror = () => reject(upgradeReq.error);
+    };
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => {
+      console.warn("[idb] ensureParentIndexOnImages blocked");
+    };
   });
 }
 
@@ -296,6 +791,10 @@ export async function updateImage(id, updates) {
       const updatedData = {
         ...existingData,
         ...updates,
+        parentImageId:
+          updates.parentImageId === undefined
+            ? existingData.parentImageId ?? null
+            : updates.parentImageId ?? null,
         // 确保tags是纯数组，不包含任何复杂对象
         tags: updates.tags
           ? [...updates.tags]
@@ -316,6 +815,39 @@ export async function updateImage(id, updates) {
 }
 
 export async function deleteImage(id) {
+  // 先级联删除相册关联，并维护计数/封面
+  try {
+    await cascadeDeleteAlbumItemsByImageId(id);
+  } catch (e) {
+    console.warn("[idb] cascadeDeleteAlbumItemsByImageId failed", e);
+  }
+
+  // 附图模式：若删除的是主图，考虑整组删除（这里采用整组删除策略）
+  try {
+    const dbForRead = await openDB();
+    await new Promise((resolve, reject) => {
+      const tx = dbForRead.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+      const getReq = store.get(id);
+      getReq.onsuccess = async () => {
+        const row = getReq.result;
+        if (
+          row &&
+          (row.parentImageId === null || row.parentImageId === undefined)
+        ) {
+          // 删除其所有附图
+          try {
+            await detachChildren(id, { deleteChildren: true });
+          } catch (e) {
+            console.warn("[idb] detachChildren failed", e);
+          }
+        }
+        resolve();
+      };
+      getReq.onerror = () => reject(getReq.error);
+    });
+  } catch {}
+
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
@@ -323,6 +855,104 @@ export async function deleteImage(id) {
     const req = store.delete(id);
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
+  });
+}
+
+// ==================== 附图 API ====================
+export async function getRootImages() {
+  const all = await getAllImages();
+  return all.filter((r) => r.parentImageId === null);
+}
+
+export async function getChildrenImages(parentId) {
+  await ensureParentIndexOnImages();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+    const idx = store.index("parentImageId");
+    const range = IDBKeyRange.only(parentId);
+    const list = [];
+    idx.openCursor(range).onsuccess = (e) => {
+      const cursor = e.target.result;
+      if (cursor) {
+        list.push(cursor.value);
+        cursor.continue();
+      } else {
+        resolve(list);
+      }
+    };
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+export async function attachImagesToParent(parentId, imageIds) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    imageIds.forEach((id) => {
+      const getReq = store.get(id);
+      getReq.onsuccess = () => {
+        const row = getReq.result;
+        if (!row) return;
+        const updated = { ...row, parentImageId: parentId };
+        // 继承主图的分组与标签需在调用层执行（这里保持轻量）
+        store.put(updated);
+      };
+    });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+export async function detachChildren(
+  parentId,
+  { deleteChildren = false } = {}
+) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    const idx = store.index("parentImageId");
+    const range = IDBKeyRange.only(parentId);
+    const toProcess = [];
+    idx.openCursor(range).onsuccess = (e) => {
+      const cursor = e.target.result;
+      if (cursor) {
+        toProcess.push(cursor.primaryKey);
+        cursor.continue();
+      }
+    };
+    tx.oncomplete = async () => {
+      if (deleteChildren) {
+        const delDb = await openDB();
+        await new Promise((res, rej) => {
+          const t = delDb.transaction(STORE_NAME, "readwrite");
+          const s = t.objectStore(STORE_NAME);
+          toProcess.forEach((pk) => s.delete(pk));
+          t.oncomplete = () => res();
+          t.onerror = () => rej(t.error);
+        });
+      } else {
+        const updDb = await openDB();
+        await new Promise((res, rej) => {
+          const t = updDb.transaction(STORE_NAME, "readwrite");
+          const s = t.objectStore(STORE_NAME);
+          toProcess.forEach(async (pk) => {
+            const g = s.get(pk);
+            g.onsuccess = () => {
+              const row = g.result;
+              if (row) s.put({ ...row, parentImageId: null });
+            };
+          });
+          t.oncomplete = () => res();
+          t.onerror = () => rej(t.error);
+        });
+      }
+      resolve();
+    };
+    tx.onerror = () => reject(tx.error);
   });
 }
 
