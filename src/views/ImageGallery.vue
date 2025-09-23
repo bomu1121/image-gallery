@@ -433,11 +433,6 @@ function revokeObjectUrls(list) {
 }
 
 async function load() {
-  // 如果正在搜索状态，不重新加载图片
-  if (isSearchActive.value) {
-    return;
-  }
-
   const prev = images.value;
   const data = await getAllImages();
   revokeObjectUrls(prev);
@@ -461,6 +456,12 @@ async function load() {
     objectUrl:
       r.blob && r.blob instanceof Blob ? URL.createObjectURL(r.blob) : r.url,
   }));
+
+  // 如果当前处于搜索状态，则基于新的分组数据重新应用搜索条件
+  if (isSearchActive.value) {
+    originalImages.value = [...images.value];
+    performRealtimeSearch();
+  }
 }
 
 onMounted(() => {
@@ -480,10 +481,6 @@ onMounted(() => {
 watch(
   () => props.selectedGroupId,
   () => {
-    // 分组切换时清除搜索状态
-    if (isSearchActive.value) {
-      clearSearch();
-    }
     load();
   }
 );
@@ -1792,8 +1789,8 @@ function clearSearch() {
 }
 
 .tags-display {
-  min-height: 60px;
-  padding: 12px;
+  min-height: 40px;
+
   background: rgba(255, 255, 255, 0.6);
   border-radius: 8px;
   backdrop-filter: blur(10px);
