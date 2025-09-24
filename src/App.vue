@@ -142,7 +142,7 @@ import {
   processPastedImages,
 } from "@/utils/modules/paste.js";
 import { putImage } from "@/utils/idb.js";
-import { updateImage, getImageById } from "@/utils/idb.js";
+import { updateImage, getImageById, getChildrenImages } from "@/utils/idb.js";
 import "@/utils/logManager.js"; // 初始化全局日志管理器
 import { aiImageAnalysisService } from "@/services/AIImageAnalysisService.js";
 
@@ -487,23 +487,51 @@ async function createAlbumFromSelection() {
   }
   try {
     const ids = Array.from(selectedImages.value);
-    const coverImageId = ids[0];
-    // 读取封面图，继承其分组与标签
-    const coverImg = await getImageById(coverImageId);
-    const groupId = coverImg?.groupId ?? null;
-    const tags = Array.isArray(coverImg?.tags) ? [...coverImg.tags] : [];
+    const firstImageId = ids[0];
 
-    // 将其余图片挂到主图下，并继承分组与标签
-    const children = ids.slice(1);
-    if (children.length > 0) {
-      await Promise.all(
-        children.map((id) =>
-          updateImage(id, { parentImageId: coverImageId, groupId, tags })
-        )
-      );
+    // 检查第一个图片是否已经是组图（有附图）
+    const firstImg = await getImageById(firstImageId);
+    const childrenImages = await getChildrenImages(firstImageId);
+    const isExistingGroup = childrenImages.length > 0;
+
+    let coverImageId, groupId, tags;
+
+    if (isExistingGroup) {
+      // 如果第一个是已有组图，则向该组图添加新图片
+      coverImageId = firstImageId;
+      groupId = firstImg.groupId ?? null;
+      tags = Array.isArray(firstImg.tags) ? [...firstImg.tags] : [];
+
+      // 将后续图片挂到该组图下
+      const children = ids.slice(1);
+      if (children.length > 0) {
+        await Promise.all(
+          children.map((id) =>
+            updateImage(id, { parentImageId: coverImageId, groupId, tags })
+          )
+        );
+      }
+
+      success(`已向组图添加 ${children.length} 张图片`);
+    } else {
+      // 如果第一个是独立图片，则创建新组图
+      coverImageId = firstImageId;
+      groupId = firstImg?.groupId ?? null;
+      tags = Array.isArray(firstImg?.tags) ? [...firstImg.tags] : [];
+
+      // 将其余图片挂到主图下，并继承分组与标签
+      const children = ids.slice(1);
+      if (children.length > 0) {
+        await Promise.all(
+          children.map((id) =>
+            updateImage(id, { parentImageId: coverImageId, groupId, tags })
+          )
+        );
+      }
+
+      success("组图已创建");
     }
 
-    success("组图已创建");
     // 退出组图模式并清空选择
     albumMode.value = false;
     selectedImages.value.clear();

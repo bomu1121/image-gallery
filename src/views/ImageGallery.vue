@@ -234,6 +234,7 @@
             'is-deleting': isDeleting(img.id),
             'is-selected':
               (batchDeleteMode || albumMode) && selectedImages.has(img.id),
+            'is-main-image': albumMode && isMainImage(img.id),
           }"
         >
           <img
@@ -443,6 +444,32 @@ function isDeleting(id) {
   return deletingIds.value.includes(id);
 }
 
+// 判断是否为组图模式下的主图（第一个选中的图片）
+function isMainImage(id) {
+  if (!props.albumMode || props.selectedImages.size === 0) return false;
+  const selectedArray = Array.from(props.selectedImages);
+  return selectedArray.length > 0 && selectedArray[0] === id;
+}
+
+// 判断图片是否可以被选择（组图模式下的选择限制）
+function canSelectImage(id) {
+  if (!props.albumMode) return true;
+
+  const selectedArray = Array.from(props.selectedImages);
+
+  // 如果还没有选择任何图片，可以选择任何图片（包括组图）
+  if (selectedArray.length === 0) {
+    return true;
+  }
+
+  // 如果已经选择了图片，后续只能选择独立图片（非组图）
+  const img = images.value.find((img) => img.id === id);
+  if (!img) return false;
+
+  // 检查是否为独立图片（没有附图的主图）
+  return coverCounts.value[id] === undefined || coverCounts.value[id] === 0;
+}
+
 function startDeleting(id) {
   if (!isDeleting(id)) deletingIds.value.push(id);
 }
@@ -575,6 +602,10 @@ function onCardClick(img) {
 
   if (props.batchDeleteMode || props.albumMode) {
     // 批量删除 / 组图模式 下，切换选中状态
+    // 在组图模式下，需要检查选择限制
+    if (props.albumMode && !canSelectImage(img.id)) {
+      return;
+    }
     emit("toggleImageSelection", img.id);
   } else {
     // 正常模式下，跳转到详情页
@@ -1306,6 +1337,25 @@ function clearSearch() {
   break-inside: avoid;
   margin-bottom: 12px;
   position: relative;
+}
+
+/* 主图特殊样式 */
+.card.is-main-image {
+}
+
+.card.is-main-image::before {
+  content: "主图";
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: #409eff;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(64, 158, 255, 0.3);
 }
 .card img {
   display: block;
