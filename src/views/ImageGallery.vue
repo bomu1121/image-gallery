@@ -19,7 +19,7 @@
             @click="toggleUploadMode"
             title="上传图片"
           >
-            <el-icon><icon-upload /></el-icon>
+            <el-icon><icon-plus /></el-icon>
           </div>
           <div
             class="menu-action-item"
@@ -96,7 +96,7 @@
             accept="image/*"
             :on-change="onFileChange"
           >
-            <el-icon class="el-icon--upload"><icon-upload /></el-icon>
+            <el-icon class="el-icon--upload"><icon-plus /></el-icon>
             <div class="el-upload__text">拖拽图片到此处，或点击选择</div>
             <!-- <div class="el-upload__tip">支持 Ctrl+V 粘贴图片</div> -->
           </el-upload>
@@ -534,9 +534,6 @@ async function load() {
     objectUrl:
       r.blob && r.blob instanceof Blob ? URL.createObjectURL(r.blob) : r.url,
   }));
-
-  expandedRoots.value = new Set();
-  childrenMap.value = {};
 
   // 如果当前处于搜索状态，则基于新的分组数据重新应用搜索条件
   if (isSearchActive.value) {
@@ -1733,8 +1730,8 @@ function clearSearch() {
 }
 
 .upload-area .uploader:hover {
-  border-color: #409eff;
-  background: #f0f9ff;
+  border-color: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .uploader {
@@ -1781,14 +1778,14 @@ function clearSearch() {
 
 /* 调整上传图标大小 */
 .uploader :deep(.el-icon--upload) {
-  font-size: 24px;
-  color: #999;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
   margin-bottom: 8px;
 }
 
 .uploader :deep(.el-upload__text) {
-  font-size: 14px;
-  color: #666;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
   margin-bottom: 4px;
 }
 

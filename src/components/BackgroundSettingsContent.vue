@@ -12,7 +12,7 @@
           :on-change="onBackgroundChange"
         >
           <div class="upload-placeholder">
-            <el-icon class="el-icon--upload"><icon-upload /></el-icon>
+            <el-icon class="el-icon--upload"><icon-plus /></el-icon>
             <div class="el-upload__text">拖拽背景图片到此处，或点击选择</div>
           </div>
         </el-upload>
@@ -64,7 +64,7 @@
 <script setup>
 import { ref } from "vue";
 import { ElUpload, ElIcon, ElButton, ElSlider } from "element-plus";
-import { Upload as IconUpload } from "@element-plus/icons-vue";
+import { Plus as IconPlus } from "@element-plus/icons-vue";
 import { useDrawerNotification } from "@/composables/useDrawerNotification.js";
 
 const props = defineProps({
@@ -148,8 +148,8 @@ const onFileInputChange = (event) => {
 }
 
 .background-uploader:hover {
-  border-color: #409eff;
-  background: #f0f9ff;
+  border-color: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.05);
 }
 
 /* 覆盖 el-upload 的默认样式 */
@@ -187,14 +187,14 @@ const onFileInputChange = (event) => {
 
 /* 调整上传图标大小 */
 .background-uploader :deep(.el-icon--upload) {
-  font-size: 24px;
-  color: #999;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
   margin-bottom: 8px;
 }
 
 .background-uploader :deep(.el-upload__text) {
-  font-size: 14px;
-  color: #666;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
   margin-bottom: 4px;
 }
 
