@@ -4,11 +4,7 @@
     <div class="fixed-header" ref="headerRef">
       <div class="header-content">
         <div @click="goBack" class="back-icon-button">
-          <img
-            src="/src/static/images/icons/back.svg"
-            alt="返回"
-            class="back-icon"
-          />
+          <el-icon><ArrowLeft /></el-icon>
         </div>
         <div
           @click="removeImage"
@@ -41,22 +37,16 @@
               />
             </div>
           </div>
-          <!-- 附图折叠栏（仅当存在附图时显示） -->
-          <div v-if="childrenCount > 0" class="children-toggle">
-            <span class="children-toggle-text" @click="toggleChildren">
-              {{ showChildren ? "收起" : "查看更多" }}（{{ childrenCount }}）
-            </span>
-          </div>
-          <!-- 附图纵向列表（展开时显示） -->
-          <div v-if="showChildren" class="children-list">
-            <div class="child-item" v-for="child in children" :key="child.id">
-              <img
-                :src="child.objectUrl || child.url"
-                :alt="child.name"
-                @click="openChildViewer(child)"
-              />
-            </div>
-          </div>
+          <!-- 组图轮播条（仅当存在组图时显示） -->
+          <ThumbnailCarousel
+            v-if="childrenCount > 0"
+            :items="allGroupImages"
+            :current-index="currentImageIndex"
+            :get-item-image="getThumbnailUrl"
+            :get-item-alt="(img) => img.name"
+            @item-click="switchToImage"
+            class="group-carousel"
+          />
         </div>
 
         <!-- 右侧信息区域 -->
@@ -405,6 +395,7 @@ import {
 } from "@/utils/idb.js";
 import { useDrawerNotification } from "@/composables/useDrawerNotification.js";
 import { aiImageAnalysisService } from "@/services/AIImageAnalysisService.js";
+import ThumbnailCarousel from "@/components/ThumbnailCarousel.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -412,7 +403,9 @@ const image = ref(null);
 const headerRef = ref(null);
 const children = ref([]);
 const childrenCount = ref(0);
-const showChildren = ref(false);
+const allGroupImages = ref([]); // 包含主图和所有附图的数组
+const currentImageIndex = ref(0); // 当前显示的图片索引
+const carouselRef = ref(null);
 const isEditingNotes = ref(false);
 const editingNotes = ref("");
 const notesInput = ref(null);
@@ -551,20 +544,38 @@ async function loadImage() {
       tags: data.tags || [],
     };
 
-    // 附图计数（仅针对主图展示）
+    // 加载所有组图（主图 + 附图）
     try {
       const childList = await getChildrenImages(image.value.id);
       childrenCount.value = childList.length;
-      // 初始不展开；重置已加载的 children
-      showChildren.value = false;
-      // 释放旧 children 的 objectUrl
-      children.value.forEach(
-        (c) => c.objectUrl && URL.revokeObjectURL(c.objectUrl)
-      );
-      children.value = [];
+
+      // 释放旧图片的 objectUrl 并将其在 allGroupImages 中置空
+      allGroupImages.value.forEach((img) => {
+        if (img.objectUrl && img.objectUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(img.objectUrl);
+          img.objectUrl = null; // 关键：置空 objectUrl
+        }
+      });
+
+      // 构建包含主图和附图的数组
+      const normalizedChildren = childList.map((child) => ({
+        ...child,
+        objectUrl:
+          child.blob && child.blob instanceof Blob
+            ? URL.createObjectURL(child.blob)
+            : child.url,
+      }));
+
+      // 主图放在第一位，然后是附图
+      allGroupImages.value = [image.value, ...normalizedChildren];
+      currentImageIndex.value = 0; // 默认显示主图
+
+      // 保持children数组用于兼容性
+      children.value = normalizedChildren;
     } catch (e) {
       childrenCount.value = 0;
-      showChildren.value = false;
+      allGroupImages.value = [image.value]; // 至少包含主图
+      currentImageIndex.value = 0;
       children.value = [];
     }
   } catch (err) {
@@ -575,8 +586,8 @@ async function loadImage() {
 onMounted(loadImage);
 onBeforeUnmount(() => {
   revokeObjectUrl(image.value);
-  children.value.forEach(
-    (c) => c.objectUrl && URL.revokeObjectURL(c.objectUrl)
+  allGroupImages.value.forEach(
+    (img) => img.objectUrl && URL.revokeObjectURL(img.objectUrl)
   );
 });
 
@@ -625,27 +636,71 @@ function openChildViewer(child) {
   if (src) window.open(src, "_blank");
 }
 
-// 展开/收起附图
-async function toggleChildren() {
-  if (!image.value) return;
-  if (showChildren.value) {
-    showChildren.value = false;
-    return;
+// 获取缩略图的URL
+function getThumbnailUrl(img) {
+  // 如果有有效的 objectUrl（blob URL），直接使用
+  if (img.objectUrl && img.objectUrl.startsWith("blob:")) {
+    return img.objectUrl;
   }
-  try {
-    const list = await getChildrenImages(image.value.id);
-    // 生成 objectUrl
-    const normalized = list.map((r) => ({
-      ...r,
-      objectUrl:
-        r.blob && r.blob instanceof Blob ? URL.createObjectURL(r.blob) : r.url,
-    }));
-    children.value = normalized;
-    showChildren.value = true;
-  } catch (e) {
-    children.value = [];
-    showChildren.value = false;
+
+  // 如果没有 objectUrl 但有 blob 数据，创建新的 objectUrl
+  if (!img.objectUrl && img.blob && img.blob instanceof Blob) {
+    const newObjectUrl = URL.createObjectURL(img.blob);
+    // 更新 allGroupImages 中的 objectUrl
+    const index = allGroupImages.value.findIndex((item) => item.id === img.id);
+    if (index !== -1) {
+      allGroupImages.value[index].objectUrl = newObjectUrl;
+    }
+    return newObjectUrl;
   }
+
+  // 最后回退到原始 URL
+  return img.url;
+}
+
+// 切换到指定索引的图片
+function switchToImage(index) {
+  if (index < 0 || index >= allGroupImages.value.length) return;
+
+  currentImageIndex.value = index;
+  const targetImage = allGroupImages.value[index];
+
+  // 确保目标图片有有效的 objectUrl
+  let targetObjectUrl = targetImage.objectUrl;
+  if (
+    !targetObjectUrl &&
+    targetImage.blob &&
+    targetImage.blob instanceof Blob
+  ) {
+    targetObjectUrl = URL.createObjectURL(targetImage.blob);
+    // 更新 allGroupImages 中的 objectUrl，避免重复创建
+    allGroupImages.value[index].objectUrl = targetObjectUrl;
+  } else if (!targetObjectUrl) {
+    targetObjectUrl = targetImage.url;
+  }
+
+  // 释放当前图片的 objectUrl 并在 allGroupImages 中置空
+  if (
+    image.value &&
+    image.value.objectUrl &&
+    image.value.objectUrl.startsWith("blob:")
+  ) {
+    URL.revokeObjectURL(image.value.objectUrl);
+    // 在 allGroupImages 中找到对应的图片并置空其 objectUrl
+    const currentIndex = allGroupImages.value.findIndex(
+      (img) => img.id === image.value.id
+    );
+    if (currentIndex !== -1) {
+      allGroupImages.value[currentIndex].objectUrl = null;
+    }
+  }
+
+  // 更新当前显示的图片
+  image.value = {
+    ...targetImage,
+    objectUrl: targetObjectUrl,
+    tags: targetImage.tags || [],
+  };
 }
 
 function formatFileSize(bytes) {
@@ -1013,12 +1068,16 @@ function showAILogs() {
   justify-content: center;
   width: 24px;
   height: 24px;
+  color: #606266;
+  transition: color 0.2s ease;
 }
 
-.back-icon {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
+.back-icon-button:hover {
+  color: #4e4f52;
+}
+
+.back-icon-button .el-icon {
+  font-size: 20px;
 }
 
 .delete-icon-button {
@@ -1055,6 +1114,7 @@ function showAILogs() {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 .image-viewport {
@@ -1083,39 +1143,12 @@ function showAILogs() {
   cursor: pointer;
 }
 
-/* 附图折叠与列表样式 */
-.children-toggle {
-  margin-top: 8px;
-  display: flex;
-  justify-content: center;
-}
-
-.children-toggle-text {
-  font-size: 13px;
-  color: #667eea;
-  cursor: pointer;
-  user-select: none;
-}
-
-.children-toggle-text:hover {
-  text-decoration: underline;
-}
-
-.children-list {
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-}
-
-.child-item img {
-  max-width: 700px;
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+/* 组图轮播条样式 */
+.group-carousel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
 }
 
 /* 右侧信息区域 */
@@ -1694,175 +1727,4 @@ function showAILogs() {
 }
 
 /* 响应式 */
-@media (max-width: 1200px) {
-  .content {
-    flex-direction: column;
-  }
-
-  .info-section {
-    width: 100%;
-  }
-}
-
-@media (max-width: 768px) {
-  .detail-wrapper {
-    padding: 12px;
-    margin-left: 0;
-  }
-
-  .header {
-    margin-bottom: 16px;
-    gap: 8px;
-  }
-
-  .back-button {
-    font-size: 14px;
-    padding: 8px 16px;
-  }
-
-  .delete-button {
-    width: 36px;
-    height: 36px;
-    padding: 0;
-  }
-
-  .info-section {
-    gap: 24px;
-    padding: 16px 0;
-  }
-
-  .section-title {
-    font-size: 15px;
-    margin-bottom: 12px;
-  }
-
-  .info-grid {
-    gap: 12px;
-  }
-
-  .info-row {
-    padding: 10px 0;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-
-  .info-row:hover {
-    padding: 10px 8px;
-  }
-
-  .info-label {
-    min-width: auto;
-    font-size: 13px;
-    color: #6c7b8a;
-  }
-
-  .info-value {
-    text-align: left;
-    margin-left: 0;
-    font-size: 13px;
-    word-break: break-all;
-  }
-
-  .notes-display {
-    min-height: 100px;
-    padding: 12px;
-  }
-
-  .notes-content {
-    font-size: 13px;
-  }
-
-  .notes-placeholder {
-    font-size: 13px;
-  }
-
-  .notes-edit {
-    padding: 12px;
-  }
-
-  .notes-input {
-    font-size: 14px;
-  }
-
-  .tags-display {
-    min-height: 60px;
-    padding: 12px;
-  }
-
-  .tag-item {
-    font-size: 12px;
-    padding: 4px 8px;
-  }
-
-  .existing-tags {
-    gap: 6px;
-    margin-bottom: 8px;
-  }
-
-  .add-tag-button {
-    width: 28px;
-    height: 28px;
-  }
-
-  .add-tag-button .el-icon {
-    font-size: 14px;
-  }
-
-  .adding-tag {
-    min-width: 60px;
-    transition: width 0.2s ease;
-  }
-
-  .tag-input-field {
-    font-size: 12px;
-  }
-
-  /* 移动端分析模式选择器样式 */
-  .tag-actions {
-    flex-direction: column;
-    gap: 8px;
-    align-items: stretch;
-  }
-
-  .ai-analyze-container {
-    width: 100%;
-  }
-
-  .analysis-mode-panel {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 90%;
-    max-width: 320px;
-    margin: 0;
-    z-index: 2000;
-  }
-
-  .ai-analyze-button,
-  .ai-config-button {
-    width: 100%;
-  }
-
-  /* 移动端时，顶部栏覆盖整个屏幕宽度 */
-  .header-content {
-    padding: 8px 16px;
-  }
-  .content-wrapper {
-    padding: 12px;
-  }
-  .back-icon-button,
-  .delete-icon-button {
-    width: 24px;
-    height: 24px;
-  }
-  .back-icon {
-    width: 20px;
-    height: 20px;
-  }
-  .delete-icon-button .el-icon {
-    font-size: 18px;
-  }
-}
 </style>
