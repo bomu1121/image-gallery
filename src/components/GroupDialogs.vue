@@ -1,60 +1,22 @@
 <template>
   <!-- 新建分组对话框 -->
-  <el-dialog
-    :model-value="showCreateGroup"
-    @update:model-value="$emit('update:showCreateGroup', $event)"
-    title="新建分组"
-    width="500px"
-  >
-    <div class="create-group-content">
-      <el-form :model="newGroup" label-width="80px">
-        <el-form-item label="分组名称">
-          <el-input
-            :model-value="newGroup.name"
-            @update:model-value="
-              $emit('update:newGroup', { ...newGroup, name: $event })
-            "
-            placeholder="请输入分组名称"
-          />
-        </el-form-item>
-      </el-form>
-      <div class="dialog-footer">
-        <el-button @click="$emit('update:showCreateGroup', false)"
-          >取消</el-button
-        >
-        <el-button type="primary" @click="createGroup">确定</el-button>
-      </div>
-    </div>
-  </el-dialog>
+  <CreateGroupModal
+    :visible="showCreateGroup"
+    :initial-data="newGroup"
+    @update:visible="$emit('update:showCreateGroup', $event)"
+    @confirm="handleCreateGroupConfirm"
+    @cancel="handleCreateGroupCancel"
+  />
 
   <!-- 编辑分组对话框 -->
-  <el-dialog
-    :model-value="showEditGroup"
-    @update:model-value="$emit('update:showEditGroup', $event)"
-    title="编辑分组"
-    width="500px"
-  >
-    <div class="edit-group-content">
-      <el-form :model="editingGroup" label-width="80px">
-        <el-form-item label="分组名称">
-          <el-input
-            :model-value="editingGroup.name"
-            @update:model-value="
-              $emit('update:editingGroup', { ...editingGroup, name: $event })
-            "
-            placeholder="请输入分组名称"
-          />
-        </el-form-item>
-      </el-form>
-      <div class="dialog-footer">
-        <el-button @click="$emit('update:showEditGroup', false)"
-          >取消</el-button
-        >
-        <el-button type="danger" @click="deleteGroup">删除分组</el-button>
-        <el-button type="primary" @click="updateGroup">保存</el-button>
-      </div>
-    </div>
-  </el-dialog>
+  <EditGroupModal
+    :visible="showEditGroup"
+    :group-data="editingGroup"
+    @update:visible="$emit('update:showEditGroup', $event)"
+    @confirm="handleEditGroupConfirm"
+    @delete="handleEditGroupDelete"
+    @cancel="handleEditGroupCancel"
+  />
 
   <!-- 图片分组选择对话框 -->
   <el-dialog
@@ -97,6 +59,8 @@ import {
   ElIcon,
 } from "element-plus";
 import { Folder as IconFolder } from "@element-plus/icons-vue";
+import CreateGroupModal from "./CreateGroupModal.vue";
+import EditGroupModal from "./EditGroupModal.vue";
 
 const props = defineProps({
   showCreateGroup: Boolean,
@@ -120,6 +84,36 @@ const emit = defineEmits([
   "selectImageGroup",
   "moveImageToGroup",
 ]);
+
+// 新建分组确认
+function handleCreateGroupConfirm(groupData) {
+  // 更新newGroup数据
+  emit("update:newGroup", groupData);
+  emit("createGroup");
+}
+
+// 新建分组取消
+function handleCreateGroupCancel() {
+  emit("update:showCreateGroup", false);
+}
+
+// 编辑分组确认
+function handleEditGroupConfirm(groupData) {
+  // 更新editingGroup数据
+  emit("update:editingGroup", groupData);
+  emit("updateGroup");
+}
+
+// 编辑分组删除
+function handleEditGroupDelete(groupId) {
+  emit("update:editingGroup", { ...props.editingGroup, id: groupId });
+  emit("deleteGroup");
+}
+
+// 编辑分组取消
+function handleEditGroupCancel() {
+  emit("update:showEditGroup", false);
+}
 
 const createGroup = () => {
   emit("createGroup");
