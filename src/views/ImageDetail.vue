@@ -435,11 +435,6 @@
             class="group-carousel"
           />
         </div>
-
-        <!-- 右侧信息区域 -->
-        <div class="info-section">
-          <!-- 右侧信息区域现在为空，信息已移动到面板中 -->
-        </div>
       </div>
     </div>
   </div>
@@ -1220,7 +1215,7 @@ function showAILogs() {
 .content-wrapper {
   flex: 1;
   /* padding: 24px; */
-  overflow-y: auto;
+  overflow-y: hidden;
   min-height: 0;
 }
 
@@ -1265,15 +1260,14 @@ function showAILogs() {
 
 .content {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
   flex: 1;
   min-height: 0;
 }
 
-/* 左侧图片区域 */
+/* 图片区域 */
 .image-section {
   width: 100%;
+  height: 100%;
   position: relative;
   min-width: 0;
   display: flex;
@@ -1310,56 +1304,9 @@ function showAILogs() {
 /* 组图轮播条样式 */
 .group-carousel {
   position: absolute;
-  bottom: 0;
+  bottom: -1px; /* 下移-1px弥补出现的空隙，但是需要content容器overflow-y:hidden配合 */
   left: 0;
   right: 0;
-}
-
-/* 右侧信息区域 */
-.info-section {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-  padding: 24px;
-}
-
-.info-section-item {
-  position: relative;
-}
-
-.section-title {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  color: #2c3e50;
-  font-weight: 600;
-  position: relative;
-  padding-left: 12px;
-}
-
-.section-title::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 2px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.tag-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
 }
 
 /* AI分析容器和面板样式 */
@@ -1500,240 +1447,6 @@ function showAILogs() {
   background: #e6e6e6 !important;
   border-color: #d9d9d9 !important;
   color: #333 !important;
-}
-
-.info-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
-}
-
-.info-row:hover {
-  background: rgba(102, 126, 234, 0.02);
-  border-radius: 6px;
-  padding-left: 8px;
-  padding-right: 8px;
-}
-
-.info-row:last-child {
-  border-bottom: none;
-}
-
-.info-label {
-  font-weight: 500;
-  color: #5a6c7d;
-  font-size: 14px;
-  min-width: 80px;
-}
-
-.info-value {
-  color: #2c3e50;
-  font-weight: 400;
-  text-align: right;
-  flex: 1;
-  margin-left: 16px;
-  font-size: 14px;
-}
-
-.notes-container {
-  position: relative;
-}
-
-/* 显示模式样式 */
-.notes-display {
-  min-height: 120px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 8px;
-  backdrop-filter: blur(10px);
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.notes-display:hover {
-  background: rgba(255, 255, 255, 0.8);
-  transform: translateY(-1px);
-}
-
-.notes-content {
-  color: #2c3e50;
-  line-height: 1.6;
-  font-size: 14px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.notes-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: #8a9ba8;
-  font-size: 14px;
-  min-height: 20px;
-}
-
-.placeholder-text {
-  flex: 1;
-}
-
-.edit-icon {
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
-}
-
-.notes-display:hover .edit-icon {
-  opacity: 1;
-}
-
-/* 编辑模式样式 */
-.notes-edit {
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 8px;
-  padding: 16px;
-}
-
-.notes-input {
-  border: none;
-  background: transparent;
-  resize: none;
-}
-
-.notes-input:focus {
-  outline: none;
-}
-
-/* 标签区域样式 */
-.tags-container {
-  position: relative;
-}
-
-.tags-display {
-  min-height: 80px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 8px;
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.tags-display:hover {
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.tag-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-radius: 16px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
-}
-
-.tag-item:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
-}
-
-.tag-remove {
-  font-size: 12px;
-  opacity: 0.8;
-  transition: opacity 0.2s ease;
-}
-
-.tag-item:hover .tag-remove {
-  opacity: 1;
-}
-
-.add-tag-section {
-  margin-top: 8px;
-}
-
-.tag-input {
-  width: 100%;
-}
-
-.tag-input :deep(.el-input__wrapper) {
-  border-radius: 20px;
-  border: 1px solid #e0e0e0;
-  background: rgba(255, 255, 255, 0.8);
-  transition: all 0.2s ease;
-}
-
-.tag-input :deep(.el-input__wrapper:hover) {
-  border-color: #667eea;
-}
-
-.tag-input :deep(.el-input__wrapper.is-focus) {
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
-}
-
-/* 添加标签按钮样式 */
-.add-tag-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: rgba(102, 126, 234, 0.1);
-  border: 2px dashed rgba(102, 126, 234, 0.3);
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #667eea;
-}
-
-.add-tag-button:hover {
-  background: rgba(102, 126, 234, 0.2);
-  border-color: rgba(102, 126, 234, 0.5);
-  transform: scale(1.05);
-}
-
-.add-tag-button .el-icon {
-  font-size: 16px;
-}
-
-/* 正在添加的标签样式 */
-.adding-tag {
-  background: rgba(102, 126, 234, 0.1) !important;
-  border: 2px solid #667eea !important;
-  min-width: 80px;
-  transition: width 0.2s ease;
-}
-
-.tag-input-field {
-  background: transparent;
-  border: none;
-  outline: none;
-  color: #2c3e50;
-  font-size: 13px;
-  font-weight: 500;
-  width: 100%;
-  padding: 0;
-  margin: 0;
-}
-
-.tag-input-field::placeholder {
-  color: #8a9ba8;
 }
 
 /* AI分析结果样式 */
