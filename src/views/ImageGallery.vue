@@ -56,7 +56,7 @@
         </div>
 
         <!-- 分组选择区域 -->
-        <div v-if="showGroupSelector" class="group-selector">
+        <div v-if="showGroupSelector" class="group-selector slide-down-panel">
           <div class="group-tabs">
             <!-- 新建分组按钮 -->
             <div class="group-tab create-group-tab" @click="showCreateGroup">
@@ -87,7 +87,7 @@
         </div>
 
         <!-- 上传区域 -->
-        <div v-if="uploadMode" class="upload-area">
+        <div v-if="uploadMode" class="upload-area slide-down-panel">
           <el-upload
             class="uploader"
             drag
@@ -103,7 +103,10 @@
         </div>
 
         <!-- 批量删除/组图模式操作（共用面板，互斥显示） -->
-        <div v-if="batchDeleteMode || albumMode" class="menu-batch-bar">
+        <div
+          v-if="batchDeleteMode || albumMode"
+          class="menu-batch-bar slide-down-panel"
+        >
           <div class="batch-info">
             <span class="selected-count"
               >已选择 {{ selectedImages.size }} 张图片</span
@@ -145,7 +148,7 @@
         </div>
 
         <!-- 搜索区域 -->
-        <div v-if="showSearchArea" class="search-area">
+        <div v-if="showSearchArea" class="search-area slide-down-panel">
           <div class="search-form">
             <div class="search-field">
               <el-input
@@ -1338,6 +1341,7 @@ function clearSearch() {
 
 /* 主图特殊样式 */
 .card.is-main-image {
+  /* 主图样式可以在这里添加 */
 }
 
 .card.is-main-image::before {
@@ -2034,5 +2038,87 @@ function clearSearch() {
 .search-actions .el-button {
   font-size: 12px;
   padding: 6px 12px;
+}
+
+/* 滑动面板动画效果 */
+.slide-down-panel {
+  overflow: hidden;
+}
+
+/* 为不同类型的面板设置合适的最大高度 */
+.group-selector.slide-down-panel {
+  animation: slideDownGroup 0.3s ease-out;
+}
+
+@keyframes slideDownGroup {
+  from {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 100px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+}
+
+.upload-area.slide-down-panel {
+  animation: slideDownUpload 0.3s ease-out;
+}
+
+@keyframes slideDownUpload {
+  from {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 140px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+}
+
+.menu-batch-bar.slide-down-panel {
+  animation: slideDownBatch 0.3s ease-out;
+}
+
+@keyframes slideDownBatch {
+  from {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 80px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
+
+.search-area.slide-down-panel {
+  animation: slideDownSearch 0.3s ease-out;
+}
+
+@keyframes slideDownSearch {
+  from {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 300px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
 }
 </style>
