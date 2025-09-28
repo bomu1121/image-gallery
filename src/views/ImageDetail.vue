@@ -1449,6 +1449,107 @@ function showAILogs() {
   color: #333 !important;
 }
 
+/* 标签区域样式 */
+.tags-container {
+  position: relative;
+}
+
+.tags-display {
+  min-height: 80px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.tags-display:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.tag-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+}
+
+.tag-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+.tag-remove {
+  font-size: 12px;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.tag-item:hover .tag-remove {
+  opacity: 1;
+}
+
+/* 添加标签按钮样式 */
+.add-tag-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(102, 126, 234, 0.1);
+  border: 2px dashed rgba(102, 126, 234, 0.3);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #667eea;
+}
+
+.add-tag-button:hover {
+  background: rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.5);
+  transform: scale(1.05);
+}
+
+.add-tag-button .el-icon {
+  font-size: 16px;
+}
+
+/* 正在添加的标签样式 */
+.adding-tag {
+  background: rgba(102, 126, 234, 0.1) !important;
+  border: 2px solid #667eea !important;
+  min-width: 80px;
+  transition: width 0.2s ease;
+}
+
+.tag-input-field {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #2c3e50;
+  font-size: 13px;
+  font-weight: 500;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.tag-input-field::placeholder {
+  color: #8a9ba8;
+}
+
 /* AI分析结果样式 */
 .ai-analysis-result {
   margin-bottom: 20px;
