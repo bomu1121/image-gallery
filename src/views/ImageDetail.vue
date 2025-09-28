@@ -6,12 +6,22 @@
         <div @click="goBack" class="back-icon-button">
           <el-icon><ArrowLeft /></el-icon>
         </div>
-        <div
-          @click="removeImage"
-          :class="{ disabled: !image }"
-          class="delete-icon-button"
-        >
-          <el-icon><Delete /></el-icon>
+        <div class="header-actions">
+          <div
+            @click="toggleAddToGroupMode"
+            :class="{ active: addToGroupMode }"
+            class="add-to-group-button"
+            title="添加图片到组图"
+          >
+            <el-icon><Plus /></el-icon>
+          </div>
+          <div
+            @click="removeImage"
+            :class="{ disabled: !image }"
+            class="delete-icon-button"
+          >
+            <el-icon><Delete /></el-icon>
+          </div>
         </div>
       </div>
     </div>
@@ -25,6 +35,25 @@
       <div v-else class="content">
         <!-- 左侧图片区域 -->
         <div class="image-section">
+          <!-- 添加组图panel（类似轮播条的样式） -->
+          <div v-if="addToGroupMode" class="add-to-group-panel">
+            <div class="panel-content">
+              <el-upload
+                class="group-uploader"
+                drag
+                :auto-upload="false"
+                :show-file-list="false"
+                accept="image/*"
+                :on-change="onAddToGroupFileChange"
+              >
+                <el-icon class="el-icon--upload"><Plus /></el-icon>
+                <div class="el-upload__text">
+                  拖拽图片到此处，或点击选择，将新图片添加到当前组图
+                </div>
+              </el-upload>
+            </div>
+          </div>
+
           <div
             class="image-viewport"
             :style="{ height: imageAreaHeight + 'px' }"
@@ -375,6 +404,7 @@ import {
   ElIcon,
   ElMessageBox,
   ElTooltip,
+  ElUpload,
 } from "element-plus";
 import {
   ArrowLeft,
@@ -382,6 +412,7 @@ import {
   Edit,
   Delete,
   Plus,
+  Upload,
   Star,
   Setting,
   Check,
@@ -414,6 +445,9 @@ const tagInput = ref(null);
 const isAddingTag = ref(false);
 const tagInputWidth = ref(80); // 默认最小宽度
 const { success, error } = useDrawerNotification();
+
+// 添加组图相关状态
+const addToGroupMode = ref(false);
 
 // AI分析相关状态
 const isAnalyzing = ref(false);
@@ -593,6 +627,52 @@ onBeforeUnmount(() => {
 
 function goBack() {
   router.push("/gallery");
+}
+
+// 切换添加组图模式
+function toggleAddToGroupMode() {
+  addToGroupMode.value = !addToGroupMode.value;
+}
+
+// 处理添加到组图的上传文件
+async function onAddToGroupFileChange(file) {
+  if (!image.value) return;
+
+  try {
+    const raw = file.raw;
+    if (!raw) return;
+
+    const arrayBuffer = await raw.arrayBuffer();
+    const blob = new Blob([arrayBuffer], { type: raw.type || "image/*" });
+
+    // 导入必要的函数
+    const { putImage } = await import("@/utils/idb.js");
+
+    // 创建新图片记录，将其作为当前图片的附图
+    const record = {
+      name: raw.name,
+      type: raw.type,
+      size: raw.size,
+      blob,
+      parentImageId: image.value.id, // 设置为当前图片的附图
+      groupId: image.value.groupId, // 继承当前图片的分组
+      tags: [...(image.value.tags || [])], // 继承当前图片的标签
+      createdAt: Date.now(),
+    };
+
+    await putImage(record);
+
+    // 关闭添加组图模式
+    addToGroupMode.value = false;
+
+    // 重新加载图片数据以更新轮播条
+    await loadImage();
+
+    success(`图片 "${raw.name}" 已添加到组图`);
+  } catch (err) {
+    console.error("添加到组图失败:", err);
+    error("添加到组图失败，请重试");
+  }
 }
 
 async function removeImage() {
@@ -1110,11 +1190,11 @@ function showAILogs() {
 /* 左侧图片区域 */
 .image-section {
   width: 100%;
+  position: relative;
   min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
 }
 
 .image-viewport {
@@ -1237,12 +1317,6 @@ function showAILogs() {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.panel-header {
-  padding: 8px 12px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
 }
 
 .panel-title {
@@ -1724,6 +1798,104 @@ function showAILogs() {
   max-width: 100%;
   max-height: 80vh;
   object-fit: contain;
+}
+
+/* 添加组图相关样式 */
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.add-to-group-button {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #666;
+}
+
+.add-to-group-button:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.add-to-group-button.active {
+  background: #e0e0e0;
+  color: #333;
+}
+
+/* 添加组图panel样式（类似轮播条） */
+.add-to-group-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  z-index: 20;
+  animation: slideDown 0.3s ease-out;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.panel-content {
+  padding: 16px;
+}
+
+.group-uploader {
+  width: 100%;
+}
+
+.group-uploader :deep(.el-upload-dragger) {
+  border: 2px dashed rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.02);
+  width: 100%;
+  height: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.group-uploader :deep(.el-upload-dragger:hover) {
+  border-color: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.group-uploader :deep(.el-icon--upload) {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
+  margin-bottom: 8px;
+}
+
+.group-uploader :deep(.el-upload__text) {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
 }
 
 /* 响应式 */
