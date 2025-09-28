@@ -8,6 +8,30 @@
         </div>
         <div class="header-actions">
           <div
+            @click="toggleInfoMode"
+            :class="{ active: showInfoPanel }"
+            class="info-button"
+            title="查看信息"
+          >
+            <img
+              src="/src/static/images/icons/info.png"
+              alt="信息"
+              class="info-icon"
+            />
+          </div>
+          <div
+            @click="toggleTagMode"
+            :class="{ active: showTagPanel }"
+            class="tag-button"
+            title="管理标签"
+          >
+            <img
+              src="/src/static/images/icons/tags.png"
+              alt="标签"
+              class="tag-icon"
+            />
+          </div>
+          <div
             @click="toggleAddToGroupMode"
             :class="{ active: addToGroupMode }"
             class="add-to-group-button"
@@ -33,8 +57,342 @@
       </div>
 
       <div v-else class="content">
-        <!-- 左侧图片区域 -->
+        <!-- 图片区域 -->
         <div class="image-section">
+          <!-- 信息管理panel -->
+          <div v-if="showInfoPanel" class="info-panel">
+            <div class="panel-content">
+              <div class="info-panel-header">
+                <h3 class="panel-title">图片信息</h3>
+              </div>
+
+              <!-- 基本信息 -->
+              <div class="info-section-compact">
+                <h4 class="section-title-compact">基本信息</h4>
+                <div class="info-grid-compact">
+                  <div class="info-row-compact">
+                    <span class="info-label-compact">文件名</span>
+                    <span class="info-value-compact">{{ image.name }}</span>
+                  </div>
+                  <div class="info-row-compact">
+                    <span class="info-label-compact">文件类型</span>
+                    <span class="info-value-compact">{{
+                      image.type || "未知"
+                    }}</span>
+                  </div>
+                  <div class="info-row-compact">
+                    <span class="info-label-compact">文件大小</span>
+                    <span class="info-value-compact">{{
+                      formatFileSize(image.size)
+                    }}</span>
+                  </div>
+                  <div class="info-row-compact">
+                    <span class="info-label-compact">上传时间</span>
+                    <span class="info-value-compact">{{
+                      formatDate(image.createdAt)
+                    }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 备注区域 -->
+              <div class="notes-section-compact">
+                <h4 class="section-title-compact">备注</h4>
+                <div class="notes-container-compact">
+                  <!-- 显示模式 -->
+                  <div
+                    v-if="!isEditingNotes"
+                    class="notes-display-compact"
+                    @click="startEditNotes"
+                  >
+                    <div v-if="image.notes" class="notes-content-compact">
+                      {{ image.notes }}
+                    </div>
+                    <div v-else class="notes-placeholder-compact">
+                      <span class="placeholder-text-compact"
+                        >点击添加图片备注...</span
+                      >
+                      <el-icon class="edit-icon-compact"><Edit /></el-icon>
+                    </div>
+                  </div>
+
+                  <!-- 编辑模式 -->
+                  <div v-else class="notes-edit-compact">
+                    <el-input
+                      v-model="editingNotes"
+                      type="textarea"
+                      :rows="4"
+                      placeholder="添加图片备注..."
+                      @blur="saveNotes"
+                      @keydown.escape="cancelEditNotes"
+                      ref="notesInput"
+                      class="notes-input-compact"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 标签管理panel -->
+          <div v-if="showTagPanel" class="tag-panel">
+            <div class="panel-content">
+              <div class="tag-panel-header">
+                <h3 class="panel-title">标签管理</h3>
+                <div class="tag-actions">
+                  <!-- AI分析按钮和模式选择面板 -->
+                  <div class="ai-analyze-container">
+                    <el-tooltip
+                      :content="hasValidApiKey ? '' : '请先进行模型配置'"
+                      :disabled="hasValidApiKey"
+                      placement="top"
+                    >
+                      <el-button
+                        size="small"
+                        type="primary"
+                        :loading="isAnalyzing"
+                        :disabled="!hasValidApiKey"
+                        @click="analyzeImageWithAI"
+                        @mouseenter="
+                          hasValidApiKey ? showAnalysisModePanelNow() : null
+                        "
+                        @mouseleave="
+                          hasValidApiKey ? hideAnalysisModePanel() : null
+                        "
+                        class="ai-analyze-button"
+                        :class="{
+                          'ai-analyze-button-disabled': !hasValidApiKey,
+                        }"
+                      >
+                        <el-icon><Star /></el-icon>
+                        AI分析
+                      </el-button>
+                    </el-tooltip>
+
+                    <!-- 分析模式选择面板 -->
+                    <div
+                      v-show="showAnalysisModePanel && hasValidApiKey"
+                      @mouseenter="showAnalysisModePanelNow"
+                      @mouseleave="hideAnalysisModePanel"
+                      class="analysis-mode-panel"
+                    >
+                      <!-- 连接桥梁，确保鼠标移动过程中不会中断 -->
+                      <div class="hover-bridge"></div>
+                      <div class="panel-header">
+                        <span class="panel-title">选择分析模式</span>
+                      </div>
+                      <div class="mode-options">
+                        <label
+                          class="mode-option"
+                          :class="{
+                            active: analysisMode === 'similarity-based',
+                          }"
+                        >
+                          <input
+                            type="radio"
+                            v-model="analysisMode"
+                            value="similarity-based"
+                            class="mode-radio"
+                          />
+                          <div class="mode-content">
+                            <div class="mode-title">相似图集分析</div>
+                            <div class="mode-description">
+                              基于相似图片的标签推荐（推荐）
+                            </div>
+                          </div>
+                        </label>
+
+                        <label
+                          class="mode-option"
+                          :class="{
+                            active: analysisMode === 'ai-direct-recommendation',
+                          }"
+                        >
+                          <input
+                            type="radio"
+                            v-model="analysisMode"
+                            value="ai-direct-recommendation"
+                            class="mode-radio"
+                          />
+                          <div class="mode-content">
+                            <div class="mode-title">AI直接推荐</div>
+                            <div class="mode-description">
+                              AI直接分析图片生成新标签（不依赖标签库）
+                            </div>
+                          </div>
+                        </label>
+
+                        <label
+                          class="mode-option"
+                          :class="{
+                            active: analysisMode === 'visual-similarity',
+                          }"
+                        >
+                          <input
+                            type="radio"
+                            v-model="analysisMode"
+                            value="visual-similarity"
+                            class="mode-radio"
+                          />
+                          <div class="mode-content">
+                            <div class="mode-title">视觉相似性分析</div>
+                            <div class="mode-description">
+                              基于视觉特征识别相似图片
+                            </div>
+                          </div>
+                        </label>
+
+                        <label
+                          class="mode-option"
+                          :class="{
+                            active: analysisMode === 'semantic-analysis',
+                          }"
+                        >
+                          <input
+                            type="radio"
+                            v-model="analysisMode"
+                            value="semantic-analysis"
+                            class="mode-radio"
+                          />
+                          <div class="mode-content">
+                            <div class="mode-title">语义分析</div>
+                            <div class="mode-description">
+                              基于语义特征分析图片内容
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  <el-button
+                    size="small"
+                    @click="goToAISettings"
+                    class="ai-config-button"
+                  >
+                    <el-icon><Setting /></el-icon>
+                    配置
+                  </el-button>
+                </div>
+              </div>
+
+              <!-- AI分析结果 -->
+              <div
+                v-if="aiAnalysisResult.length > 0"
+                class="ai-analysis-result"
+              >
+                <div class="ai-result-header">
+                  <span class="ai-result-title">AI推荐标签</span>
+                  <div class="ai-result-actions">
+                    <el-button
+                      size="small"
+                      type="text"
+                      @click="showAILogs"
+                      class="view-logs-button"
+                    >
+                      <el-icon><Document /></el-icon>
+                      查看日志
+                    </el-button>
+                    <el-button
+                      size="small"
+                      type="text"
+                      @click="clearAIAnalysis"
+                      class="clear-ai-button"
+                    >
+                      清除
+                    </el-button>
+                  </div>
+                </div>
+                <div class="ai-tags">
+                  <div
+                    v-for="aiTag in aiAnalysisResult"
+                    :key="aiTag.tag"
+                    class="ai-tag-item"
+                    :class="{
+                      'ai-tag-selected': selectedAITags.has(aiTag.tag),
+                    }"
+                    @click="toggleAITag(aiTag.tag)"
+                  >
+                    <div class="ai-tag-content">
+                      <span class="ai-tag-text">{{ aiTag.tag }}</span>
+                      <span class="ai-tag-confidence"
+                        >{{ (aiTag.confidence * 100).toFixed(0) }}%</span
+                      >
+                    </div>
+                    <div
+                      v-if="
+                        aiTag.category &&
+                        analysisMode === 'ai-direct-recommendation'
+                      "
+                      class="ai-tag-category"
+                    >
+                      {{ aiTag.category }}
+                    </div>
+                    <el-icon
+                      v-if="selectedAITags.has(aiTag.tag)"
+                      class="ai-tag-check"
+                    >
+                      <Check />
+                    </el-icon>
+                  </div>
+                </div>
+                <div class="ai-actions">
+                  <el-button
+                    size="small"
+                    type="primary"
+                    :disabled="selectedAITags.size === 0"
+                    @click="addSelectedAITags"
+                    class="add-ai-tags-button"
+                  >
+                    添加选中标签 ({{ selectedAITags.size }})
+                  </el-button>
+                </div>
+              </div>
+
+              <!-- 标签管理区域 -->
+              <div class="tags-container">
+                <div class="tags-display">
+                  <!-- 现有标签 -->
+                  <div
+                    v-for="tag in image.tags"
+                    :key="tag"
+                    class="tag-item"
+                    @click="removeTag(tag)"
+                  >
+                    {{ tag }}
+                    <el-icon class="tag-remove"><Delete /></el-icon>
+                  </div>
+
+                  <!-- 添加标签按钮 -->
+                  <div
+                    v-if="!isAddingTag"
+                    class="add-tag-button"
+                    @click="startAddingTag"
+                  >
+                    <el-icon><Plus /></el-icon>
+                  </div>
+
+                  <!-- 正在添加的标签输入框 -->
+                  <div
+                    v-if="isAddingTag"
+                    class="tag-item adding-tag"
+                    :style="{ width: tagInputWidth + 'px' }"
+                  >
+                    <input
+                      v-model="newTagInput"
+                      ref="tagInput"
+                      class="tag-input-field"
+                      placeholder="输入标签"
+                      @keyup.enter="confirmAddTag"
+                      @keyup.escape="cancelAddTag"
+                      @blur="confirmAddTag"
+                      @input="adjustTagInputWidth"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- 添加组图panel（类似轮播条的样式） -->
           <div v-if="addToGroupMode" class="add-to-group-panel">
             <div class="panel-content">
@@ -80,312 +438,7 @@
 
         <!-- 右侧信息区域 -->
         <div class="info-section">
-          <!-- 基本信息 -->
-          <div class="info-section-item">
-            <h3 class="section-title">基本信息</h3>
-            <div class="info-grid">
-              <div class="info-row">
-                <span class="info-label">文件名</span>
-                <span class="info-value">{{ image.name }}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">文件类型</span>
-                <span class="info-value">{{ image.type || "未知" }}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">文件大小</span>
-                <span class="info-value">{{ formatFileSize(image.size) }}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">上传时间</span>
-                <span class="info-value">{{
-                  formatDate(image.createdAt)
-                }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 备注区域 -->
-          <div class="info-section-item">
-            <h3 class="section-title">备注</h3>
-            <div class="notes-container">
-              <!-- 显示模式 -->
-              <div
-                v-if="!isEditingNotes"
-                class="notes-display"
-                @click="startEditNotes"
-              >
-                <div v-if="image.notes" class="notes-content">
-                  {{ image.notes }}
-                </div>
-                <div v-else class="notes-placeholder">
-                  <span class="placeholder-text">点击添加图片备注...</span>
-                  <el-icon class="edit-icon"><Edit /></el-icon>
-                </div>
-              </div>
-
-              <!-- 编辑模式 -->
-              <div v-else class="notes-edit">
-                <el-input
-                  v-model="editingNotes"
-                  type="textarea"
-                  :rows="6"
-                  placeholder="添加图片备注..."
-                  @blur="saveNotes"
-                  @keydown.escape="cancelEditNotes"
-                  ref="notesInput"
-                  class="notes-input"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- 标签区域 -->
-          <div class="info-section-item">
-            <div class="section-header">
-              <h3 class="section-title">标签</h3>
-              <div class="tag-actions">
-                <!-- AI分析按钮和模式选择面板 -->
-                <div class="ai-analyze-container">
-                  <el-tooltip
-                    :content="hasValidApiKey ? '' : '请先进行模型配置'"
-                    :disabled="hasValidApiKey"
-                    placement="top"
-                  >
-                    <el-button
-                      size="small"
-                      type="primary"
-                      :loading="isAnalyzing"
-                      :disabled="!hasValidApiKey"
-                      @click="analyzeImageWithAI"
-                      @mouseenter="
-                        hasValidApiKey ? showAnalysisModePanelNow() : null
-                      "
-                      @mouseleave="
-                        hasValidApiKey ? hideAnalysisModePanel() : null
-                      "
-                      class="ai-analyze-button"
-                      :class="{ 'ai-analyze-button-disabled': !hasValidApiKey }"
-                    >
-                      <el-icon><Star /></el-icon>
-                      AI分析
-                    </el-button>
-                  </el-tooltip>
-
-                  <!-- 分析模式选择面板 -->
-                  <div
-                    v-show="showAnalysisModePanel && hasValidApiKey"
-                    @mouseenter="showAnalysisModePanelNow"
-                    @mouseleave="hideAnalysisModePanel"
-                    class="analysis-mode-panel"
-                  >
-                    <!-- 连接桥梁，确保鼠标移动过程中不会中断 -->
-                    <div class="hover-bridge"></div>
-                    <div class="panel-header">
-                      <span class="panel-title">选择分析模式</span>
-                    </div>
-                    <div class="mode-options">
-                      <label
-                        class="mode-option"
-                        :class="{ active: analysisMode === 'similarity-based' }"
-                      >
-                        <input
-                          type="radio"
-                          v-model="analysisMode"
-                          value="similarity-based"
-                          class="mode-radio"
-                        />
-                        <div class="mode-content">
-                          <div class="mode-title">相似图集分析</div>
-                          <div class="mode-description">
-                            基于相似图片的标签推荐（推荐）
-                          </div>
-                        </div>
-                      </label>
-
-                      <label
-                        class="mode-option"
-                        :class="{
-                          active: analysisMode === 'ai-direct-recommendation',
-                        }"
-                      >
-                        <input
-                          type="radio"
-                          v-model="analysisMode"
-                          value="ai-direct-recommendation"
-                          class="mode-radio"
-                        />
-                        <div class="mode-content">
-                          <div class="mode-title">AI直接推荐</div>
-                          <div class="mode-description">
-                            AI直接分析图片生成新标签（不依赖标签库）
-                          </div>
-                        </div>
-                      </label>
-
-                      <label
-                        class="mode-option"
-                        :class="{
-                          active: analysisMode === 'visual-similarity',
-                        }"
-                      >
-                        <input
-                          type="radio"
-                          v-model="analysisMode"
-                          value="visual-similarity"
-                          class="mode-radio"
-                        />
-                        <div class="mode-content">
-                          <div class="mode-title">视觉相似性分析</div>
-                          <div class="mode-description">
-                            基于视觉特征识别相似图片
-                          </div>
-                        </div>
-                      </label>
-
-                      <label
-                        class="mode-option"
-                        :class="{
-                          active: analysisMode === 'semantic-analysis',
-                        }"
-                      >
-                        <input
-                          type="radio"
-                          v-model="analysisMode"
-                          value="semantic-analysis"
-                          class="mode-radio"
-                        />
-                        <div class="mode-content">
-                          <div class="mode-title">语义分析</div>
-                          <div class="mode-description">
-                            基于语义特征分析图片内容
-                          </div>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-                <el-button
-                  size="small"
-                  @click="goToAISettings"
-                  class="ai-config-button"
-                >
-                  <el-icon><Setting /></el-icon>
-                  配置
-                </el-button>
-              </div>
-            </div>
-
-            <!-- AI分析结果 -->
-            <div v-if="aiAnalysisResult.length > 0" class="ai-analysis-result">
-              <div class="ai-result-header">
-                <span class="ai-result-title">AI推荐标签</span>
-                <div class="ai-result-actions">
-                  <el-button
-                    size="small"
-                    type="text"
-                    @click="showAILogs"
-                    class="view-logs-button"
-                  >
-                    <el-icon><Document /></el-icon>
-                    查看日志
-                  </el-button>
-                  <el-button
-                    size="small"
-                    type="text"
-                    @click="clearAIAnalysis"
-                    class="clear-ai-button"
-                  >
-                    清除
-                  </el-button>
-                </div>
-              </div>
-              <div class="ai-tags">
-                <div
-                  v-for="aiTag in aiAnalysisResult"
-                  :key="aiTag.tag"
-                  class="ai-tag-item"
-                  :class="{ 'ai-tag-selected': selectedAITags.has(aiTag.tag) }"
-                  @click="toggleAITag(aiTag.tag)"
-                >
-                  <div class="ai-tag-content">
-                    <span class="ai-tag-text">{{ aiTag.tag }}</span>
-                    <span class="ai-tag-confidence"
-                      >{{ (aiTag.confidence * 100).toFixed(0) }}%</span
-                    >
-                  </div>
-                  <div
-                    v-if="
-                      aiTag.category &&
-                      analysisMode === 'ai-direct-recommendation'
-                    "
-                    class="ai-tag-category"
-                  >
-                    {{ aiTag.category }}
-                  </div>
-                  <el-icon
-                    v-if="selectedAITags.has(aiTag.tag)"
-                    class="ai-tag-check"
-                  >
-                    <Check />
-                  </el-icon>
-                </div>
-              </div>
-              <div class="ai-actions">
-                <el-button
-                  size="small"
-                  type="primary"
-                  :disabled="selectedAITags.size === 0"
-                  @click="addSelectedAITags"
-                  class="add-ai-tags-button"
-                >
-                  添加选中标签 ({{ selectedAITags.size }})
-                </el-button>
-              </div>
-            </div>
-
-            <div class="tags-container">
-              <div class="tags-display">
-                <!-- 现有标签 -->
-                <div
-                  v-for="tag in image.tags"
-                  :key="tag"
-                  class="tag-item"
-                  @click="removeTag(tag)"
-                >
-                  {{ tag }}
-                  <el-icon class="tag-remove"><Delete /></el-icon>
-                </div>
-
-                <!-- 添加标签按钮 -->
-                <div
-                  v-if="!isAddingTag"
-                  class="add-tag-button"
-                  @click="startAddingTag"
-                >
-                  <el-icon><Plus /></el-icon>
-                </div>
-
-                <!-- 正在添加的标签输入框 -->
-                <div
-                  v-if="isAddingTag"
-                  class="tag-item adding-tag"
-                  :style="{ width: tagInputWidth + 'px' }"
-                >
-                  <input
-                    v-model="newTagInput"
-                    ref="tagInput"
-                    class="tag-input-field"
-                    placeholder="输入标签"
-                    @keyup.enter="confirmAddTag"
-                    @keyup.escape="cancelAddTag"
-                    @blur="confirmAddTag"
-                    @input="adjustTagInputWidth"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+          <!-- 右侧信息区域现在为空，信息已移动到面板中 -->
         </div>
       </div>
     </div>
@@ -448,6 +501,12 @@ const { success, error } = useDrawerNotification();
 
 // 添加组图相关状态
 const addToGroupMode = ref(false);
+
+// 标签面板相关状态
+const showTagPanel = ref(false);
+
+// 信息面板相关状态
+const showInfoPanel = ref(false);
 
 // AI分析相关状态
 const isAnalyzing = ref(false);
@@ -629,9 +688,34 @@ function goBack() {
   router.push("/gallery");
 }
 
+// 切换信息面板模式
+function toggleInfoMode() {
+  showInfoPanel.value = !showInfoPanel.value;
+  // 如果打开信息面板，关闭其他面板
+  if (showInfoPanel.value) {
+    showTagPanel.value = false;
+    addToGroupMode.value = false;
+  }
+}
+
+// 切换标签面板模式
+function toggleTagMode() {
+  showTagPanel.value = !showTagPanel.value;
+  // 如果打开标签面板，关闭其他面板
+  if (showTagPanel.value) {
+    showInfoPanel.value = false;
+    addToGroupMode.value = false;
+  }
+}
+
 // 切换添加组图模式
 function toggleAddToGroupMode() {
   addToGroupMode.value = !addToGroupMode.value;
+  // 如果打开添加组图面板，关闭其他面板
+  if (addToGroupMode.value) {
+    showInfoPanel.value = false;
+    showTagPanel.value = false;
+  }
 }
 
 // 处理添加到组图的上传文件
@@ -1286,9 +1370,9 @@ function showAILogs() {
 
 .analysis-mode-panel {
   position: absolute;
-  bottom: 100%;
+  top: 100%;
   right: 0;
-  margin-bottom: 8px;
+  margin-top: 8px;
   background: white;
   border: 1px solid #e0e0e0;
   border-radius: 6px;
@@ -1296,12 +1380,12 @@ function showAILogs() {
   z-index: 1000;
   width: 240px;
   overflow: hidden;
-  animation: fadeInUp 0.2s ease-out;
+  animation: fadeInDown 0.2s ease-out;
 }
 
 .hover-bridge {
   position: absolute;
-  bottom: -8px;
+  top: -8px;
   left: 0;
   right: 0;
   height: 8px;
@@ -1312,6 +1396,17 @@ function showAILogs() {
   from {
     opacity: 0;
     transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
   }
   to {
     opacity: 1;
@@ -1807,6 +1902,106 @@ function showAILogs() {
   align-items: center;
 }
 
+.info-button {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.info-icon {
+  width: 20px;
+  height: 20px;
+  transition: opacity 0.2s ease;
+}
+
+.info-button::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  background-image: url("/src/static/images/icons/info-hover.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.info-button:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.info-button.active {
+  background: rgba(102, 126, 234, 0.2);
+}
+
+.info-button.active .info-icon {
+  opacity: 0;
+}
+
+.info-button.active::after {
+  opacity: 1;
+}
+
+.tag-button {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.tag-icon {
+  width: 20px;
+  height: 20px;
+  transition: opacity 0.2s ease;
+}
+
+.tag-button::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  background-image: url("/src/static/images/icons/tags-hover.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.tag-button:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.tag-button.active {
+  background: rgba(102, 126, 234, 0.2);
+}
+
+.tag-button.active .tag-icon {
+  opacity: 0;
+}
+
+.tag-button.active::after {
+  opacity: 1;
+}
+
 .add-to-group-button {
   width: 40px;
   height: 40px;
@@ -1827,6 +2022,227 @@ function showAILogs() {
 .add-to-group-button.active {
   background: #e0e0e0;
   color: #333;
+}
+
+/* 信息管理panel样式 */
+.info-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  z-index: 20;
+  animation: slideDown 0.3s ease-out;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.info-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 0 16px;
+}
+
+.info-panel-header .panel-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* 紧凑的信息展示样式 */
+.info-section-compact {
+  margin-bottom: 20px;
+  padding: 0 16px;
+}
+
+.section-title-compact {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 12px 0;
+  padding-left: 8px;
+  border-left: 3px solid #667eea;
+}
+
+.info-grid-compact {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.info-row-compact {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.info-label-compact {
+  font-size: 11px;
+  color: #8a9ba8;
+  font-weight: 500;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value-compact {
+  font-size: 13px;
+  color: #2c3e50;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+/* 紧凑的备注样式 */
+.notes-section-compact {
+  padding: 0 16px;
+}
+
+.notes-container-compact {
+  position: relative;
+}
+
+.notes-display-compact {
+  height: 80px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: flex-start;
+}
+
+.notes-display-compact:hover {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(102, 126, 234, 0.2);
+}
+
+.notes-content-compact {
+  color: #2c3e50;
+  line-height: 1.5;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.notes-placeholder-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #8a9ba8;
+  font-size: 13px;
+  min-height: 20px;
+}
+
+.placeholder-text-compact {
+  flex: 1;
+}
+
+.edit-icon-compact {
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+  font-size: 14px;
+}
+
+.notes-display-compact:hover .edit-icon-compact {
+  opacity: 1;
+}
+
+.notes-edit-compact {
+  height: 80px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  display: flex;
+  align-items: flex-start;
+}
+
+.notes-input-compact {
+  border: none !important;
+  background: transparent;
+  resize: none;
+  box-shadow: none !important;
+}
+
+.notes-input-compact:focus {
+  outline: none;
+}
+
+.notes-input-compact :deep(.el-input__wrapper) {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.notes-input-compact :deep(.el-textarea__inner) {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  resize: none;
+  height: 100% !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
+}
+
+/* 标签管理panel样式 */
+.tag-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  z-index: 20;
+  animation: slideDown 0.3s ease-out;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.tag-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 0 16px;
+}
+
+.tag-panel-header .panel-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* 标签面板内的样式调整 */
+.tag-panel .tags-container {
+  padding: 0 16px;
+}
+
+.tag-panel .tags-display {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  padding: 12px;
+  min-height: 60px;
+}
+
+.tag-panel .ai-analysis-result {
+  margin: 0 16px 16px 16px;
+  padding: 12px;
+}
+
+.tag-panel .ai-tags {
+  margin-bottom: 8px;
 }
 
 /* 添加组图panel样式（类似轮播条） */
