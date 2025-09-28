@@ -1486,11 +1486,11 @@ function clearSearch() {
 /* 折叠区域内的批量操作条复用样式 */
 .menu-batch-bar {
   padding: 12px 16px;
-  border-top: 1px dashed #e0e0e0;
+  border-top: 1px solid #e0e0e0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(245, 245, 245, 0.9);
 }
 
 .batch-info {
@@ -1717,7 +1717,7 @@ function clearSearch() {
 /* 上传区域样式 */
 .upload-area {
   border-top: 1px solid #e0e0e0;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(245, 245, 245, 0.9);
   padding: 16px;
   height: 120px; /* 固定高度 */
   display: flex;
@@ -1799,7 +1799,7 @@ function clearSearch() {
 .group-selector {
   border-top: 1px solid #e0e0e0;
   padding: 8px 16px; /* 缩小上下内边距，避免顶栏被挤压 */
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(245, 245, 245, 0.9);
 }
 
 .group-selector-title {
@@ -1876,7 +1876,7 @@ function clearSearch() {
 .search-area {
   border-top: 1px solid #e0e0e0;
   padding: 16px;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(245, 245, 245, 0.9);
 }
 
 .search-form {
@@ -1901,6 +1901,19 @@ function clearSearch() {
   width: 100%;
 }
 
+.search-field .el-input :deep(.el-input__wrapper) {
+  background-color: rgba(250, 250, 250, 0.9);
+  border-radius: 100px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: none;
+  font-size: 13px;
+}
+
+.search-field .el-input :deep(.el-input__inner) {
+  font-size: 13px;
+  color: #333;
+}
+
 /* 搜索标签容器样式 */
 .tags-container {
   position: relative;
@@ -1909,8 +1922,8 @@ function clearSearch() {
 .tags-display {
   min-height: 40px;
 
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 8px;
+  background: rgba(245, 245, 245, 0.8);
+  border-radius: 100px;
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
   display: flex;
@@ -1919,9 +1932,9 @@ function clearSearch() {
   align-items: center;
 }
 
-.tags-display:hover {
+/* .tags-display:hover {
   background: rgba(255, 255, 255, 0.8);
-}
+} */
 
 .tag-item {
   display: inline-flex;
