@@ -4,6 +4,38 @@
   padding: 0;
   box-sizing: border-box;
 }
+
+/* 全局禁用文本和图片选择效果 */
+* {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 禁用图片拖拽 */
+img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+}
+
+/* 允许输入框和按钮可以被选中/交互 */
+input,
+textarea,
+button,
+.el-input__inner,
+.el-textarea__inner,
+[contenteditable] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
 html,
 body {
   margin: 0;
