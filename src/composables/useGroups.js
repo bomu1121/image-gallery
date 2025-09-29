@@ -470,17 +470,50 @@ export function useGroups() {
   }
 
   // 处理粘贴的图片（与上传类似，但不需要文件对象）
-  async function onPasteImages(processedImages, targetGroupId = null) {
+  async function onPasteImages(
+    processedImages,
+    targetGroupId = null,
+    options = {}
+  ) {
     try {
       const actualGroupId =
         targetGroupId !== null ? targetGroupId : currentGroupId.value;
       // 如果目标分组是"全部"分组，则使用"未分组"作为实际存储分组
       const finalGroupId = actualGroupId === -1 ? 0 : actualGroupId;
 
-      for (const imageRecord of processedImages) {
-        // 使用克隆对象，避免后续复用同一引用导致分组串写
-        const toInsert = { ...imageRecord, groupId: finalGroupId };
-        await putImage(toInsert);
+      if (!processedImages || processedImages.length === 0) {
+        return;
+      }
+
+      if (processedImages.length === 1) {
+        const only = { ...processedImages[0], groupId: finalGroupId };
+        await putImage(only);
+      } else {
+        const asAlbum = !!options.asAlbum;
+        if (!asAlbum) {
+          for (const imageRecord of processedImages) {
+            const toInsert = { ...imageRecord, groupId: finalGroupId };
+            await putImage(toInsert);
+          }
+        } else {
+          // 多图粘贴：以组图形式保存，首图为主图，其余为附图
+          const first = {
+            ...processedImages[0],
+            groupId: finalGroupId,
+            parentImageId: null,
+          };
+          const parentId = await putImage(first);
+
+          const rest = processedImages.slice(1);
+          for (const img of rest) {
+            const child = {
+              ...img,
+              groupId: finalGroupId,
+              parentImageId: parentId,
+            };
+            await putImage(child);
+          }
+        }
       }
 
       // 更新对应分组的图片数量
@@ -503,7 +536,7 @@ export function useGroups() {
       // 触发图片库刷新事件
       window.dispatchEvent(new CustomEvent("imageAdded"));
 
-      success(`成功粘贴 ${processedImages.length} 张图片`);
+      // success(`成功粘贴 ${processedImages.length} 张图片`);
     } catch (e) {
       console.error("粘贴失败:", e);
       error("粘贴失败，请重试");

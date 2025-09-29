@@ -91,6 +91,21 @@ export function useConfirmDelete() {
     });
   };
 
+  /**
+   * 通用确认对话框（对外暴露）
+   * 用于非删除类的场景，如多图粘贴是否按组图生成
+   */
+  const confirmAction = (message, title = "确认操作", options = {}) => {
+    return confirm({
+      title,
+      message,
+      type: options.type || "info",
+      confirmButtonText: options.confirmButtonText || "确定",
+      cancelButtonText: options.cancelButtonText || "取消",
+      ...options,
+    });
+  };
+
   return {
     dialogVisible,
     dialogConfig,
@@ -100,5 +115,6 @@ export function useConfirmDelete() {
     cloudServerDeleteConfirm,
     logDeleteConfirm,
     restoreConfirm,
+    confirmAction,
   };
 }

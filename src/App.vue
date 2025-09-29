@@ -179,7 +179,8 @@ const locale = computed(() => {
 
 // #region --- 通知设置
 const { success, error, warning, info } = useDrawerNotification();
-const { dialogVisible, dialogConfig, batchDeleteConfirm } = useConfirmDelete();
+const { dialogVisible, dialogConfig, batchDeleteConfirm, confirmAction } =
+  useConfirmDelete();
 // #endregion
 
 // 页面状态
@@ -495,9 +496,28 @@ async function handleGlobalPaste(event) {
 
       if (processedImages.length > 0) {
         console.log(`处理了 ${processedImages.length} 张图片`);
-        console.log("直接处理粘贴的图片");
-        // 直接处理，使用当前选中的分组ID
-        await onPasteImages(processedImages, selectedGroupId.value);
+        // 若为多图，询问是否以组图方式生成
+        let asAlbum = false;
+        if (processedImages.length > 1) {
+          try {
+            await confirmAction(
+              `检测到 ${processedImages.length} 张图片。是否以组图的形式生成？\n选择“否”则按独立图片粘贴。`,
+              "粘贴为组图",
+              {
+                confirmButtonText: "是，生成组图",
+                cancelButtonText: "否，单独粘贴",
+              }
+            );
+            asAlbum = true;
+          } catch (e) {
+            asAlbum = false;
+          }
+        }
+
+        // 处理，使用当前选中的分组ID，并传入是否组图
+        await onPasteImages(processedImages, selectedGroupId.value, {
+          asAlbum,
+        });
       }
     }
   } catch (err) {
