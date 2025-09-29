@@ -8,6 +8,7 @@ const BACKGROUND_STORE_NAME = "background";
 const ANALYSIS_LOGS_STORE_NAME = "analysis_logs";
 const ALBUMS_STORE_NAME = "albums";
 const ALBUM_ITEMS_STORE_NAME = "album_items";
+const TRASH_STORE_NAME = "trash";
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -97,6 +98,18 @@ function openDB() {
           ["albumId", "sortOrder"],
           { unique: false }
         );
+      }
+
+      // 创建回收站存储
+      if (!db.objectStoreNames.contains(TRASH_STORE_NAME)) {
+        const trashStore = db.createObjectStore(TRASH_STORE_NAME, {
+          keyPath: "id",
+          autoIncrement: true,
+        });
+        trashStore.createIndex("deletedAt", "deletedAt", { unique: false });
+        trashStore.createIndex("originalImageId", "originalImageId", {
+          unique: false,
+        });
       }
     };
     request.onblocked = () => {
@@ -1363,4 +1376,407 @@ export async function getAnalysisLogsStatistics() {
     avgDuration: avgDuration / 1000, // 转换为秒
     successRate: total > 0 ? ((completed / total) * 100).toFixed(1) : 0,
   };
+}
+
+// ==================== 回收站相关方法 ====================
+
+/**
+ * 确保回收站存储存在
+ */
+async function ensureTrashStoreExists() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME);
+    req.onsuccess = () => {
+      const db = req.result;
+      if (db.objectStoreNames.contains(TRASH_STORE_NAME)) {
+        db.close();
+        resolve();
+        return;
+      }
+
+      const nextVersion = db.version + 1;
+      db.close();
+
+      const upgradeReq = indexedDB.open(DB_NAME, nextVersion);
+      upgradeReq.onupgradeneeded = () => {
+        const udb = upgradeReq.result;
+        if (!udb.objectStoreNames.contains(TRASH_STORE_NAME)) {
+          const trashStore = udb.createObjectStore(TRASH_STORE_NAME, {
+            keyPath: "id",
+            autoIncrement: true,
+          });
+          trashStore.createIndex("deletedAt", "deletedAt", { unique: false });
+          trashStore.createIndex("originalImageId", "originalImageId", {
+            unique: false,
+          });
+        }
+      };
+      upgradeReq.onblocked = () => {
+        console.warn("[idb] ensureTrashStoreExists upgrade blocked");
+      };
+      upgradeReq.onsuccess = () => {
+        upgradeReq.result.close();
+        resolve();
+      };
+      upgradeReq.onerror = () => reject(upgradeReq.error);
+    };
+    req.onblocked = () => {
+      console.warn("[idb] ensureTrashStoreExists open blocked");
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * 将图片移动到回收站
+ * @param {Object} image - 要删除的图片对象
+ * @returns {Promise<number>} 返回回收站记录ID
+ */
+export async function moveImageToTrash(image) {
+  await ensureTrashStoreExists();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(TRASH_STORE_NAME, "readwrite");
+    const store = tx.objectStore(TRASH_STORE_NAME);
+    const now = Date.now();
+
+    const trashData = {
+      originalImageId: image.id,
+      imageData: {
+        ...image,
+        // 移除可能导致克隆问题的字段
+        objectUrl: undefined,
+      },
+      deletedAt: now,
+    };
+
+    const req = store.add(trashData);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * 获取回收站中的所有图片
+ * @returns {Promise<Array>} 返回回收站中的图片列表
+ */
+export async function getTrashImages() {
+  await ensureTrashStoreExists();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(TRASH_STORE_NAME, "readonly");
+    const store = tx.objectStore(TRASH_STORE_NAME);
+    const req = store.getAll();
+    req.onsuccess = () => {
+      const trashItems = req.result.map((item) => ({
+        ...item.imageData,
+        trashId: item.id,
+        originalImageId: item.originalImageId, // 确保 originalImageId 被保留
+        deletedAt: item.deletedAt,
+        objectUrl:
+          item.imageData.blob && item.imageData.blob instanceof Blob
+            ? URL.createObjectURL(item.imageData.blob)
+            : item.imageData.url,
+      }));
+      // 按删除时间倒序排列（最新删除的在前）
+      trashItems.sort((a, b) => b.deletedAt - a.deletedAt);
+      resolve(trashItems);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * 从回收站恢复组图（主图和所有附图）
+ * @param {number} parentTrashId - 主图的回收站记录ID
+ * @returns {Promise<Array<number>>} 返回恢复的图片ID数组
+ */
+async function restoreGroupFromTrash(parentTrashId) {
+  await ensureTrashStoreExists();
+  const db = await openDB();
+
+  // 获取主图数据
+  const parentTrashItem = await new Promise((resolve, reject) => {
+    const tx = db.transaction(TRASH_STORE_NAME, "readonly");
+    const store = tx.objectStore(TRASH_STORE_NAME);
+    const req = store.get(parentTrashId);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+
+  if (!parentTrashItem) {
+    throw new Error("Parent trash item not found");
+  }
+
+  const parentOriginalId = parentTrashItem.originalImageId;
+
+  // 查找所有相关的回收站项目（主图+附图）
+  const allTrashItems = await new Promise((resolve, reject) => {
+    const tx = db.transaction(TRASH_STORE_NAME, "readonly");
+    const store = tx.objectStore(TRASH_STORE_NAME);
+    const req = store.getAll();
+    req.onsuccess = () => {
+      // 筛选出主图和所有附图
+      const items = req.result.filter(
+        (item) =>
+          item.originalImageId === parentOriginalId ||
+          item.imageData.parentImageId === parentOriginalId
+      );
+      resolve(items);
+    };
+    req.onerror = () => reject(req.error);
+  });
+
+  // 恢复所有图片
+  const restoredIds = [];
+  const newParentId = await restoreSingleImageFromTrash(parentTrashId);
+  restoredIds.push(newParentId);
+
+  // 恢复所有附图，并更新它们的parentImageId
+  for (const trashItem of allTrashItems) {
+    if (trashItem.id !== parentTrashId) {
+      const newChildId = await restoreSingleImageFromTrash(trashItem.id);
+      // 更新附图的parentImageId
+      await updateImage(newChildId, { parentImageId: newParentId });
+      restoredIds.push(newChildId);
+    }
+  }
+
+  return restoredIds;
+}
+
+/**
+ * 恢复单个图片（内部函数）
+ * @param {number} trashId - 回收站记录ID
+ * @returns {Promise<number>} 返回恢复的图片ID
+ */
+async function restoreSingleImageFromTrash(trashId) {
+  await ensureTrashStoreExists();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction([TRASH_STORE_NAME, STORE_NAME], "readwrite");
+    const trashStore = tx.objectStore(TRASH_STORE_NAME);
+    const imageStore = tx.objectStore(STORE_NAME);
+
+    // 从回收站获取图片数据
+    const getReq = trashStore.get(trashId);
+    getReq.onsuccess = () => {
+      const trashItem = getReq.result;
+      if (!trashItem) {
+        reject(new Error("Trash item not found"));
+        return;
+      }
+
+      // 恢复图片到主存储
+      const imageData = {
+        ...trashItem.imageData,
+        // 完全移除id字段，让IndexedDB自动生成新的ID
+        createdAt: Date.now(),
+        // 暂时清空parentImageId，稍后会重新设置
+        parentImageId: null,
+      };
+
+      // 确保移除id字段
+      delete imageData.id;
+
+      const addReq = imageStore.add(imageData);
+      addReq.onsuccess = () => {
+        // 从回收站删除
+        trashStore.delete(trashId);
+        resolve(addReq.result);
+      };
+      addReq.onerror = () => reject(addReq.error);
+    };
+    getReq.onerror = () => reject(getReq.error);
+  });
+}
+
+/**
+ * 从回收站恢复图片
+ * @param {number} trashId - 回收站记录ID
+ * @returns {Promise<number>} 返回恢复的图片ID
+ */
+export async function restoreImageFromTrash(trashId) {
+  await ensureTrashStoreExists();
+  const db = await openDB();
+
+  // 获取回收站项目数据
+  const trashItem = await new Promise((resolve, reject) => {
+    const tx = db.transaction(TRASH_STORE_NAME, "readonly");
+    const store = tx.objectStore(TRASH_STORE_NAME);
+    const req = store.get(trashId);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+
+  if (!trashItem) {
+    throw new Error("Trash item not found");
+  }
+
+  // 检查是否为主图（没有parentImageId）
+  const isParentImage = !trashItem.imageData.parentImageId;
+
+  if (isParentImage) {
+    // 如果是主图，恢复整个组图
+    const restoredIds = await restoreGroupFromTrash(trashId);
+    return restoredIds[0]; // 返回主图ID
+  } else {
+    // 如果是附图，只恢复这一张图片
+    return await restoreSingleImageFromTrash(trashId);
+  }
+}
+
+/**
+ * 批量从回收站恢复图片
+ * @param {Array<number>} trashIds - 回收站记录ID数组
+ * @returns {Promise<Array<number>>} 返回恢复的图片ID数组
+ */
+export async function restoreImagesFromTrash(trashIds) {
+  const results = [];
+  for (const trashId of trashIds) {
+    try {
+      const imageId = await restoreImageFromTrash(trashId);
+      results.push(imageId);
+    } catch (error) {
+      console.error(`恢复图片失败 (trashId: ${trashId}):`, error);
+    }
+  }
+  return results;
+}
+
+/**
+ * 从回收站永久删除图片
+ * @param {number} trashId - 回收站记录ID
+ * @returns {Promise<void>}
+ */
+export async function permanentlyDeleteFromTrash(trashId) {
+  await ensureTrashStoreExists();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(TRASH_STORE_NAME, "readwrite");
+    const store = tx.objectStore(TRASH_STORE_NAME);
+    const req = store.delete(trashId);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * 批量从回收站永久删除图片
+ * @param {Array<number>} trashIds - 回收站记录ID数组
+ * @returns {Promise<void>}
+ */
+export async function permanentlyDeleteFromTrashBatch(trashIds) {
+  await ensureTrashStoreExists();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(TRASH_STORE_NAME, "readwrite");
+    const store = tx.objectStore(TRASH_STORE_NAME);
+
+    trashIds.forEach((trashId) => {
+      store.delete(trashId);
+    });
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/**
+ * 清空回收站
+ * @returns {Promise<void>}
+ */
+export async function clearTrash() {
+  await ensureTrashStoreExists();
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(TRASH_STORE_NAME, "readwrite");
+    const store = tx.objectStore(TRASH_STORE_NAME);
+    const req = store.clear();
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * 将组图的所有图片（主图和附图）移动到回收站
+ * @param {number} parentId - 主图ID
+ * @returns {Promise<void>}
+ */
+async function moveGroupToTrash(parentId) {
+  // 获取主图
+  const parentImage = await getImageById(parentId);
+  if (!parentImage) {
+    throw new Error("Parent image not found");
+  }
+
+  // 获取所有附图
+  const childrenImages = await getChildrenImages(parentId);
+
+  // 将所有图片（主图+附图）移动到回收站
+  const allImages = [parentImage, ...childrenImages];
+
+  for (const image of allImages) {
+    await moveImageToTrash(image);
+  }
+
+  // 从主存储中删除所有图片
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+
+    // 删除主图
+    store.delete(parentId);
+
+    // 删除所有附图
+    childrenImages.forEach((child) => {
+      store.delete(child.id);
+    });
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/**
+ * 修改删除图片的逻辑，将图片移动到回收站而不是直接删除
+ * @param {number} id - 图片ID
+ * @returns {Promise<void>}
+ */
+export async function deleteImageToTrash(id) {
+  // 先获取图片数据
+  const image = await getImageById(id);
+  if (!image) {
+    throw new Error("Image not found");
+  }
+
+  // 先级联删除相册关联，并维护计数/封面
+  try {
+    await cascadeDeleteAlbumItemsByImageId(id);
+  } catch (e) {
+    console.warn("[idb] cascadeDeleteAlbumItemsByImageId failed", e);
+  }
+
+  // 检查是否为组图的主图
+  const isParentImage =
+    image.parentImageId === null || image.parentImageId === undefined;
+
+  if (isParentImage) {
+    // 如果是主图，将整个组图移动到回收站
+    await moveGroupToTrash(id);
+  } else {
+    // 如果是附图，只移动这一张图片
+    await moveImageToTrash(image);
+
+    // 从主存储中删除
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.delete(id);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
 }

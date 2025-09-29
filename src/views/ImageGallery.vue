@@ -354,7 +354,11 @@ import {
   Setting as IconSetting,
   Search as IconSearch,
 } from "@element-plus/icons-vue";
-import { getAllImages, deleteImage, getChildrenImages } from "@/utils/idb.js";
+import {
+  getAllImages,
+  deleteImageToTrash,
+  getChildrenImages,
+} from "@/utils/idb.js";
 
 // Props
 const props = defineProps({
@@ -582,7 +586,7 @@ async function remove(id) {
   startDeleting(id);
   try {
     console.time(`delete-image-${id}`);
-    await withMinDuration(deleteImage(id), MIN_DELETE_MS);
+    await withMinDuration(deleteImageToTrash(id), MIN_DELETE_MS);
     console.timeEnd(`delete-image-${id}`);
     await load();
     // 通知上层同步分组计数等派生数据
@@ -985,9 +989,9 @@ async function deleteImageFromContext(img) {
     hideContextMenu();
     startDeleting(img.id);
     console.time(`delete-image-${img.id}`);
-    await withMinDuration(deleteImage(img.id), MIN_DELETE_MS);
+    await withMinDuration(deleteImageToTrash(img.id), MIN_DELETE_MS);
     console.timeEnd(`delete-image-${img.id}`);
-    success("删除成功");
+    success("图片已移动到回收站");
     await load();
 
     // 触发分组数量更新事件
@@ -1346,6 +1350,7 @@ function clearSearch() {
 /* 主图特殊样式 */
 .card.is-main-image {
   /* 主图样式可以在这里添加 */
+  position: relative;
 }
 
 .card.is-main-image::before {

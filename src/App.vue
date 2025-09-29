@@ -10,6 +10,7 @@
         @go-home="goToHome"
         @show-settings="showSettingsPage = true"
         @showAIAnalysisLogs="goToAIAnalysisLogs"
+        @showTrash="goToTrash"
         @start-batch-delete="startBatchDelete"
       />
 
@@ -225,6 +226,8 @@ const activeKey = computed(() => {
   if (showSettingsPage.value) return "settings";
   if (router.currentRoute.value.path === "/ai-analysis-logs")
     return "ai-analysis-logs";
+  if (router.currentRoute.value.path === "/trash")
+    return "trash";
   return "home";
 });
 
@@ -243,6 +246,21 @@ function goToAIAnalysisLogs() {
   showSettingsPage.value = false;
   router
     .push("/ai-analysis-logs")
+    .then(() => {
+      console.log("✅ 路由跳转完成，新路由:", router.currentRoute.value.path);
+    })
+    .catch((error) => {
+      console.error("❌ 路由跳转失败:", error);
+    });
+}
+
+// 导航到回收站页面
+function goToTrash() {
+  console.log("🗑️ 点击回收站按钮，准备跳转");
+  console.log("📍 当前路由:", router.currentRoute.value.path);
+  showSettingsPage.value = false;
+  router
+    .push("/trash")
     .then(() => {
       console.log("✅ 路由跳转完成，新路由:", router.currentRoute.value.path);
     })
@@ -314,11 +332,11 @@ async function handleBatchDelete() {
     );
 
     // 导入删除函数
-    const { deleteImage } = await import("@/utils/idb.js");
+    const { deleteImageToTrash } = await import("@/utils/idb.js");
 
-    // 批量删除选中的图片
+    // 批量删除选中的图片到回收站
     const deletePromises = Array.from(selectedImages.value).map((imageId) =>
-      deleteImage(imageId)
+      deleteImageToTrash(imageId)
     );
 
     await Promise.all(deletePromises);
@@ -326,7 +344,7 @@ async function handleBatchDelete() {
     // 重新统计分组图片数量
     await initializeGroups();
 
-    success(`成功删除 ${selectedImages.value.size} 张图片`);
+    success(`成功将 ${selectedImages.value.size} 张图片移动到回收站`);
     selectedImages.value.clear();
     // 保持批量模式开启，不自动关闭
 

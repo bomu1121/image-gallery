@@ -22,6 +22,14 @@
     <div class="sidebar-bottom">
       <div
         class="sidebar-item"
+        :class="{ active: active === 'trash' }"
+        @click="handleTrashClick"
+        title="回收站"
+      >
+        <el-icon><icon-delete /></el-icon>
+      </div>
+      <div
+        class="sidebar-item"
         :class="{ active: active === 'ai-analysis-logs' }"
         @click="handleAILogsClick"
         title="AI分析日志"
@@ -46,6 +54,7 @@ import {
   Setting as IconSetting,
   Grid as IconHome,
   Document as IconDocument,
+  Delete as IconDelete,
 } from "@element-plus/icons-vue";
 import { useRouter } from "vue-router";
 
@@ -61,9 +70,28 @@ const emit = defineEmits([
   "goHome",
   "showSettings",
   "showAIAnalysisLogs",
+  "showTrash",
 ]);
 
 const router = useRouter();
+
+function handleTrashClick() {
+  console.log("🗑️ 侧边栏回收站按钮被点击");
+  console.log("📤 准备发射事件: showTrash");
+  emit("showTrash");
+  console.log("✅ 事件已发射");
+
+  // 直接测试路由跳转
+  console.log("🚀 直接测试路由跳转");
+  router
+    .push("/trash")
+    .then(() => {
+      console.log("✅ 直接路由跳转成功");
+    })
+    .catch((error) => {
+      console.error("❌ 直接路由跳转失败:", error);
+    });
+}
 
 function handleAILogsClick() {
   console.log("📋 侧边栏AI日志按钮被点击");

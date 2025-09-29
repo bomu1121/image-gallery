@@ -54,6 +54,18 @@ export const productionRouter = [
     component: () => import("@/views/AIAnalysisLogDetail.vue"),
     meta: { title: "AI分析日志详情" },
   },
+  {
+    path: "/trash",
+    name: "Trash",
+    component: () => import("@/views/TrashPage.vue"),
+    meta: { title: "回收站" },
+  },
+  {
+    path: "/trash/:id",
+    name: "TrashImageDetail",
+    component: () => import("@/views/TrashImageDetail.vue"),
+    meta: { title: "回收站图片详情" },
+  },
 
   // 404
   { path: "/:catchAll(.*)", redirect: { name: "NotFound" } },
