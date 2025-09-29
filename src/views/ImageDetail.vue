@@ -1805,8 +1805,8 @@ async function removeFromGroup() {
 }
 
 .info-button {
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1855,8 +1855,8 @@ async function removeFromGroup() {
 }
 
 .tag-button {
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1905,8 +1905,8 @@ async function removeFromGroup() {
 }
 
 .add-to-group-button {
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1927,8 +1927,8 @@ async function removeFromGroup() {
 }
 
 .remove-from-group-button {
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;

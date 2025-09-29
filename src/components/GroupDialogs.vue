@@ -19,48 +19,23 @@
   />
 
   <!-- 图片分组选择对话框 -->
-  <el-dialog
-    :model-value="showImageGroup"
-    @update:model-value="$emit('update:showImageGroup', $event)"
-    title="选择分组"
-    width="400px"
-  >
-    <div class="image-group-content">
-      <div class="group-options">
-        <div
-          v-for="group in groups"
-          :key="group.id"
-          class="group-option"
-          :class="{ selected: selectedImageGroupId === group.id }"
-          @click="selectImageGroup(group.id)"
-        >
-          <el-icon><icon-folder /></el-icon>
-          <span class="group-name">{{ group.name }}</span>
-          <span class="group-count">({{ group.imageCount }})</span>
-        </div>
-      </div>
-      <div class="dialog-footer">
-        <el-button @click="$emit('update:showImageGroup', false)"
-          >取消</el-button
-        >
-        <el-button type="primary" @click="moveImageToGroup">确定</el-button>
-      </div>
-    </div>
-  </el-dialog>
+  <SelectGroupModal
+    :visible="showImageGroup"
+    :groups="groups"
+    :selected-group-id="selectedImageGroupId"
+    @update:visible="$emit('update:showImageGroup', $event)"
+    @confirm="handleSelectGroupConfirm"
+    @cancel="handleSelectGroupCancel"
+    @select="selectImageGroup"
+  />
 </template>
 
 <script setup>
-import {
-  ElDialog,
-  ElForm,
-  ElFormItem,
-  ElInput,
-  ElButton,
-  ElIcon,
-} from "element-plus";
+import { ElForm, ElFormItem, ElInput, ElButton, ElIcon } from "element-plus";
 import { Folder as IconFolder } from "@element-plus/icons-vue";
 import CreateGroupModal from "./CreateGroupModal.vue";
 import EditGroupModal from "./EditGroupModal.vue";
+import SelectGroupModal from "./SelectGroupModal.vue";
 
 const props = defineProps({
   showCreateGroup: Boolean,
@@ -115,6 +90,16 @@ function handleEditGroupCancel() {
   emit("update:showEditGroup", false);
 }
 
+// 选择分组确认
+function handleSelectGroupConfirm(groupId) {
+  emit("moveImageToGroup");
+}
+
+// 选择分组取消
+function handleSelectGroupCancel() {
+  emit("update:showImageGroup", false);
+}
+
 const createGroup = () => {
   emit("createGroup");
 };
@@ -137,11 +122,6 @@ const moveImageToGroup = () => {
 </script>
 
 <style scoped>
-.create-group-content,
-.edit-group-content,
-.image-group-content {
-}
-
 .dialog-footer {
   text-align: right;
   margin-top: 20px;

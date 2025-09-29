@@ -1776,6 +1776,8 @@ function clearSearch() {
   font-size: 14px;
   font-weight: 500;
   color: #333;
+  height: 30px;
+  width: 30px;
 }
 
 .menu-title .el-icon {
@@ -1808,12 +1810,12 @@ function clearSearch() {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 16px;
+  padding: 8px;
 }
 
 .menu-action-item {
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
