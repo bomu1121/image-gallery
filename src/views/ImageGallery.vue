@@ -295,6 +295,14 @@
         <el-icon><icon-folder /></el-icon>
         <span>分组</span>
       </div>
+      <div
+        v-if="isContextMenuImageGroup"
+        class="context-menu-item"
+        @click="restoreGroupFromContext(contextMenuImage)"
+      >
+        <el-icon><icon-setting /></el-icon>
+        <span>组图还原</span>
+      </div>
       <div class="context-menu-divider"></div>
       <div
         class="context-menu-item"
@@ -319,6 +327,19 @@
         />
       </div>
     </el-dialog>
+
+    <!-- 自定义确认删除对话框 -->
+    <CustomDialog
+      :visible="dialogVisible"
+      :title="dialogConfig.title"
+      :message="dialogConfig.message"
+      :type="dialogConfig.type"
+      :show-cancel-button="dialogConfig.showCancelButton"
+      :confirm-button-text="dialogConfig.confirmButtonText"
+      :cancel-button-text="dialogConfig.cancelButtonText"
+      @confirm="handleConfirm"
+      @cancel="handleCancel"
+    />
   </div>
 </template>
 
@@ -341,6 +362,8 @@ import {
   // ElMessageBox,
 } from "element-plus";
 import { useDrawerNotification } from "@/composables/useDrawerNotification.js";
+import { useConfirmDelete } from "@/composables/useConfirmDelete.js";
+import CustomDialog from "@/components/CustomDialog.vue";
 import {
   Delete as IconDelete,
   CopyDocument as IconCopy,
@@ -358,6 +381,7 @@ import {
   getAllImages,
   deleteImageToTrash,
   getChildrenImages,
+  restoreGroupToIndividualImages,
 } from "@/utils/idb.js";
 
 // Props
@@ -410,6 +434,7 @@ const emit = defineEmits([
 
 const router = useRouter();
 const { success, error, warning, info } = useDrawerNotification();
+const { dialogVisible, dialogConfig, deleteConfirm } = useConfirmDelete();
 
 const images = ref([]);
 const coverCounts = ref({}); // { [imageId]: number }
@@ -494,6 +519,7 @@ const contextMenuVisible = ref(false);
 const contextMenuX = ref(0);
 const contextMenuY = ref(0);
 const contextMenuImage = ref(null);
+const isContextMenuImageGroup = ref(false);
 
 function revokeObjectUrls(list) {
   list?.forEach((it) => {
@@ -622,9 +648,18 @@ function onCardClick(img) {
 }
 
 // 右键菜单相关函数
-function showContextMenu(event, img) {
+async function showContextMenu(event, img) {
   event.preventDefault();
   contextMenuImage.value = img;
+
+  // 检查是否为组图
+  try {
+    const children = await getChildrenImages(img.id);
+    isContextMenuImageGroup.value = children.length > 0;
+  } catch (err) {
+    console.error("检查组图状态失败:", err);
+    isContextMenuImageGroup.value = false;
+  }
 
   // 先显示菜单以获取实际尺寸
   contextMenuX.value = event.clientX;
@@ -680,6 +715,7 @@ function onCardContextMenu(event, img) {
 function hideContextMenu() {
   contextMenuVisible.value = false;
   contextMenuImage.value = null;
+  isContextMenuImageGroup.value = false;
 }
 
 async function copyImageToClipboard(img) {
@@ -1011,6 +1047,67 @@ function showGroupMenu(img) {
     })
   );
   hideContextMenu();
+}
+
+// 处理确认删除对话框
+function handleConfirm() {
+  if (dialogConfig.value._onConfirm) {
+    dialogConfig.value._onConfirm();
+  }
+}
+
+function handleCancel() {
+  if (dialogConfig.value._onCancel) {
+    dialogConfig.value._onCancel();
+  }
+}
+
+// 从右键菜单还原组图
+async function restoreGroupFromContext(img) {
+  if (!img) return;
+
+  try {
+    // 获取附图数量
+    const children = await getChildrenImages(img.id);
+    const childrenCount = children.length;
+
+    if (childrenCount === 0) {
+      error("该图片没有附图，无法还原组图");
+      return;
+    }
+
+    // 显示确认对话框
+    await deleteConfirm(
+      `确定要将组图 "${img.name}" 还原为 ${
+        childrenCount + 1
+      } 张独立图片吗？\n还原后，所有图片将变为独立图片，组图关系将被解除。`,
+      "组图还原确认",
+      {
+        confirmButtonText: "确定还原",
+        cancelButtonText: "取消",
+      }
+    );
+
+    // 执行还原操作
+    const restoredCount = await restoreGroupToIndividualImages(img.id);
+
+    success(`组图已还原，${restoredCount + 1} 张图片已变为独立图片`);
+
+    // 重新加载图片列表
+    await load();
+
+    // 触发分组数量更新事件
+    window.dispatchEvent(new CustomEvent("imageAdded"));
+  } catch (err) {
+    if (err.message === "用户取消") {
+      // 用户取消还原，不显示错误信息
+      return;
+    }
+    console.error("还原组图失败:", err);
+    error("还原组图失败，请重试");
+  } finally {
+    hideContextMenu();
+  }
 }
 
 // 批量删除相关函数

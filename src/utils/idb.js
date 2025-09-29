@@ -1007,6 +1007,82 @@ export async function removeImageFromGroup(imageId) {
   });
 }
 
+/**
+ * 还原整个组图（将组图拆分为独立图片）
+ * @param {number} parentImageId - 主图ID
+ * @returns {Promise<number>} 返回被还原的图片数量
+ */
+export async function restoreGroupToIndividualImages(parentImageId) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+
+    // 获取主图信息
+    const getParentReq = store.get(parentImageId);
+    getParentReq.onsuccess = () => {
+      const parentImage = getParentReq.result;
+      if (!parentImage) {
+        reject(new Error("主图不存在"));
+        return;
+      }
+
+      // 检查是否为主图
+      if (
+        parentImage.parentImageId !== null &&
+        parentImage.parentImageId !== undefined
+      ) {
+        reject(new Error("该图片不是主图，无法还原组图"));
+        return;
+      }
+
+      // 查找所有附图
+      const idx = store.index("parentImageId");
+      const range = IDBKeyRange.only(parentImageId);
+      const childrenToUpdate = [];
+
+      idx.openCursor(range).onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) {
+          childrenToUpdate.push(cursor.primaryKey);
+          cursor.continue();
+        } else {
+          // 所有附图都已找到，开始更新
+          let updateCount = 0;
+          const totalCount = childrenToUpdate.length;
+
+          if (totalCount === 0) {
+            reject(new Error("该图片没有附图，无法还原组图"));
+            return;
+          }
+
+          // 更新所有附图，将parentImageId设置为null
+          childrenToUpdate.forEach((childId) => {
+            const getChildReq = store.get(childId);
+            getChildReq.onsuccess = () => {
+              const childImage = getChildReq.result;
+              if (childImage) {
+                const updatedChild = { ...childImage, parentImageId: null };
+                const putReq = store.put(updatedChild);
+                putReq.onsuccess = () => {
+                  updateCount++;
+                  if (updateCount === totalCount) {
+                    resolve(totalCount);
+                  }
+                };
+                putReq.onerror = () => reject(putReq.error);
+              }
+            };
+            getChildReq.onerror = () => reject(getChildReq.error);
+          });
+        }
+      };
+    };
+
+    getParentReq.onerror = () => reject(getParentReq.error);
+  });
+}
+
 export async function clearAll() {
   const db = await openDB();
   return new Promise((resolve, reject) => {
