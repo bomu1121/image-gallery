@@ -969,6 +969,44 @@ export async function detachChildren(
   });
 }
 
+/**
+ * 从组图中移除单个图片（将附图变为独立图片）
+ * @param {number} imageId - 要移除的图片ID
+ * @returns {Promise<void>}
+ */
+export async function removeImageFromGroup(imageId) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+
+    // 获取图片信息
+    const getReq = store.get(imageId);
+    getReq.onsuccess = () => {
+      const image = getReq.result;
+      if (!image) {
+        reject(new Error("图片不存在"));
+        return;
+      }
+
+      // 检查是否为附图
+      if (image.parentImageId === null || image.parentImageId === undefined) {
+        reject(new Error("该图片不是组图的附图，无法移除"));
+        return;
+      }
+
+      // 将parentImageId设置为null，使其成为独立图片
+      const updatedImage = { ...image, parentImageId: null };
+      const putReq = store.put(updatedImage);
+
+      putReq.onsuccess = () => resolve();
+      putReq.onerror = () => reject(putReq.error);
+    };
+
+    getReq.onerror = () => reject(getReq.error);
+  });
+}
+
 export async function clearAll() {
   const db = await openDB();
   return new Promise((resolve, reject) => {

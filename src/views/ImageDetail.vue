@@ -40,6 +40,14 @@
             <el-icon><Plus /></el-icon>
           </div>
           <div
+            v-if="isChildImage"
+            @click="removeFromGroup"
+            class="remove-from-group-button"
+            title="从组图中移除"
+          >
+            <el-icon><Minus /></el-icon>
+          </div>
+          <div
             @click="removeImage"
             :class="{ disabled: !image }"
             class="delete-icon-button"
@@ -474,6 +482,7 @@ import {
   Edit,
   Delete,
   Plus,
+  Minus,
   Upload,
   Star,
   Setting,
@@ -485,6 +494,7 @@ import {
   deleteImage,
   updateImage,
   getChildrenImages,
+  removeImageFromGroup,
 } from "@/utils/idb.js";
 import { useDrawerNotification } from "@/composables/useDrawerNotification.js";
 import { aiImageAnalysisService } from "@/services/AIImageAnalysisService.js";
@@ -607,6 +617,15 @@ const hasValidApiKey = computed(() => {
     status.kimi ||
     status.doubao ||
     status.silicoflow
+  );
+});
+
+// 计算当前图片是否为附图
+const isChildImage = computed(() => {
+  return (
+    image.value &&
+    image.value.parentImageId !== null &&
+    image.value.parentImageId !== undefined
   );
 });
 
@@ -1211,6 +1230,49 @@ function goToAISettings() {
 
 function showAILogs() {
   router.push("/ai-analysis-logs");
+}
+
+// 从组图中移除当前图片
+async function removeFromGroup() {
+  if (!image.value || !isChildImage.value) {
+    error("当前图片不是组图的附图，无法移除");
+    return;
+  }
+
+  try {
+    await deleteConfirm(
+      `确定要将图片 "${image.value.name}" 从组图中移除吗？移除后该图片将变为独立图片。`,
+      "移除确认",
+      {
+        confirmButtonText: "确定移除",
+        cancelButtonText: "取消",
+      }
+    );
+
+    // 保存当前图片的ID，用于后续处理
+    const removedImageId = image.value.id;
+
+    // 执行移除操作
+    await removeImageFromGroup(removedImageId);
+
+    success("图片已从组图中移除");
+
+    // 如果移除的是当前显示的附图，需要切换到主图
+    if (currentImageIndex.value > 0) {
+      // 当前显示的是附图，切换到主图
+      switchToImage(0);
+    }
+
+    // 重新加载图片数据以更新轮播条
+    await loadImage();
+  } catch (err) {
+    if (err.message === "用户取消") {
+      // 用户取消操作，不显示错误信息
+      return;
+    }
+    console.error("移除图片失败:", err);
+    error("移除图片失败，请重试");
+  }
 }
 </script>
 
@@ -1862,6 +1924,27 @@ function showAILogs() {
 .add-to-group-button.active {
   background: #e0e0e0;
   color: #333;
+}
+
+.remove-from-group-button {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #ff6b6b;
+}
+
+.remove-from-group-button:hover {
+  background: rgba(255, 107, 107, 0.1);
+  color: #ff5252;
+}
+
+.remove-from-group-button .el-icon {
+  font-size: 18px;
 }
 
 /* 信息管理panel样式 */
