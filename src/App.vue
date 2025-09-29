@@ -113,13 +113,27 @@
         <el-button type="primary" @click="confirmAddToAlbum">确定</el-button>
       </template>
     </el-dialog>
+    <!-- 自定义确认删除对话框 -->
+    <CustomDialog
+      :visible="dialogVisible"
+      :title="dialogConfig.title"
+      :message="dialogConfig.message"
+      :type="dialogConfig.type"
+      :show-cancel-button="dialogConfig.showCancelButton"
+      :confirm-button-text="dialogConfig.confirmButtonText"
+      :cancel-button-text="dialogConfig.cancelButtonText"
+      @confirm="handleConfirm"
+      @cancel="handleCancel"
+    />
   </el-config-provider>
 </template>
 
 <script setup>
 // #region --- element语言
-import { ElConfigProvider, ElMessageBox } from "element-plus";
+import { ElConfigProvider } from "element-plus";
 import { useDrawerNotification } from "@/composables/useDrawerNotification.js";
+import { useConfirmDelete } from "@/composables/useConfirmDelete.js";
+import CustomDialog from "@/components/CustomDialog.vue";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import en from "element-plus/es/locale/lang/en";
 import { useSystemLang } from "@/store/system/lang.js";
@@ -164,6 +178,7 @@ const locale = computed(() => {
 
 // #region --- 通知设置
 const { success, error, warning, info } = useDrawerNotification();
+const { dialogVisible, dialogConfig, batchDeleteConfirm } = useConfirmDelete();
 // #endregion
 
 // 页面状态
@@ -226,8 +241,7 @@ const activeKey = computed(() => {
   if (showSettingsPage.value) return "settings";
   if (router.currentRoute.value.path === "/ai-analysis-logs")
     return "ai-analysis-logs";
-  if (router.currentRoute.value.path === "/trash")
-    return "trash";
+  if (router.currentRoute.value.path === "/trash") return "trash";
   return "home";
 });
 
@@ -313,6 +327,19 @@ function clearSelection() {
   // batchDeleteMode.value = false;
 }
 
+// 处理确认删除对话框
+function handleConfirm() {
+  if (dialogConfig.value._onConfirm) {
+    dialogConfig.value._onConfirm();
+  }
+}
+
+function handleCancel() {
+  if (dialogConfig.value._onCancel) {
+    dialogConfig.value._onCancel();
+  }
+}
+
 // 处理批量删除
 async function handleBatchDelete() {
   if (selectedImages.value.size === 0) {
@@ -321,15 +348,10 @@ async function handleBatchDelete() {
   }
 
   try {
-    await ElMessageBox.confirm(
-      `确定要删除选中的 ${selectedImages.value.size} 张图片吗？`,
-      "确认删除",
-      {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-      }
-    );
+    await batchDeleteConfirm(selectedImages.value.size, "张图片", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+    });
 
     // 导入删除函数
     const { deleteImageToTrash } = await import("@/utils/idb.js");
@@ -351,7 +373,7 @@ async function handleBatchDelete() {
     // 刷新图片列表
     window.dispatchEvent(new CustomEvent("imageAdded"));
   } catch (err) {
-    if (err !== "cancel") {
+    if (err.message !== "用户取消") {
       console.error("批量删除失败:", err);
       error("删除失败，请重试");
     }

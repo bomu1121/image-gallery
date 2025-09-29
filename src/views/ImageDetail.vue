@@ -437,6 +437,19 @@
         </div>
       </div>
     </div>
+
+    <!-- 自定义确认删除对话框 -->
+    <CustomDialog
+      :visible="dialogVisible"
+      :title="dialogConfig.title"
+      :message="dialogConfig.message"
+      :type="dialogConfig.type"
+      :show-cancel-button="dialogConfig.showCancelButton"
+      :confirm-button-text="dialogConfig.confirmButtonText"
+      :cancel-button-text="dialogConfig.cancelButtonText"
+      @confirm="handleConfirm"
+      @cancel="handleCancel"
+    />
   </div>
 </template>
 
@@ -450,10 +463,11 @@ import {
   ElDescriptionsItem,
   ElInput,
   ElIcon,
-  ElMessageBox,
   ElTooltip,
   ElUpload,
 } from "element-plus";
+import { useConfirmDelete } from "@/composables/useConfirmDelete.js";
+import CustomDialog from "@/components/CustomDialog.vue";
 import {
   ArrowLeft,
   View,
@@ -493,6 +507,7 @@ const tagInput = ref(null);
 const isAddingTag = ref(false);
 const tagInputWidth = ref(80); // 默认最小宽度
 const { success, error } = useDrawerNotification();
+const { dialogVisible, dialogConfig, deleteConfirm } = useConfirmDelete();
 
 // 添加组图相关状态
 const addToGroupMode = ref(false);
@@ -754,18 +769,29 @@ async function onAddToGroupFileChange(file) {
   }
 }
 
+// 处理确认删除对话框
+function handleConfirm() {
+  if (dialogConfig.value._onConfirm) {
+    dialogConfig.value._onConfirm();
+  }
+}
+
+function handleCancel() {
+  if (dialogConfig.value._onCancel) {
+    dialogConfig.value._onCancel();
+  }
+}
+
 async function removeImage() {
   if (!image.value) return;
 
   try {
-    await ElMessageBox.confirm(
+    await deleteConfirm(
       `确定要删除图片 "${image.value.name}" 吗？`,
       "删除确认",
       {
         confirmButtonText: "确定删除",
         cancelButtonText: "取消",
-        type: "warning",
-        confirmButtonClass: "el-button--danger",
       }
     );
 
@@ -773,7 +799,7 @@ async function removeImage() {
     success("删除成功");
     goBack();
   } catch (err) {
-    if (err === "cancel") {
+    if (err.message === "用户取消") {
       // 用户取消删除，不显示错误信息
       return;
     }

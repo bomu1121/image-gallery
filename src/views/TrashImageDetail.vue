@@ -130,14 +130,29 @@
         </div>
       </div>
     </div>
+
+    <!-- 自定义确认删除对话框 -->
+    <CustomDialog
+      :visible="dialogVisible"
+      :title="dialogConfig.title"
+      :message="dialogConfig.message"
+      :type="dialogConfig.type"
+      :show-cancel-button="dialogConfig.showCancelButton"
+      :confirm-button-text="dialogConfig.confirmButtonText"
+      :cancel-button-text="dialogConfig.cancelButtonText"
+      @confirm="handleConfirm"
+      @cancel="handleCancel"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ElButton, ElEmpty, ElIcon, ElMessageBox } from "element-plus";
+import { ElButton, ElEmpty, ElIcon } from "element-plus";
 import { ArrowLeft, Refresh, Delete } from "@element-plus/icons-vue";
+import { useConfirmDelete } from "@/composables/useConfirmDelete.js";
+import CustomDialog from "@/components/CustomDialog.vue";
 import {
   getTrashImages,
   restoreImageFromTrash,
@@ -155,6 +170,8 @@ const childrenCount = ref(0);
 const allGroupImages = ref([]); // 包含主图和所有附图的数组
 const currentImageIndex = ref(0); // 当前显示的图片索引
 const { success, error } = useDrawerNotification();
+const { dialogVisible, dialogConfig, deleteConfirm, restoreConfirm } =
+  useConfirmDelete();
 
 // 信息面板相关状态
 const showInfoPanel = ref(false);
@@ -282,6 +299,19 @@ onBeforeUnmount(() => {
   );
 });
 
+// 处理确认删除对话框
+function handleConfirm() {
+  if (dialogConfig.value._onConfirm) {
+    dialogConfig.value._onConfirm();
+  }
+}
+
+function handleCancel() {
+  if (dialogConfig.value._onCancel) {
+    dialogConfig.value._onCancel();
+  }
+}
+
 function goBack() {
   router.push("/trash");
 }
@@ -296,22 +326,16 @@ async function restoreImage() {
   if (!image.value) return;
 
   try {
-    await ElMessageBox.confirm(
-      `确定要恢复图片 "${image.value.name}" 吗？`,
-      "恢复确认",
-      {
-        confirmButtonText: "确定恢复",
-        cancelButtonText: "取消",
-        type: "info",
-        confirmButtonClass: "el-button--primary",
-      }
-    );
+    await restoreConfirm(1, `张图片 "${image.value.name}"`, {
+      confirmButtonText: "确定恢复",
+      cancelButtonText: "取消",
+    });
 
     await restoreImageFromTrash(image.value.trashId);
     success("恢复成功");
     goBack();
   } catch (err) {
-    if (err === "cancel") {
+    if (err.message === "用户取消") {
       // 用户取消恢复，不显示错误信息
       return;
     }
@@ -324,14 +348,12 @@ async function permanentlyDeleteImage() {
   if (!image.value) return;
 
   try {
-    await ElMessageBox.confirm(
+    await deleteConfirm(
       `确定要永久删除图片 "${image.value.name}" 吗？此操作不可撤销！`,
       "永久删除确认",
       {
         confirmButtonText: "确定删除",
         cancelButtonText: "取消",
-        type: "warning",
-        confirmButtonClass: "el-button--danger",
       }
     );
 
@@ -339,7 +361,7 @@ async function permanentlyDeleteImage() {
     success("永久删除成功");
     goBack();
   } catch (err) {
-    if (err === "cancel") {
+    if (err.message === "用户取消") {
       // 用户取消删除，不显示错误信息
       return;
     }

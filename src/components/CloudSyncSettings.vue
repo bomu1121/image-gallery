@@ -199,12 +199,27 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 自定义确认删除对话框 -->
+    <CustomDialog
+      :visible="dialogVisible"
+      :title="dialogConfig.title"
+      :message="dialogConfig.message"
+      :type="dialogConfig.type"
+      :show-cancel-button="dialogConfig.showCancelButton"
+      :confirm-button-text="dialogConfig.confirmButtonText"
+      :cancel-button-text="dialogConfig.cancelButtonText"
+      @confirm="handleConfirm"
+      @cancel="handleCancel"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
+import { useConfirmDelete } from "@/composables/useConfirmDelete.js";
+import CustomDialog from "@/components/CustomDialog.vue";
 import {
   Plus,
   Upload,
@@ -230,6 +245,10 @@ const {
   updateSyncSettings: updateSettings,
   testServerConnection,
 } = useCloudSync();
+
+// 确认删除对话框
+const { dialogVisible, dialogConfig, cloudServerDeleteConfirm } =
+  useConfirmDelete();
 
 // 对话框状态
 const showAddDialog = ref(false);
@@ -325,19 +344,32 @@ const editServer = (server) => {
   showAddDialog.value = true;
 };
 
+// 处理确认删除对话框
+function handleConfirm() {
+  if (dialogConfig.value._onConfirm) {
+    dialogConfig.value._onConfirm();
+  }
+}
+
+function handleCancel() {
+  if (dialogConfig.value._onCancel) {
+    dialogConfig.value._onCancel();
+  }
+}
+
 // 删除服务器
 const deleteServer = async (serverId) => {
   try {
-    await ElMessageBox.confirm("确定要删除这个云服务器配置吗？", "确认删除", {
+    const server = cloudServers.value.find((s) => s.id === serverId);
+    await cloudServerDeleteConfirm(server?.name || "未知服务器", {
       confirmButtonText: "确定",
       cancelButtonText: "取消",
-      type: "warning",
     });
 
     await removeServer(serverId);
     ElMessage.success("服务器配置已删除");
   } catch (error) {
-    if (error !== "cancel") {
+    if (error.message !== "用户取消") {
       ElMessage.error("删除失败: " + error.message);
     }
   }

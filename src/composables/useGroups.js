@@ -1,6 +1,6 @@
 import { ref, watch } from "vue";
-import { ElMessageBox } from "element-plus";
 import { useDrawerNotification } from "@/composables/useDrawerNotification.js";
+import { useConfirmDelete } from "@/composables/useConfirmDelete.js";
 import {
   putImage,
   getAllImages,
@@ -13,6 +13,7 @@ import {
 
 export function useGroups() {
   const { success, error, warning, info } = useDrawerNotification();
+  const { groupDeleteConfirm } = useConfirmDelete();
 
   const groups = ref([
     { id: -1, name: "全部", description: "显示所有图片", imageCount: 0 },
@@ -227,13 +228,12 @@ export function useGroups() {
 
   async function deleteGroup() {
     try {
-      await ElMessageBox.confirm(
-        "确定要删除这个分组吗？删除后分组内的图片将移动到未分组。",
-        "确认删除",
+      await groupDeleteConfirm(
+        editingGroup.value.name,
+        editingGroup.value.imageCount,
         {
           confirmButtonText: "确定",
           cancelButtonText: "取消",
-          type: "warning",
         }
       );
 
@@ -271,7 +271,7 @@ export function useGroups() {
         }
       }
     } catch (err) {
-      if (err !== "cancel") {
+      if (err.message !== "用户取消") {
         console.error("删除分组失败:", err);
         error("删除分组失败，请重试");
       }

@@ -162,14 +162,29 @@
         />
       </div>
     </el-dialog>
+
+    <!-- 自定义确认删除对话框 -->
+    <CustomDialog
+      :visible="dialogVisible"
+      :title="dialogConfig.title"
+      :message="dialogConfig.message"
+      :type="dialogConfig.type"
+      :show-cancel-button="dialogConfig.showCancelButton"
+      :confirm-button-text="dialogConfig.confirmButtonText"
+      :cancel-button-text="dialogConfig.cancelButtonText"
+      @confirm="handleConfirm"
+      @cancel="handleCancel"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useRouter } from "vue-router";
-import { ElButton, ElIcon, ElDialog, ElMessageBox } from "element-plus";
+import { ElButton, ElIcon, ElDialog } from "element-plus";
 import { useDrawerNotification } from "@/composables/useDrawerNotification.js";
+import { useConfirmDelete } from "@/composables/useConfirmDelete.js";
+import CustomDialog from "@/components/CustomDialog.vue";
 import {
   Delete as IconDelete,
   Refresh as IconRefresh,
@@ -185,6 +200,8 @@ import {
 } from "@/utils/idb.js";
 
 const { success, error, warning, info } = useDrawerNotification();
+const { dialogVisible, dialogConfig, batchDeleteConfirm, restoreConfirm } =
+  useConfirmDelete();
 const router = useRouter();
 
 const images = ref([]);
@@ -366,6 +383,19 @@ function clearAll() {
   selectedImages.value.clear();
 }
 
+// 处理确认删除对话框
+function handleConfirm() {
+  if (dialogConfig.value._onConfirm) {
+    dialogConfig.value._onConfirm();
+  }
+}
+
+function handleCancel() {
+  if (dialogConfig.value._onCancel) {
+    dialogConfig.value._onCancel();
+  }
+}
+
 async function confirmBatchRestore() {
   if (selectedImages.value.size === 0) {
     warning("请先选择要恢复的图片");
@@ -373,15 +403,10 @@ async function confirmBatchRestore() {
   }
 
   try {
-    await ElMessageBox.confirm(
-      `确定要恢复选中的 ${selectedImages.value.size} 张图片吗？`,
-      "确认恢复",
-      {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "info",
-      }
-    );
+    await restoreConfirm(selectedImages.value.size, "张图片", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+    });
 
     const trashIds = Array.from(selectedImages.value);
     const restoredIds = await restoreImagesFromTrash(trashIds);
@@ -394,7 +419,7 @@ async function confirmBatchRestore() {
     // 通知主页面刷新
     window.dispatchEvent(new CustomEvent("imageAdded"));
   } catch (err) {
-    if (err !== "cancel") {
+    if (err.message !== "用户取消") {
       console.error("批量恢复失败:", err);
       error("恢复失败，请重试");
     }
@@ -408,15 +433,11 @@ async function confirmBatchDelete() {
   }
 
   try {
-    await ElMessageBox.confirm(
-      `确定要永久删除选中的 ${selectedImages.value.size} 张图片吗？此操作不可撤销！`,
-      "确认永久删除",
-      {
-        confirmButtonText: "确定删除",
-        cancelButtonText: "取消",
-        type: "warning",
-      }
-    );
+    await batchDeleteConfirm(selectedImages.value.size, "张图片", {
+      confirmButtonText: "确定删除",
+      cancelButtonText: "取消",
+      warning: "此操作不可撤销！",
+    });
 
     const trashIds = Array.from(selectedImages.value);
     await permanentlyDeleteFromTrashBatch(trashIds);
@@ -426,7 +447,7 @@ async function confirmBatchDelete() {
     batchDeleteMode.value = false;
     await load();
   } catch (err) {
-    if (err !== "cancel") {
+    if (err.message !== "用户取消") {
       console.error("批量删除失败:", err);
       error("删除失败，请重试");
     }
@@ -456,22 +477,18 @@ async function permanentlyDeleteImage(img) {
   if (!img) return;
 
   try {
-    await ElMessageBox.confirm(
-      `确定要永久删除图片 "${img.name}" 吗？此操作不可撤销！`,
-      "确认永久删除",
-      {
-        confirmButtonText: "确定删除",
-        cancelButtonText: "取消",
-        type: "warning",
-      }
-    );
+    await batchDeleteConfirm(1, `张图片 "${img.name}"`, {
+      confirmButtonText: "确定删除",
+      cancelButtonText: "取消",
+      warning: "此操作不可撤销！",
+    });
 
     await permanentlyDeleteFromTrash(img.trashId);
     success("图片已永久删除");
     hideContextMenu();
     await load();
   } catch (err) {
-    if (err !== "cancel") {
+    if (err.message !== "用户取消") {
       console.error("永久删除图片失败:", err);
       error("删除失败，请重试");
     }
