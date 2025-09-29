@@ -51,7 +51,11 @@
             @click="onStartAlbumMode"
             title="组图"
           >
-            <el-icon><icon-folder /></el-icon>
+            <img
+              src="/src/static/images/icons/group.png"
+              alt="组图"
+              class="album-icon"
+            />
           </div>
         </div>
 
@@ -1495,6 +1499,7 @@ function clearSearch() {
   justify-content: space-between;
   align-items: center;
   background-color: rgba(245, 245, 245, 0.9);
+  padding-left: 24px;
 }
 
 .batch-info {
@@ -1504,9 +1509,10 @@ function clearSearch() {
 }
 
 .selected-count {
-  font-size: 14px;
-  color: #333;
-  font-weight: 500;
+  font-size: 12px;
+  color: #999;
+  font-style: italic;
+  font-weight: 400;
 }
 
 .batch-actions {
@@ -1718,6 +1724,13 @@ function clearSearch() {
   color: #333;
 }
 
+/* 组图图标样式 */
+.menu-action-item .album-icon {
+  width: 22px;
+  height: auto;
+  object-fit: contain;
+}
+
 /* 上传区域样式 */
 .upload-area {
   border-top: 1px solid #e0e0e0;
@@ -1916,6 +1929,13 @@ function clearSearch() {
 .search-field .el-input :deep(.el-input__inner) {
   font-size: 13px;
   color: #333;
+}
+
+.search-field .el-input :deep(.el-input__inner::placeholder) {
+  font-size: 12px;
+  color: #999;
+  font-style: italic;
+  font-weight: 400;
 }
 
 /* 搜索标签容器样式 */
