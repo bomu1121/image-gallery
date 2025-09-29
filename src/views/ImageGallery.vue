@@ -249,7 +249,7 @@
             :alt="img.name"
             @click="onCardClick(img)"
             @contextmenu.prevent="
-              !(batchDeleteMode || albumMode) && onCardContextMenu($event, img)
+              !batchDeleteMode && onCardContextMenu($event, img)
             "
           />
           <div v-if="coverCounts[img.id] > 0" class="album-count-badge">
@@ -294,6 +294,13 @@
       <div class="context-menu-item" @click="showGroupMenu(contextMenuImage)">
         <el-icon><icon-folder /></el-icon>
         <span>分组</span>
+      </div>
+      <div
+        class="context-menu-item"
+        @click="addToAlbumFromContext(contextMenuImage)"
+      >
+        <el-icon><icon-plus /></el-icon>
+        <span>新增组图</span>
       </div>
       <div
         v-if="isContextMenuImageGroup"
@@ -1046,6 +1053,17 @@ function showGroupMenu(img) {
       detail: { image: img },
     })
   );
+  hideContextMenu();
+}
+
+// 从右键菜单新增组图
+function addToAlbumFromContext(img) {
+  if (!img) return;
+
+  // 触发组图模式并选中该图片
+  emit("startAlbumMode");
+  emit("toggleImageSelection", img.id);
+
   hideContextMenu();
 }
 
