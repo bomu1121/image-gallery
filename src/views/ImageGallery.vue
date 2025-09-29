@@ -232,7 +232,7 @@
         </div> -->
       </div>
 
-      <div class="grid" v-else>
+      <div class="grid" :style="gridStyle" v-else>
         <div
           v-for="img in images"
           :key="img.id"
@@ -452,6 +452,9 @@ const current = ref(null);
 const deletingIds = ref([]);
 const MIN_DELETE_MS = 800; // 调试用最小展示时长
 
+// 列数设置
+const columnCount = ref(3); // 默认三列
+
 // 取消可见数量限制，改为完整展示（结合样式做换行/布局）
 
 // 菜单栏状态
@@ -597,6 +600,12 @@ onMounted(() => {
   document.addEventListener("scroll", hideContextMenu, true);
   // 监听上传完成事件，刷新列表
   window.addEventListener("imageAdded", load);
+
+  // 监听列数变化事件
+  window.addEventListener("columnCountChanged", handleColumnCountChanged);
+
+  // 初始化列数设置
+  initializeColumnCount();
 });
 
 // 监听分组变化，重新加载图片
@@ -612,6 +621,7 @@ onBeforeUnmount(() => {
   document.removeEventListener("click", hideContextMenu);
   document.removeEventListener("scroll", hideContextMenu, true);
   window.removeEventListener("imageAdded", load);
+  window.removeEventListener("columnCountChanged", handleColumnCountChanged);
 });
 
 async function remove(id) {
@@ -1355,6 +1365,41 @@ function clearSearch() {
     originalImages.value = [];
   }
 }
+
+// 初始化列数设置
+function initializeColumnCount() {
+  const savedColumnCount = localStorage.getItem("imageGalleryColumnCount");
+  if (savedColumnCount) {
+    try {
+      const parsed = JSON.parse(savedColumnCount);
+      columnCount.value = parsed;
+    } catch (e) {
+      console.warn("Failed to parse saved column count:", e);
+    }
+  }
+}
+
+// 处理列数变化
+function handleColumnCountChanged(event) {
+  columnCount.value = event.detail.columnCount;
+}
+
+// 计算网格样式
+const gridStyle = computed(() => {
+  if (columnCount.value === "auto") {
+    return {
+      columnCount: "auto",
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+      gap: "12px",
+    };
+  } else {
+    return {
+      columnCount: columnCount.value.toString(),
+      display: "block",
+    };
+  }
+});
 </script>
 
 <style scoped>

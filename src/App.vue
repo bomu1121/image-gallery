@@ -27,6 +27,7 @@
           @remove-background="removeBackground"
           @data-imported="handleDataImported"
           @data-exported="handleDataExported"
+          @column-count-change="handleColumnCountChange"
         />
 
         <!-- 其他页面内容 -->
@@ -395,6 +396,16 @@ function toggleUploadMode() {
 function toggleGroupSelector() {
   // 切换分组选择器
   showGroupSelector.value = !showGroupSelector.value;
+}
+
+// 处理列数变化
+function handleColumnCountChange(columnCount) {
+  // 触发全局事件，通知图片画廊组件更新列数
+  window.dispatchEvent(
+    new CustomEvent("columnCountChanged", {
+      detail: { columnCount },
+    })
+  );
 }
 
 // 跳转到详情页

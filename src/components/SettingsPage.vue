@@ -58,6 +58,12 @@
         <!-- AI设置内容 -->
         <AISettings v-else-if="activeSetting === 'ai-config'" />
 
+        <!-- 个性化设置内容 -->
+        <PersonalizationSettings
+          v-else-if="activeSetting === 'personalization'"
+          @column-count-change="$emit('columnCountChange', $event)"
+        />
+
         <!-- 其他设置内容可以在这里添加 -->
         <div v-else class="empty-content">
           <el-icon class="empty-icon"><icon-setting /></el-icon>
@@ -71,11 +77,19 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
-import { Picture, Setting, Upload, Download, Star } from "@/utils/icons.js";
+import {
+  Picture,
+  Setting,
+  Upload,
+  Download,
+  Star,
+  User,
+} from "@/utils/icons.js";
 import BackgroundSettingsContent from "./BackgroundSettingsContent.vue";
 import CloudSyncSettings from "./CloudSyncSettings.vue";
 import ImportExportSettings from "./ImportExportSettings.vue";
 import AISettings from "./AISettings.vue";
+import PersonalizationSettings from "./PersonalizationSettings.vue";
 
 const props = defineProps({
   backgroundImage: {
@@ -99,6 +113,7 @@ const emit = defineEmits([
   "syncStatusChange",
   "dataImported",
   "dataExported",
+  "columnCountChange",
 ]);
 
 // 设置项配置
@@ -126,6 +141,12 @@ const settingsItems = [
     title: "AI 配置",
     description: "配置 AI 服务用于图片标签分析",
     icon: Star,
+  },
+  {
+    key: "personalization",
+    title: "个性化",
+    description: "自定义应用界面和展示方式",
+    icon: User,
   },
   // 可以在这里添加更多设置项
 ];
