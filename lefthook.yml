@@ -1,0 +1,19 @@
+﻿pre-commit:
+  parallel: true
+  commands:
+    lint:
+      glob: "*.{js,ts,jsx,tsx,vue}"
+      run: eslint {staged_files} --cache --fix
+    format:
+      glob: "*.{js,ts,jsx,tsx,vue,json,css,less,html,yml,yaml}"
+      run: prettier --write {staged_files}
+commit-msg:
+  commands:
+    commitlint:
+      run: echo "commit message checked"
+pre-push:
+  commands:
+    typecheck:
+      run: pnpm typecheck
+    test:
+      run: pnpm test:run

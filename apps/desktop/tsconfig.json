@@ -1,0 +1,19 @@
+﻿{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@gallery/shared": ["../../packages/shared/src"],
+      "@gallery/db": ["../../packages/db/src"],
+      "@gallery/ai": ["../../packages/ai/src"],
+      "@gallery/sync": ["../../packages/sync/src"],
+      "@gallery/image-processor": ["../../packages/image-processor/src"],
+      "@gallery/ui": ["../../packages/ui/src"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

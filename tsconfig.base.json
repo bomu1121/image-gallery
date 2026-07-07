@@ -1,0 +1,28 @@
+﻿{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "strict": false,
+    "allowJs": true,
+    "checkJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "preserve",
+    "baseUrl": ".",
+    "paths": {
+      "@gallery/shared": ["./packages/shared/src"],
+      "@gallery/db": ["./packages/db/src"],
+      "@gallery/ai": ["./packages/ai/src"],
+      "@gallery/sync": ["./packages/sync/src"],
+      "@gallery/image-processor": ["./packages/image-processor/src"],
+      "@gallery/ui": ["./packages/ui/src"]
+    }
+  }
+}
