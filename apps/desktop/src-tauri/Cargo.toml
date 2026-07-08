@@ -1,4 +1,4 @@
-﻿[package]
+[package]
 name = "image-gallery"
 version = "0.0.0"
 description = "Image Gallery Desktop Application"

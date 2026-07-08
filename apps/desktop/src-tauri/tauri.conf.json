@@ -1,34 +1,42 @@
 ﻿{
-  "$schema": "https://raw.githubusercontent.com/nicepage/nicepage/refs/heads/main/.schemas/tauri-schemas/tauri.schema.json",
-  "productName": "Image Gallery",
-  "version": "0.0.0",
-  "identifier": "com.bomu1121.image-gallery",
-  "build": {
-    "frontendDist": "../dist",
-    "devUrl": "http://localhost:8883",
-    "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build"
-  },
-  "app": {
-    "windows": [
-      {
-        "title": "Image Gallery",
-        "width": 1200,
-        "height": 800,
-        "resizable": true,
-        "fullscreen": false
-      }
-    ],
-    "security": {
-      "csp": null
-    }
-  },
-  "plugins": {
-    "dialog": {},
-    "clipboard-manager": {},
-    "fs": {
-      "scope": ["**"]
-    },
-    "shell": {}
-  }
+    "$schema":  "https://raw.githubusercontent.com/nicepage/nicepage/refs/heads/main/.schemas/tauri-schemas/tauri.schema.json",
+    "productName":  "Image Gallery",
+    "version":  "0.0.0",
+    "identifier":  "com.bomu1121.image-gallery",
+    "build":  {
+                  "frontendDist":  "../dist",
+                  "devUrl":  "http://localhost:5173",
+                  "beforeDevCommand":  "pnpm dev",
+                  "beforeBuildCommand":  "pnpm build"
+              },
+    "app":  {
+                "windows":  [
+                                {
+                                    "title":  "Image Gallery",
+                                    "width":  1200,
+                                    "height":  800,
+                                    "resizable":  true,
+                                    "fullscreen":  false
+                                }
+                            ],
+                "security":  {
+                                 "csp":  null
+                             }
+            },
+    "plugins":  {
+                    "dialog":  {
+
+                               },
+                    "clipboard-manager":  {
+
+                                          },
+                    "fs":  {
+                               "scope":  [
+                                             "**"
+                                         ]
+                           },
+                    "shell":  {
+
+                              }
+                }
 }
