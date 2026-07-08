@@ -421,6 +421,7 @@ export function useGroups() {
 
   // 文件上传处理
   async function onFileChange(file, targetGroupId = null) {
+    console.log("[drag:2] useGroups onFileChange received", file?.name, file?.raw?.name);
     try {
       const raw = file.raw;
       if (!raw) return;

@@ -1177,6 +1177,7 @@ function toggleUploadMode() {
 }
 
 function onFileChange(file) {
+  console.log("[drag:1] ImageGallery emit fileChange", file?.name);
   emit("fileChange", file);
 }
 
