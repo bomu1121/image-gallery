@@ -1182,6 +1182,7 @@ function toggleUploadMode() {
 
 function onFileChange(file) {
   document.__fileChangeHandler = onFileChange;
+  console.log("[drag:debug] __fileChangeHandler set to:", typeof document.__fileChangeHandler);
   console.log("[drag:1] ImageGallery emit fileChange", file?.name);
   emit("fileChange", file);
 }
@@ -1424,6 +1425,7 @@ if (typeof document !== "undefined" && !document.__dragHandlerInstalled) {
         name: item.name,
         raw: item.blob || item,
       };
+      console.log("[drag:debug] __fileChangeHandler exists:", typeof document.__fileChangeHandler);
       if (document.__fileChangeHandler) {
         document.__fileChangeHandler(fileObj);
       }
