@@ -10,44 +10,26 @@ const ALBUMS_STORE_NAME = "albums";
 const ALBUM_ITEMS_STORE_NAME = "album_items";
 const TRASH_STORE_NAME = "trash";
 
+
 function openDB() {
   return new Promise((resolve, reject) => {
-    // 涓嶆樉寮忔寚瀹氱増鏈紝閬垮厤鍑虹幇鈥滆姹傜増鏈皬浜庣幇鏈夌増鏈€濈殑閿欒
-    const request = indexedDB.open(DB_NAME, 3);
-  console.log('[idb:debug] openDB v' + request.transaction?.db?.version + ' -> requesting v3');
-  request.onupgradeneeded = (event) => {
-    console.log('[idb:debug] upgrade: ' + event.oldVersion + ' -> ' + event.newVersion);
-    const db = request.result;
-    // create stores
-    if (!db.objectStoreNames.contains('images')) db.createObjectStore('images',{keyPath:'id',autoIncrement:true});
-    if (!db.objectStoreNames.contains('groups')) db.createObjectStore('groups',{keyPath:'id',autoIncrement:true});
-    if (!db.objectStoreNames.contains('background')) db.createObjectStore('background',{keyPath:'id',autoIncrement:true});
-    if (!db.objectStoreNames.contains('analysis_logs')) db.createObjectStore('analysis_logs',{keyPath:'id',autoIncrement:true});
-    if (!db.objectStoreNames.contains('albums')) db.createObjectStore('albums',{keyPath:'id',autoIncrement:true});
-    if (!db.objectStoreNames.contains('album_items')) db.createObjectStore('album_items',{keyPath:'id',autoIncrement:true});
-    if (!db.objectStoreNames.contains('trash')) db.createObjectStore('trash',{keyPath:'id',autoIncrement:true});
-    console.log('[idb:debug] stores created:', Array.from(db.objectStoreNames));
-    return;
-  };
-    ;
-    request.onblocked = () => {
-      console.warn(
-        "[idb] openDB blocked: another connection is preventing upgrade"
-      );
+    const req = indexedDB.open(DB_NAME);
+    req.onupgradeneeded = (event) => {
+      console.log('[idb] upgrade: v' + event.oldVersion + ' -> v' + event.newVersion);
+      const db = req.result;
+      if (!db.objectStoreNames.contains('images')) { const s = db.createObjectStore('images',{keyPath:'id',autoIncrement:true}); s.createIndex('createdAt','createdAt',{unique:false}); s.createIndex('parentImageId','parentImageId',{unique:false}); }
+      if (!db.objectStoreNames.contains('groups')) { const s = db.createObjectStore('groups',{keyPath:'id',autoIncrement:true}); s.createIndex('createdAt','createdAt',{unique:false}); }
+      if (!db.objectStoreNames.contains('background')) { const s = db.createObjectStore('background',{keyPath:'id',autoIncrement:true}); s.createIndex('createdAt','createdAt',{unique:false}); }
+      if (!db.objectStoreNames.contains('analysis_logs')) { const s = db.createObjectStore('analysis_logs',{keyPath:'id',autoIncrement:true}); s.createIndex('timestamp','timestamp',{unique:false}); s.createIndex('imageName','imageName',{unique:false}); s.createIndex('aiService','aiService',{unique:false}); s.createIndex('status','status',{unique:false}); }
+      if (!db.objectStoreNames.contains('albums')) { const s = db.createObjectStore('albums',{keyPath:'id',autoIncrement:true}); s.createIndex('updatedAt','updatedAt',{unique:false}); s.createIndex('name','name',{unique:false}); }
+      if (!db.objectStoreNames.contains('album_items')) { const s = db.createObjectStore('album_items',{keyPath:'id',autoIncrement:true}); s.createIndex('albumId','albumId',{unique:false}); s.createIndex('imageId','imageId',{unique:false}); s.createIndex('albumId_imageId',['albumId','imageId'],{unique:true}); s.createIndex('albumId_sortOrder',['albumId','sortOrder'],{unique:false}); }
+      if (!db.objectStoreNames.contains('trash')) { db.createObjectStore('trash',{keyPath:'id',autoIncrement:true}); }
     };
-    request.onsuccess = () => {
-      const db = request.result;
-      // 鑻ユ湁鏂扮増鏈崌绾ц姹傦紝涓诲姩鍏抽棴鏃ц繛鎺ワ紝閬垮厤 blocked
-      db.onversionchange = () => {
-        try {
-          db.close();
-        } catch {}
-      };
-      resolve(db);
-    };
-    request.onerror = () => reject(request.error);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
   });
 }
+
 
 // 纭繚鍒嗙粍瀵硅薄浠撳簱瀛樺湪锛堣嫢缂哄け鍒欒Е鍙戜竴娆＄増鏈崌绾у垱寤轰箣锛?
 async function ensureGroupsStoreExists() {
