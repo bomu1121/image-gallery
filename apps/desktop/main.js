@@ -35,27 +35,24 @@ app.use(createPinia());
 
 // === Global drag-and-drop support ===
 (function() {
-  document.addEventListener("dragenter", function(e) {
-    e.preventDefault();
+  // Use capture phase on window to catch events before anything else
+  window.addEventListener("dragenter", function(e) {
     console.log("[drag:main] dragenter", e.target.tagName);
-  });
-  document.addEventListener("dragover", function(e) {
+  }, true);
+  window.addEventListener("dragover", function(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
-  });
-  document.addEventListener("dragleave", function(e) {
-    console.log("[drag:main] dragleave", e.target.tagName);
-  });
-  
-  document.addEventListener("drop", function(e) {
+  }, true);
+  window.addEventListener("drop", function(e) {
     e.preventDefault();
     var files = e.dataTransfer && e.dataTransfer.files;
+    console.log("[drag:main] drop on window", files ? files.length : 0, "files");
     if (files && files.length > 0) {
-      console.log("[drag:main] drop received", files.length, "files");
-      // Dispatch custom event for Vue components to handle
       document.dispatchEvent(new CustomEvent("globalImageDrop", { detail: files }));
     }
-  });
+  }, true);
+  
+  
   
   console.log("[drag:main] global drag-drop listeners installed");
 })();
