@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="gallery-page">
     <!-- 可折叠菜单栏 -->
     <div class="collapsible-menu-bar">
@@ -610,6 +610,9 @@ onMounted(() => {
 
   // 初始化列数设置
   initializeColumnCount();
+
+  // 将 onFileChange 注册到全局拖拽处理器
+  document.__fileChangeHandler = onFileChange;
 });
 
 // 监听分组变化，重新加载图片
@@ -1181,8 +1184,6 @@ function toggleUploadMode() {
 }
 
 function onFileChange(file) {
-  document.__fileChangeHandler = onFileChange;
-  console.log("[drag:debug] __fileChangeHandler set to:", typeof document.__fileChangeHandler);
   console.log("[drag:1] ImageGallery emit fileChange", file?.name);
   emit("fileChange", file);
 }
@@ -1425,7 +1426,6 @@ if (typeof document !== "undefined" && !document.__dragHandlerInstalled) {
         name: item.name,
         raw: item.blob || item,
       };
-      console.log("[drag:debug] __fileChangeHandler exists:", typeof document.__fileChangeHandler);
       if (document.__fileChangeHandler) {
         document.__fileChangeHandler(fileObj);
       }
