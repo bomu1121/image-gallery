@@ -1,19 +1,11 @@
 <template>
   <div class="sidebar">
     <div class="sidebar-top">
-      <!-- <div
-        class="sidebar-item upload"
-        @click="$emit('showUpload')"
-        title="上传图片"
-      >
-        <el-icon><icon-upload /></el-icon>
-      </div> -->
-
       <div
         class="sidebar-item"
         :class="{ active: active === 'home' }"
         @click="$emit('goHome')"
-        title="回到主页"
+        title="????"
       >
         <el-icon><icon-home /></el-icon>
       </div>
@@ -22,9 +14,17 @@
     <div class="sidebar-bottom">
       <div
         class="sidebar-item"
+        :class="{ active: active === 'overlay' }"
+        @click="handleOverlayClick"
+        title="????"
+      >
+        <el-icon><icon-copy-document /></el-icon>
+      </div>
+      <div
+        class="sidebar-item"
         :class="{ active: active === 'trash' }"
         @click="handleTrashClick"
-        title="回收站"
+        title="???"
       >
         <el-icon><icon-delete /></el-icon>
       </div>
@@ -32,7 +32,7 @@
         class="sidebar-item"
         :class="{ active: active === 'ai-analysis-logs' }"
         @click="handleAILogsClick"
-        title="AI分析日志"
+        title="AI????"
       >
         <el-icon><icon-document /></el-icon>
       </div>
@@ -40,7 +40,7 @@
         class="sidebar-item"
         :class="{ active: active === 'settings' }"
         @click="$emit('showSettings')"
-        title="设置"
+        title="??"
       >
         <el-icon><icon-setting /></el-icon>
       </div>
@@ -54,6 +54,7 @@ import {
   Setting as IconSetting,
   Grid as IconHome,
   Document as IconDocument,
+  CopyDocument as IconCopyDocument,
   Delete as IconDelete,
 } from "@element-plus/icons-vue";
 import { useRouter } from "vue-router";
@@ -75,40 +76,18 @@ const emit = defineEmits([
 
 const router = useRouter();
 
-function handleTrashClick() {
-  console.log("🗑️ 侧边栏回收站按钮被点击");
-  console.log("📤 准备发射事件: showTrash");
-  emit("showTrash");
-  console.log("✅ 事件已发射");
+function handleOverlayClick() {
+  router.push("/overlay");
+}
 
-  // 直接测试路由跳转
-  console.log("🚀 直接测试路由跳转");
-  router
-    .push("/trash")
-    .then(() => {
-      console.log("✅ 直接路由跳转成功");
-    })
-    .catch((error) => {
-      console.error("❌ 直接路由跳转失败:", error);
-    });
+function handleTrashClick() {
+  emit("showTrash");
+  router.push("/trash").catch((e) => console.error(e));
 }
 
 function handleAILogsClick() {
-  console.log("📋 侧边栏AI日志按钮被点击");
-  console.log("📤 准备发射事件: showAIAnalysisLogs");
   emit("showAIAnalysisLogs");
-  console.log("✅ 事件已发射");
-
-  // 直接测试路由跳转
-  console.log("🚀 直接测试路由跳转");
-  router
-    .push("/ai-analysis-logs")
-    .then(() => {
-      console.log("✅ 直接路由跳转成功");
-    })
-    .catch((error) => {
-      console.error("❌ 直接路由跳转失败:", error);
-    });
+  router.push("/ai-analysis-logs").catch((e) => console.error(e));
 }
 </script>
 
@@ -158,27 +137,6 @@ function handleAILogsClick() {
   color: #333;
 }
 
-/* 区分上传按钮的样式（始终突出） */
-.sidebar-item.upload {
-  background: #f0f0f0;
-  color: #666;
-}
-.sidebar-item.upload:hover {
-  background: #e0e0e0;
-  color: #333;
-}
-
-/* 批量删除按钮样式 */
-.sidebar-item.batch-delete {
-  background: #fef0f0;
-  color: #f56c6c;
-}
-.sidebar-item.batch-delete:hover {
-  background: #fde2e2;
-  color: #f56c6c;
-}
-
-/* 其他按钮的选中态样式 */
 .sidebar-item.active {
   background: #e0e0e0;
   color: #333;

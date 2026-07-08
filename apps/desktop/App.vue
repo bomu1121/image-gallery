@@ -243,6 +243,7 @@ const activeKey = computed(() => {
   if (showSettingsPage.value) return "settings";
   if (router.currentRoute.value.path === "/ai-analysis-logs")
     return "ai-analysis-logs";
+  if (router.currentRoute.value.path === "/overlay") return "overlay";
   if (router.currentRoute.value.path === "/trash") return "trash";
   return "home";
 });

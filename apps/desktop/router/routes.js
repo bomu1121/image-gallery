@@ -58,12 +58,18 @@ export const productionRouter = [
     path: "/trash",
     name: "Trash",
     component: () => import("@/views/TrashPage.vue"),
-    meta: { title: "回收站" },
-  },
-  {
-    path: "/trash/:id",
-    name: "TrashImageDetail",
-    component: () => import("@/views/TrashImageDetail.vue"),
+   meta: { title: "回收站" },
+ },
+ {
+   path: "/overlay",
+   name: "ImageOverlay",
+   component: () => import("@/views/ImageOverlay.vue"),
+   meta: { title: "图片叠加" },
+ },
+ {
+   path: "/trash/:id",
+   name: "TrashImageDetail",
+   component: () => import("@/views/TrashImageDetail.vue"),
     meta: { title: "回收站图片详情" },
   },
 
