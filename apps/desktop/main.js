@@ -1,5 +1,25 @@
 import { createApp } from "vue";
 
+// === Tauri native drag-drop support ===
+import { getCurrentWindow } from "@tauri-apps/api/window";
+
+(async function() {
+  try {
+    const appWindow = getCurrentWindow();
+    appWindow.onDragDropEvent(function(event) {
+      console.log("[drag:tauri] event type:", event.payload.type);
+      if (event.payload.type === "drop") {
+        var paths = event.payload.paths;
+        console.log("[drag:tauri] drop received", paths.length, "files:", paths);
+      }
+    });
+    console.log("[drag:main] Tauri drag-drop listener installed");
+  } catch(e) {
+    console.log("[drag:main] Not in Tauri, Tauri drag API unavailable:", e.message);
+  }
+})();
+
+
 // UI 组件
 import ElementPlus from "element-plus";
 import * as ElementPlusIconsVue from "@element-plus/icons-vue";
