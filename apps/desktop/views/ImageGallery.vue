@@ -1181,6 +1181,7 @@ function toggleUploadMode() {
 }
 
 function onFileChange(file) {
+  document.__fileChangeHandler = onFileChange;
   console.log("[drag:1] ImageGallery emit fileChange", file?.name);
   emit("fileChange", file);
 }
@@ -1405,6 +1406,38 @@ const gridStyle = computed(() => {
     };
   }
 });
+
+// Global drag-and-drop support (enable drop on whole page)
+if (typeof document !== "undefined" && !document.__dragHandlerInstalled) {
+  document.__dragHandlerInstalled = true;
+  
+  // Listen for global drop events and feed them to the upload handler
+  document.addEventListener("globalImageDrop", (e) => {
+    const files = e.detail;
+    for (const file of files) {
+      console.log("[drag:global] processing", file.name);
+      // Call the same onFileChange that el-upload uses
+      // We need to reach the component instance - use a stored reference
+      if (document.__fileChangeHandler) {
+        document.__fileChangeHandler({ name: file.name, raw: file });
+      }
+    }
+  });
+  document.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  document.addEventListener("drop", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      console.log("[drag:global] drop received", files.length, "files");
+      // Emit through the component if possible
+      document.dispatchEvent(new CustomEvent("globalImageDrop", { detail: files }));
+    }
+  });
+}
 </script>
 
 <style scoped>
