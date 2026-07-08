@@ -1412,14 +1412,17 @@ if (typeof document !== "undefined" && !document.__dragHandlerInstalled) {
   document.__dragHandlerInstalled = true;
   
   // Listen for global drop events and feed them to the upload handler
-  document.addEventListener("globalImageDrop", (e) => {
-    const files = e.detail;
-    for (const file of files) {
-      console.log("[drag:global] processing", file.name);
-      // Call the same onFileChange that el-upload uses
-      // We need to reach the component instance - use a stored reference
+  document.addEventListener("globalImageDrop", async (e) => {
+    const items = e.detail;
+    for (const item of items) {
+      console.log("[drag:global] processing", item.name, item.blob?.size);
+      // Construct a file-like object for onFileChange
+      const fileObj = {
+        name: item.name,
+        raw: item.blob || item,  // Tauri provides {name, blob, path}, browser provides File
+      };
       if (document.__fileChangeHandler) {
-        document.__fileChangeHandler({ name: file.name, raw: file });
+        document.__fileChangeHandler(fileObj);
       }
     }
   });

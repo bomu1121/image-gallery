@@ -6,11 +6,30 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 (async function() {
   try {
     const appWindow = getCurrentWindow();
-    appWindow.onDragDropEvent(function(event) {
+    appWindow.onDragDropEvent(async function(event) {
       console.log("[drag:tauri] event type:", event.payload.type);
       if (event.payload.type === "drop") {
         var paths = event.payload.paths;
         console.log("[drag:tauri] drop received", paths.length, "files:", paths);
+        
+        // Convert file paths to Blobs via Tauri convertFileSrc + fetch
+        var { convertFileSrc } = await import("@tauri-apps/api/core");
+        for (var i = 0; i < paths.length; i++) {
+          try {
+            var assetUrl = convertFileSrc(paths[i]);
+            var response = await fetch(assetUrl);
+            var blob = await response.blob();
+            var fileName = paths[i].split("\\").pop().split("/").pop();
+            console.log("[drag:tauri] loaded:", fileName, blob.size, "bytes");
+            
+            // Dispatch as a file-like object to the upload handler
+            document.dispatchEvent(new CustomEvent("globalImageDrop", {
+              detail: [{ name: fileName, blob: blob, path: paths[i] }]
+            }));
+          } catch(err) {
+            console.error("[drag:tauri] failed to read", paths[i], err);
+          }
+        }
       }
     });
     console.log("[drag:main] Tauri drag-drop listener installed");
