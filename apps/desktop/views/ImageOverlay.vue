@@ -74,8 +74,10 @@
         </div>
         <div class="control-group">
           <span class="control-label">??</span>
-          <el-slider v-model="overlayScale" :min="0.1" :max="2" :step="0.05" style="width: 100px;" :show-tooltip="false" />
-          <span class="control-value">{{ Math.round(overlayScale * 100) }}%</span>
+          <el-slider v-model="overlayScale" :min="0.05" :max="3" :step="0.01" style="width: 80px;" :show-tooltip="false" />
+          <input class="scale-input" type="number" :value="Math.round(overlayScale * 100)" @change="onScaleInput" min="5" max="300" step="1" />
+          <span class="control-value">%</span>
+          <!-- pct moved above -->
         </div>
         <el-button size="small" @click="resetOverlay" plain>
           <el-icon><icon-refresh /></el-icon> ????
@@ -83,7 +85,8 @@
       </div>
 
       <div class="toolbar-right">
-        <el-button type="primary" size="small" :disabled="!backgroundSrc || !overlaySrc" @click="doExport">
+        <el-button type="primary" size="small" :disabled="!backgroundSrc || !overlaySrc" @click="doExport"
+            :loading="exporting">
           <el-icon><icon-download /></el-icon> ??
         </el-button>
       </div>
@@ -295,65 +298,72 @@ function onTouchEnd() {
 }
 
 // --- Export ---
-const exportCanvas = ref(null);
+const exporting = ref(false);
+
+async function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Failed to load image"));
+    img.src = src;
+  });
+}
 
 async function doExport() {
   if (!backgroundSrc.value || !overlaySrc.value) return;
+  exporting.value = true;
 
-  const canvas = exportCanvas.value;
-  if (!canvas) return;
+  try {
+    const bgImg = await loadImage(backgroundSrc.value);
+    const ovImg = await loadImage(overlaySrc.value);
 
-  const bgImg = new Image();
-  const ovImg = new Image();
+    const bgW = bgImg.naturalWidth;
+    const bgH = bgImg.naturalHeight;
 
-  await Promise.all([
-    new Promise((resolve, reject) => { bgImg.onload = resolve; bgImg.onerror = reject; bgImg.src = backgroundSrc.value; }),
-    new Promise((resolve, reject) => { ovImg.onload = resolve; ovImg.onerror = reject; ovImg.src = overlaySrc.value; }),
-  ]);
+    const canvas = document.createElement("canvas");
+    canvas.width = bgW;
+    canvas.height = bgH;
+    const ctx = canvas.getContext("2d");
 
-  const bgW = bgImg.naturalWidth;
-  const bgH = bgImg.naturalHeight;
+    ctx.drawImage(bgImg, 0, 0, bgW, bgH);
 
-  canvas.width = bgW;
-  canvas.height = bgH;
+    const editorEl = canvasRef.value;
+    if (!editorEl) throw new Error("Editor not available");
 
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(bgImg, 0, 0, bgW, bgH);
+    const editorRect = editorEl.getBoundingClientRect();
+    const editorW = editorRect.width;
+    const editorH = editorRect.height;
 
-  // Calculate position mapping from editor display to natural coords
-  const editorEl = canvasRef.value;
-  if (!editorEl) return;
-  const editorRect = editorEl.getBoundingClientRect();
-  const editorW = editorRect.width;
-  const editorH = editorRect.height;
-  const bgAspect = bgW / bgH;
-  const editorAspect = editorW / editorH;
+    const bgAspect = bgW / bgH;
+    const editorAspect = editorW / editorH;
 
-  let displayW, displayH, offsetX, offsetY;
-  if (bgAspect > editorAspect) {
-    displayW = editorW;
-    displayH = editorW / bgAspect;
-    offsetX = 0;
-    offsetY = (editorH - displayH) / 2;
-  } else {
-    displayH = editorH;
-    displayW = editorH * bgAspect;
-    offsetX = (editorW - displayW) / 2;
-    offsetY = 0;
-  }
+    let displayW, displayH;
+    if (bgAspect > editorAspect) {
+      displayW = editorW;
+      displayH = editorW / bgAspect;
+    } else {
+      displayH = editorH;
+      displayW = editorH * bgAspect;
+    }
 
-  const scaleRatio = bgW / displayW;
-  const ovNaturalX = overlayX.value * scaleRatio;
-  const ovNaturalY = overlayY.value * scaleRatio;
-  const ovNaturalW = ovImg.naturalWidth * overlayScale.value * scaleRatio;
-  const ovNaturalH = ovImg.naturalHeight * overlayScale.value * scaleRatio;
+    const ratio = bgW / displayW;
+    const ovNaturalX = overlayX.value * ratio;
+    const ovNaturalY = overlayY.value * ratio;
+    const ovNaturalW = ovImg.naturalWidth * overlayScale.value * ratio;
+    const ovNaturalH = ovImg.naturalHeight * overlayScale.value * ratio;
 
-  ctx.globalAlpha = overlayOpacity.value;
-  ctx.drawImage(ovImg, ovNaturalX, ovNaturalY, ovNaturalW, ovNaturalH);
-  ctx.globalAlpha = 1;
+    ctx.globalAlpha = overlayOpacity.value;
+    ctx.drawImage(ovImg, ovNaturalX, ovNaturalY, ovNaturalW, ovNaturalH);
+    ctx.globalAlpha = 1;
 
-  canvas.toBlob((blob) => {
-    if (!blob) return;
+    await new Promise((r) => setTimeout(r, 50));
+
+    const blob = await new Promise((resolve) => {
+      canvas.toBlob((b) => resolve(b), "image/png");
+    });
+
+    if (!blob) throw new Error("Failed to create image blob");
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -361,8 +371,12 @@ async function doExport() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, "image/png");
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  } catch (err) {
+    console.error("Export failed:", err);
+  } finally {
+    exporting.value = false;
+  }
 }
 
 // --- Lifecycle ---
@@ -484,4 +498,40 @@ onBeforeUnmount(() => {
 
 .toolbar :deep(.el-button) { font-size: 12px; }
 .toolbar :deep(.el-button--small) { padding: 5px 10px; }
+
+.scale-input {
+  width: 48px;
+  height: 24px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 4px;
+  color: #ccd;
+  font-size: 12px;
+  text-align: center;
+  outline: none;
+}
+.scale-input:focus {
+  border-color: #409eff;
+  background: rgba(255,255,255,0.12);
+}
+.scale-input::-webkit-inner-spin-button,
+.scale-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+.scale-input {
+  width: 48px;
+  height: 24px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 4px;
+  color: #ccd;
+  font-size: 12px;
+  text-align: center;
+  outline: none;
+}
+.scale-input:focus {
+  border-color: #409eff;
+  background: rgba(255,255,255,0.12);
+}
+.scale-input::-webkit-inner-spin-button,
+.scale-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 </style>
