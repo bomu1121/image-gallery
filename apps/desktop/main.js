@@ -12,17 +12,15 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
         var paths = event.payload.paths;
         console.log("[drag:tauri] drop received", paths.length, "files:", paths);
         
-        // Convert file paths to Blobs via Tauri convertFileSrc + fetch
-        var { convertFileSrc } = await import("@tauri-apps/api/core");
+        // Read files via Tauri fs plugin
+        var { readFile } = await import("@tauri-apps/plugin-fs");
         for (var i = 0; i < paths.length; i++) {
           try {
-            var assetUrl = convertFileSrc(paths[i]);
-            var response = await fetch(assetUrl);
-            var blob = await response.blob();
+            var fileData = await readFile(paths[i]);
             var fileName = paths[i].split("\\").pop().split("/").pop();
+            var blob = new Blob([fileData]);
             console.log("[drag:tauri] loaded:", fileName, blob.size, "bytes");
             
-            // Dispatch as a file-like object to the upload handler
             document.dispatchEvent(new CustomEvent("globalImageDrop", {
               detail: [{ name: fileName, blob: blob, path: paths[i] }]
             }));
