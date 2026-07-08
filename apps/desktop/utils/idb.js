@@ -1,4 +1,4 @@
-// A tiny IndexedDB helper tailored for storing image binaries and metadata
+﻿// A tiny IndexedDB helper tailored for storing image binaries and metadata
 // API: openDB, putImage, getAllImages, getImageById, updateImage, deleteImage, clearAll
 
 const DB_NAME = "image_gallery_db";
@@ -12,25 +12,25 @@ const TRASH_STORE_NAME = "trash";
 
 function openDB() {
   return new Promise((resolve, reject) => {
-    // 不显式指定版本，避免出现“请求版本小于现有版本”的错误
-    const request = indexedDB.open(DB_NAME);
+    // 涓嶆樉寮忔寚瀹氱増鏈紝閬垮厤鍑虹幇鈥滆姹傜増鏈皬浜庣幇鏈夌増鏈€濈殑閿欒
+    const request = indexedDB.open(DB_NAME, 3);
     request.onupgradeneeded = (event) => {
       const db = request.result;
 
-      // 创建图片存储
+      // 鍒涘缓鍥剧墖瀛樺偍
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         const store = db.createObjectStore(STORE_NAME, {
           keyPath: "id",
           autoIncrement: true,
         });
         store.createIndex("createdAt", "createdAt", { unique: false });
-        // 新增索引：parentImageId（附图模式）
+        // 鏂板绱㈠紩锛歱arentImageId锛堥檮鍥炬ā寮忥級
         store.createIndex("parentImageId", "parentImageId", {
           unique: false,
         });
       }
 
-      // 创建分组存储
+      // 鍒涘缓鍒嗙粍瀛樺偍
       if (!db.objectStoreNames.contains(GROUPS_STORE_NAME)) {
         const groupsStore = db.createObjectStore(GROUPS_STORE_NAME, {
           keyPath: "id",
@@ -39,7 +39,7 @@ function openDB() {
         groupsStore.createIndex("createdAt", "createdAt", { unique: false });
       }
 
-      // 创建背景图存储
+      // 鍒涘缓鑳屾櫙鍥惧瓨鍌?
       if (!db.objectStoreNames.contains(BACKGROUND_STORE_NAME)) {
         const backgroundStore = db.createObjectStore(BACKGROUND_STORE_NAME, {
           keyPath: "id",
@@ -50,7 +50,7 @@ function openDB() {
         });
       }
 
-      // 创建AI分析日志存储
+      // 鍒涘缓AI鍒嗘瀽鏃ュ織瀛樺偍
       if (!db.objectStoreNames.contains(ANALYSIS_LOGS_STORE_NAME)) {
         const analysisLogsStore = db.createObjectStore(
           ANALYSIS_LOGS_STORE_NAME,
@@ -71,7 +71,7 @@ function openDB() {
         analysisLogsStore.createIndex("status", "status", { unique: false });
       }
 
-      // 创建相册（组图）存储
+      // 鍒涘缓鐩稿唽锛堢粍鍥撅級瀛樺偍
       if (!db.objectStoreNames.contains(ALBUMS_STORE_NAME)) {
         const albumsStore = db.createObjectStore(ALBUMS_STORE_NAME, {
           keyPath: "id",
@@ -81,7 +81,7 @@ function openDB() {
         albumsStore.createIndex("name", "name", { unique: false });
       }
 
-      // 创建相册项（组图-图片关联）存储
+      // 鍒涘缓鐩稿唽椤癸紙缁勫浘-鍥剧墖鍏宠仈锛夊瓨鍌?
       if (!db.objectStoreNames.contains(ALBUM_ITEMS_STORE_NAME)) {
         const albumItemsStore = db.createObjectStore(ALBUM_ITEMS_STORE_NAME, {
           keyPath: "id",
@@ -89,7 +89,7 @@ function openDB() {
         });
         albumItemsStore.createIndex("albumId", "albumId", { unique: false });
         albumItemsStore.createIndex("imageId", "imageId", { unique: false });
-        // 复合索引用于唯一性校验（同一图片不可重复加入同一相册）
+        // 澶嶅悎绱㈠紩鐢ㄤ簬鍞竴鎬ф牎楠岋紙鍚屼竴鍥剧墖涓嶅彲閲嶅鍔犲叆鍚屼竴鐩稿唽锛?
         albumItemsStore.createIndex("albumId_imageId", ["albumId", "imageId"], {
           unique: true,
         });
@@ -100,7 +100,7 @@ function openDB() {
         );
       }
 
-      // 创建回收站存储
+      // 鍒涘缓鍥炴敹绔欏瓨鍌?
       if (!db.objectStoreNames.contains(TRASH_STORE_NAME)) {
         const trashStore = db.createObjectStore(TRASH_STORE_NAME, {
           keyPath: "id",
@@ -119,7 +119,7 @@ function openDB() {
     };
     request.onsuccess = () => {
       const db = request.result;
-      // 若有新版本升级请求，主动关闭旧连接，避免 blocked
+      // 鑻ユ湁鏂扮増鏈崌绾ц姹傦紝涓诲姩鍏抽棴鏃ц繛鎺ワ紝閬垮厤 blocked
       db.onversionchange = () => {
         try {
           db.close();
@@ -131,10 +131,10 @@ function openDB() {
   });
 }
 
-// 确保分组对象仓库存在（若缺失则触发一次版本升级创建之）
+// 纭繚鍒嗙粍瀵硅薄浠撳簱瀛樺湪锛堣嫢缂哄け鍒欒Е鍙戜竴娆＄増鏈崌绾у垱寤轰箣锛?
 async function ensureGroupsStoreExists() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME);
+    const req = indexedDB.open(DB_NAME, 3);
     req.onsuccess = () => {
       const db = req.result;
       if (db.objectStoreNames.contains(GROUPS_STORE_NAME)) {
@@ -173,10 +173,10 @@ async function ensureGroupsStoreExists() {
   });
 }
 
-// 确保背景对象仓库存在（若缺失则触发一次版本升级创建之）
+// 纭繚鑳屾櫙瀵硅薄浠撳簱瀛樺湪锛堣嫢缂哄け鍒欒Е鍙戜竴娆＄増鏈崌绾у垱寤轰箣锛?
 async function ensureBackgroundStoreExists() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME);
+    const req = indexedDB.open(DB_NAME, 3);
     req.onsuccess = () => {
       const db = req.result;
       if (db.objectStoreNames.contains(BACKGROUND_STORE_NAME)) {
@@ -217,10 +217,10 @@ async function ensureBackgroundStoreExists() {
   });
 }
 
-// 确保AI分析日志对象仓库存在（若缺失则触发一次版本升级创建之）
+// 纭繚AI鍒嗘瀽鏃ュ織瀵硅薄浠撳簱瀛樺湪锛堣嫢缂哄け鍒欒Е鍙戜竴娆＄増鏈崌绾у垱寤轰箣锛?
 async function ensureAnalysisLogsStoreExists() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME);
+    const req = indexedDB.open(DB_NAME, 3);
     req.onsuccess = () => {
       const db = req.result;
       if (db.objectStoreNames.contains(ANALYSIS_LOGS_STORE_NAME)) {
@@ -271,10 +271,10 @@ async function ensureAnalysisLogsStoreExists() {
   });
 }
 
-// 确保相册与相册项对象仓库存在
+// 纭繚鐩稿唽涓庣浉鍐岄」瀵硅薄浠撳簱瀛樺湪
 async function ensureAlbumsStoresExist() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME);
+    const req = indexedDB.open(DB_NAME, 3);
     req.onsuccess = () => {
       const db = req.result;
       const needAlbums = !db.objectStoreNames.contains(ALBUMS_STORE_NAME);
@@ -339,7 +339,7 @@ async function ensureAlbumsStoresExist() {
   });
 }
 
-// ==================== 相册（组图）相关 API ====================
+// ==================== 鐩稿唽锛堢粍鍥撅級鐩稿叧 API ====================
 export async function createAlbum(album) {
   await ensureAlbumsStoresExist();
   const db = await openDB();
@@ -348,7 +348,7 @@ export async function createAlbum(album) {
     const store = tx.objectStore(ALBUMS_STORE_NAME);
     const now = Date.now();
     const data = {
-      name: album.name?.trim() || "未命名相册",
+      name: album.name?.trim() || "鏈懡鍚嶇浉鍐?,
       description: album.description || "",
       coverImageId: album.coverImageId ?? null,
       groupId: album.groupId ?? null,
@@ -390,14 +390,14 @@ export async function updateAlbum(id, updates) {
         return;
       }
       const data = { ...existed };
-      // 处理计数增量
+      // 澶勭悊璁℃暟澧為噺
       if (typeof updates.itemCountDelta === "number") {
         data.itemCount = Math.max(
           0,
           (data.itemCount || 0) + updates.itemCountDelta
         );
       }
-      // 其他字段合并
+      // 鍏朵粬瀛楁鍚堝苟
       Object.keys(updates).forEach((k) => {
         if (k === "itemCountDelta") return;
         if (k === "tags") {
@@ -426,7 +426,7 @@ export async function deleteAlbum(id) {
     const albumsStore = tx.objectStore(ALBUMS_STORE_NAME);
     const itemsStore = tx.objectStore(ALBUM_ITEMS_STORE_NAME);
 
-    // 删除 album_items 内的关联
+    // 鍒犻櫎 album_items 鍐呯殑鍏宠仈
     const idx = itemsStore.index("albumId");
     const range = IDBKeyRange.only(id);
     const toDelete = [];
@@ -437,7 +437,7 @@ export async function deleteAlbum(id) {
         cursor.continue();
       } else {
         toDelete.forEach((pk) => itemsStore.delete(pk));
-        // 删除相册本身
+        // 鍒犻櫎鐩稿唽鏈韩
         albumsStore.delete(id);
       }
     };
@@ -447,7 +447,7 @@ export async function deleteAlbum(id) {
   });
 }
 
-// 相册项（图片加入/移除/排序）
+// 鐩稿唽椤癸紙鍥剧墖鍔犲叆/绉婚櫎/鎺掑簭锛?
 export async function addImagesToAlbum(
   albumId,
   imageIds,
@@ -479,7 +479,7 @@ export async function addImagesToAlbum(
         added += 1;
       };
       req.onerror = () => {
-        // 若违反唯一约束（已存在），忽略即可
+        // 鑻ヨ繚鍙嶅敮涓€绾︽潫锛堝凡瀛樺湪锛夛紝蹇界暐鍗冲彲
         if (req.error && req.error.name === "ConstraintError") {
           return;
         }
@@ -489,7 +489,7 @@ export async function addImagesToAlbum(
     imageIds.forEach((id, i) => addOne(id, i));
 
     tx.oncomplete = () => {
-      // 更新计数与更新时间
+      // 鏇存柊璁℃暟涓庢洿鏂版椂闂?
       updateAlbum(albumId, { itemCountDelta: added }).finally(resolve);
     };
     tx.onerror = () => reject(tx.error);
@@ -587,7 +587,7 @@ export async function updateAlbumItem(id, updates) {
   });
 }
 
-// 删除图片时的级联清理：供外部在删除图片前调用
+// 鍒犻櫎鍥剧墖鏃剁殑绾ц仈娓呯悊锛氫緵澶栭儴鍦ㄥ垹闄ゅ浘鐗囧墠璋冪敤
 export async function cascadeDeleteAlbumItemsByImageId(imageId) {
   await ensureAlbumsStoresExist();
   const db = await openDB();
@@ -613,17 +613,17 @@ export async function cascadeDeleteAlbumItemsByImageId(imageId) {
       }
     };
     tx.oncomplete = async () => {
-      // 批量更新相册计数，并处理封面回退
+      // 鎵归噺鏇存柊鐩稿唽璁℃暟锛屽苟澶勭悊灏侀潰鍥為€€
       const entries = Array.from(affectedAlbumIds.entries());
       for (const [aid, cnt] of entries) {
         try {
-          // 先更新计数
+          // 鍏堟洿鏂拌鏁?
           await updateAlbum(aid, { itemCountDelta: -cnt });
-          // 检查封面是否需要回退
+          // 妫€鏌ュ皝闈㈡槸鍚﹂渶瑕佸洖閫€
           const albums = await getAllAlbums();
           const album = albums.find((a) => a.id === aid);
           if (album && album.coverImageId === imageId) {
-            // 找该相册剩余的第一张图片作为新封面
+            // 鎵捐鐩稿唽鍓╀綑鐨勭涓€寮犲浘鐗囦綔涓烘柊灏侀潰
             const items = await getAlbumItems(aid);
             const newCover = items.length > 0 ? items[0].imageId : null;
             await updateAlbum(aid, { coverImageId: newCover });
@@ -646,7 +646,7 @@ export async function putImage(image) {
     const store = tx.objectStore(STORE_NAME);
     const now = Date.now();
 
-    // 确保数据可以被IndexedDB克隆
+    // 纭繚鏁版嵁鍙互琚獻ndexedDB鍏嬮殕
     const data = {
       ...image,
       createdAt: image.createdAt || now,
@@ -654,18 +654,18 @@ export async function putImage(image) {
         image.parentImageId === null || image.parentImageId === undefined
           ? null
           : image.parentImageId,
-      // 确保tags是纯数组
+      // 纭繚tags鏄函鏁扮粍
       tags: image.tags ? [...image.tags] : [],
     };
 
-    // 调试日志
+    // 璋冭瘯鏃ュ織
     console.log(`putImage: ${image.name}`, {
       originalTags: image.tags,
       finalTags: data.tags,
       notes: data.notes,
     });
 
-    // 移除可能导致克隆问题的字段
+    // 绉婚櫎鍙兘瀵艰嚧鍏嬮殕闂鐨勫瓧娈?
     delete data.objectUrl;
 
     const req = store.add(data);
@@ -694,16 +694,16 @@ export async function getAllImages() {
   });
 }
 
-// 确保 images 表存在 parentImageId 索引（旧库升级）
+// 纭繚 images 琛ㄥ瓨鍦?parentImageId 绱㈠紩锛堟棫搴撳崌绾э級
 async function ensureParentIndexOnImages() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME);
+    const req = indexedDB.open(DB_NAME, 3);
     req.onsuccess = () => {
       const db = req.result;
-      // 若 images 表不存在，交给 onupgradeneeded 创建
+      // 鑻?images 琛ㄤ笉瀛樺湪锛屼氦缁?onupgradeneeded 鍒涘缓
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.close();
-        // 触发一次升级创建
+        // 瑙﹀彂涓€娆″崌绾у垱寤?
         const upgradeReq = indexedDB.open(DB_NAME, db.version + 1);
         upgradeReq.onupgradeneeded = () => {
           const udb = upgradeReq.result;
@@ -726,12 +726,12 @@ async function ensureParentIndexOnImages() {
         return;
       }
 
-      // 检查索引是否已存在
+      // 妫€鏌ョ储寮曟槸鍚﹀凡瀛樺湪
       let needUpgrade = false;
       try {
         const tx = db.transaction(STORE_NAME, "readonly");
         const store = tx.objectStore(STORE_NAME);
-        // 访问索引名；若不存在会抛错
+        // 璁块棶绱㈠紩鍚嶏紱鑻ヤ笉瀛樺湪浼氭姏閿?
         store.index("parentImageId");
       } catch (e) {
         needUpgrade = true;
@@ -791,7 +791,7 @@ export async function updateImage(id, updates) {
     const tx = db.transaction(STORE_NAME, "readwrite");
     const store = tx.objectStore(STORE_NAME);
 
-    // 先获取现有数据
+    // 鍏堣幏鍙栫幇鏈夋暟鎹?
     const getReq = store.get(id);
     getReq.onsuccess = () => {
       const existingData = getReq.result;
@@ -800,7 +800,7 @@ export async function updateImage(id, updates) {
         return;
       }
 
-      // 合并更新数据，确保数据可以被IndexedDB克隆
+      // 鍚堝苟鏇存柊鏁版嵁锛岀‘淇濇暟鎹彲浠ヨIndexedDB鍏嬮殕
       const updatedData = {
         ...existingData,
         ...updates,
@@ -808,7 +808,7 @@ export async function updateImage(id, updates) {
           updates.parentImageId === undefined
             ? existingData.parentImageId ?? null
             : updates.parentImageId ?? null,
-        // 确保tags是纯数组，不包含任何复杂对象
+        // 纭繚tags鏄函鏁扮粍锛屼笉鍖呭惈浠讳綍澶嶆潅瀵硅薄
         tags: updates.tags
           ? [...updates.tags]
           : existingData.tags
@@ -816,7 +816,7 @@ export async function updateImage(id, updates) {
           : [],
       };
 
-      // 移除可能导致克隆问题的字段
+      // 绉婚櫎鍙兘瀵艰嚧鍏嬮殕闂鐨勫瓧娈?
       delete updatedData.objectUrl;
 
       const putReq = store.put(updatedData);
@@ -828,14 +828,14 @@ export async function updateImage(id, updates) {
 }
 
 export async function deleteImage(id) {
-  // 先级联删除相册关联，并维护计数/封面
+  // 鍏堢骇鑱斿垹闄ょ浉鍐屽叧鑱旓紝骞剁淮鎶よ鏁?灏侀潰
   try {
     await cascadeDeleteAlbumItemsByImageId(id);
   } catch (e) {
     console.warn("[idb] cascadeDeleteAlbumItemsByImageId failed", e);
   }
 
-  // 附图模式：若删除的是主图，考虑整组删除（这里采用整组删除策略）
+  // 闄勫浘妯″紡锛氳嫢鍒犻櫎鐨勬槸涓诲浘锛岃€冭檻鏁寸粍鍒犻櫎锛堣繖閲岄噰鐢ㄦ暣缁勫垹闄ょ瓥鐣ワ級
   try {
     const dbForRead = await openDB();
     await new Promise((resolve, reject) => {
@@ -848,7 +848,7 @@ export async function deleteImage(id) {
           row &&
           (row.parentImageId === null || row.parentImageId === undefined)
         ) {
-          // 删除其所有附图
+          // 鍒犻櫎鍏舵墍鏈夐檮鍥?
           try {
             await detachChildren(id, { deleteChildren: true });
           } catch (e) {
@@ -871,7 +871,7 @@ export async function deleteImage(id) {
   });
 }
 
-// ==================== 附图 API ====================
+// ==================== 闄勫浘 API ====================
 export async function getRootImages() {
   const all = await getAllImages();
   return all.filter((r) => r.parentImageId === null);
@@ -910,7 +910,7 @@ export async function attachImagesToParent(parentId, imageIds) {
         const row = getReq.result;
         if (!row) return;
         const updated = { ...row, parentImageId: parentId };
-        // 继承主图的分组与标签需在调用层执行（这里保持轻量）
+        // 缁ф壙涓诲浘鐨勫垎缁勪笌鏍囩闇€鍦ㄨ皟鐢ㄥ眰鎵ц锛堣繖閲屼繚鎸佽交閲忥級
         store.put(updated);
       };
     });
@@ -970,8 +970,8 @@ export async function detachChildren(
 }
 
 /**
- * 从组图中移除单个图片（将附图变为独立图片）
- * @param {number} imageId - 要移除的图片ID
+ * 浠庣粍鍥句腑绉婚櫎鍗曚釜鍥剧墖锛堝皢闄勫浘鍙樹负鐙珛鍥剧墖锛?
+ * @param {number} imageId - 瑕佺Щ闄ょ殑鍥剧墖ID
  * @returns {Promise<void>}
  */
 export async function removeImageFromGroup(imageId) {
@@ -980,22 +980,22 @@ export async function removeImageFromGroup(imageId) {
     const tx = db.transaction(STORE_NAME, "readwrite");
     const store = tx.objectStore(STORE_NAME);
 
-    // 获取图片信息
+    // 鑾峰彇鍥剧墖淇℃伅
     const getReq = store.get(imageId);
     getReq.onsuccess = () => {
       const image = getReq.result;
       if (!image) {
-        reject(new Error("图片不存在"));
+        reject(new Error("鍥剧墖涓嶅瓨鍦?));
         return;
       }
 
-      // 检查是否为附图
+      // 妫€鏌ユ槸鍚︿负闄勫浘
       if (image.parentImageId === null || image.parentImageId === undefined) {
-        reject(new Error("该图片不是组图的附图，无法移除"));
+        reject(new Error("璇ュ浘鐗囦笉鏄粍鍥剧殑闄勫浘锛屾棤娉曠Щ闄?));
         return;
       }
 
-      // 将parentImageId设置为null，使其成为独立图片
+      // 灏唒arentImageId璁剧疆涓簄ull锛屼娇鍏舵垚涓虹嫭绔嬪浘鐗?
       const updatedImage = { ...image, parentImageId: null };
       const putReq = store.put(updatedImage);
 
@@ -1008,9 +1008,9 @@ export async function removeImageFromGroup(imageId) {
 }
 
 /**
- * 还原整个组图（将组图拆分为独立图片）
- * @param {number} parentImageId - 主图ID
- * @returns {Promise<number>} 返回被还原的图片数量
+ * 杩樺師鏁翠釜缁勫浘锛堝皢缁勫浘鎷嗗垎涓虹嫭绔嬪浘鐗囷級
+ * @param {number} parentImageId - 涓诲浘ID
+ * @returns {Promise<number>} 杩斿洖琚繕鍘熺殑鍥剧墖鏁伴噺
  */
 export async function restoreGroupToIndividualImages(parentImageId) {
   const db = await openDB();
@@ -1018,25 +1018,25 @@ export async function restoreGroupToIndividualImages(parentImageId) {
     const tx = db.transaction(STORE_NAME, "readwrite");
     const store = tx.objectStore(STORE_NAME);
 
-    // 获取主图信息
+    // 鑾峰彇涓诲浘淇℃伅
     const getParentReq = store.get(parentImageId);
     getParentReq.onsuccess = () => {
       const parentImage = getParentReq.result;
       if (!parentImage) {
-        reject(new Error("主图不存在"));
+        reject(new Error("涓诲浘涓嶅瓨鍦?));
         return;
       }
 
-      // 检查是否为主图
+      // 妫€鏌ユ槸鍚︿负涓诲浘
       if (
         parentImage.parentImageId !== null &&
         parentImage.parentImageId !== undefined
       ) {
-        reject(new Error("该图片不是主图，无法还原组图"));
+        reject(new Error("璇ュ浘鐗囦笉鏄富鍥撅紝鏃犳硶杩樺師缁勫浘"));
         return;
       }
 
-      // 查找所有附图
+      // 鏌ユ壘鎵€鏈夐檮鍥?
       const idx = store.index("parentImageId");
       const range = IDBKeyRange.only(parentImageId);
       const childrenToUpdate = [];
@@ -1047,16 +1047,16 @@ export async function restoreGroupToIndividualImages(parentImageId) {
           childrenToUpdate.push(cursor.primaryKey);
           cursor.continue();
         } else {
-          // 所有附图都已找到，开始更新
+          // 鎵€鏈夐檮鍥鹃兘宸叉壘鍒帮紝寮€濮嬫洿鏂?
           let updateCount = 0;
           const totalCount = childrenToUpdate.length;
 
           if (totalCount === 0) {
-            reject(new Error("该图片没有附图，无法还原组图"));
+            reject(new Error("璇ュ浘鐗囨病鏈夐檮鍥撅紝鏃犳硶杩樺師缁勫浘"));
             return;
           }
 
-          // 更新所有附图，将parentImageId设置为null
+          // 鏇存柊鎵€鏈夐檮鍥撅紝灏唒arentImageId璁剧疆涓簄ull
           childrenToUpdate.forEach((childId) => {
             const getChildReq = store.get(childId);
             getChildReq.onsuccess = () => {
@@ -1094,7 +1094,7 @@ export async function clearAll() {
   });
 }
 
-// 分组相关函数
+// 鍒嗙粍鐩稿叧鍑芥暟
 export async function putGroup(group) {
   await ensureGroupsStoreExists();
   const db = await openDB();
@@ -1103,7 +1103,7 @@ export async function putGroup(group) {
     const store = tx.objectStore(GROUPS_STORE_NAME);
     const now = Date.now();
     const data = { ...group, createdAt: group.createdAt || now };
-    // 使用 put 以兼容已存在主键（例如默认分组 id=0）
+    // 浣跨敤 put 浠ュ吋瀹瑰凡瀛樺湪涓婚敭锛堜緥濡傞粯璁ゅ垎缁?id=0锛?
     const req = store.put(data);
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -1142,7 +1142,7 @@ export async function updateGroup(id, updates) {
     const tx = db.transaction(GROUPS_STORE_NAME, "readwrite");
     const store = tx.objectStore(GROUPS_STORE_NAME);
 
-    // 先获取现有数据
+    // 鍏堣幏鍙栫幇鏈夋暟鎹?
     const getReq = store.get(id);
     getReq.onsuccess = () => {
       const existingData = getReq.result;
@@ -1151,10 +1151,10 @@ export async function updateGroup(id, updates) {
         return;
       }
 
-      // 合并更新数据，确保数据可以被IndexedDB克隆
+      // 鍚堝苟鏇存柊鏁版嵁锛岀‘淇濇暟鎹彲浠ヨIndexedDB鍏嬮殕
       const updatedData = { ...existingData, ...updates };
 
-      // 移除可能导致克隆问题的字段
+      // 绉婚櫎鍙兘瀵艰嚧鍏嬮殕闂鐨勫瓧娈?
       delete updatedData.objectUrl;
 
       const putReq = store.put(updatedData);
@@ -1189,7 +1189,7 @@ export async function clearAllGroups() {
   });
 }
 
-// 背景图相关函数
+// 鑳屾櫙鍥剧浉鍏冲嚱鏁?
 export async function putBackground(backgroundData) {
   await ensureBackgroundStoreExists();
   const db = await openDB();
@@ -1201,7 +1201,7 @@ export async function putBackground(backgroundData) {
       ...backgroundData,
       createdAt: backgroundData.createdAt || now,
     };
-    // 使用 put 以覆盖现有背景图（只保存一张背景图）
+    // 浣跨敤 put 浠ヨ鐩栫幇鏈夎儗鏅浘锛堝彧淇濆瓨涓€寮犺儗鏅浘锛?
     const req = store.put({ id: 1, ...data });
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -1214,7 +1214,7 @@ export async function getBackground() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(BACKGROUND_STORE_NAME, "readonly");
     const store = tx.objectStore(BACKGROUND_STORE_NAME);
-    const req = store.get(1); // 获取 id 为 1 的背景图
+    const req = store.get(1); // 鑾峰彇 id 涓?1 鐨勮儗鏅浘
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
@@ -1226,18 +1226,18 @@ export async function deleteBackground() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(BACKGROUND_STORE_NAME, "readwrite");
     const store = tx.objectStore(BACKGROUND_STORE_NAME);
-    const req = store.delete(1); // 删除 id 为 1 的背景图
+    const req = store.delete(1); // 鍒犻櫎 id 涓?1 鐨勮儗鏅浘
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
   });
 }
 
-// ==================== AI分析日志相关方法 ====================
+// ==================== AI鍒嗘瀽鏃ュ織鐩稿叧鏂规硶 ====================
 
 /**
- * 保存AI分析日志
- * @param {Object} analysisLog - 分析日志对象
- * @returns {Promise<number>} 返回保存的日志ID
+ * 淇濆瓨AI鍒嗘瀽鏃ュ織
+ * @param {Object} analysisLog - 鍒嗘瀽鏃ュ織瀵硅薄
+ * @returns {Promise<number>} 杩斿洖淇濆瓨鐨勬棩蹇桰D
  */
 export async function putAnalysisLog(analysisLog) {
   const db = await openDB();
@@ -1245,7 +1245,7 @@ export async function putAnalysisLog(analysisLog) {
     const tx = db.transaction(ANALYSIS_LOGS_STORE_NAME, "readwrite");
     const store = tx.objectStore(ANALYSIS_LOGS_STORE_NAME);
 
-    // 确保timestamp是Date对象
+    // 纭繚timestamp鏄疍ate瀵硅薄
     const logToSave = {
       ...analysisLog,
       timestamp:
@@ -1262,16 +1262,16 @@ export async function putAnalysisLog(analysisLog) {
 }
 
 /**
- * 批量保存AI分析日志
- * @param {Array} analysisLogs - 分析日志数组
- * @returns {Promise<Array>} 返回保存的日志ID数组
+ * 鎵归噺淇濆瓨AI鍒嗘瀽鏃ュ織
+ * @param {Array} analysisLogs - 鍒嗘瀽鏃ュ織鏁扮粍
+ * @returns {Promise<Array>} 杩斿洖淇濆瓨鐨勬棩蹇桰D鏁扮粍
  */
 export async function putAnalysisLogs(analysisLogs) {
-  console.log(`📝 putAnalysisLogs: 准备保存 ${analysisLogs.length} 条日志`);
+  console.log(`馃摑 putAnalysisLogs: 鍑嗗淇濆瓨 ${analysisLogs.length} 鏉℃棩蹇梎);
 
-  // 确保analysis_logs表存在
+  // 纭繚analysis_logs琛ㄥ瓨鍦?
   await ensureAnalysisLogsStoreExists();
-  console.log(`✅ 确保analysis_logs表存在`);
+  console.log(`鉁?纭繚analysis_logs琛ㄥ瓨鍦╜);
 
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -1288,7 +1288,7 @@ export async function putAnalysisLogs(analysisLogs) {
         savedAt: new Date(),
       };
 
-      console.log(`📝 保存日志 ${index + 1}:`, {
+      console.log(`馃摑 淇濆瓨鏃ュ織 ${index + 1}:`, {
         id: logToSave.id,
         imageName: logToSave.imageName,
         status: logToSave.status,
@@ -1298,11 +1298,11 @@ export async function putAnalysisLogs(analysisLogs) {
       return new Promise((resolveItem, rejectItem) => {
         const req = store.put(logToSave);
         req.onsuccess = () => {
-          console.log(`✅ 日志 ${index + 1} 保存成功，ID: ${req.result}`);
+          console.log(`鉁?鏃ュ織 ${index + 1} 淇濆瓨鎴愬姛锛孖D: ${req.result}`);
           resolveItem(req.result);
         };
         req.onerror = () => {
-          console.error(`❌ 日志 ${index + 1} 保存失败:`, req.error);
+          console.error(`鉂?鏃ュ織 ${index + 1} 淇濆瓨澶辫触:`, req.error);
           rejectItem(req.error);
         };
       });
@@ -1310,26 +1310,26 @@ export async function putAnalysisLogs(analysisLogs) {
 
     Promise.all(promises)
       .then((results) => {
-        console.log(`✅ 所有 ${analysisLogs.length} 条日志保存成功`);
+        console.log(`鉁?鎵€鏈?${analysisLogs.length} 鏉℃棩蹇椾繚瀛樻垚鍔焋);
         resolve(results);
       })
       .catch((error) => {
-        console.error(`❌ 批量保存日志失败:`, error);
+        console.error(`鉂?鎵归噺淇濆瓨鏃ュ織澶辫触:`, error);
         reject(error);
       });
   });
 }
 
 /**
- * 获取所有AI分析日志
- * @returns {Promise<Array>} 返回所有分析日志
+ * 鑾峰彇鎵€鏈堿I鍒嗘瀽鏃ュ織
+ * @returns {Promise<Array>} 杩斿洖鎵€鏈夊垎鏋愭棩蹇?
  */
 export async function getAllAnalysisLogs() {
-  console.log(`📖 getAllAnalysisLogs: 开始从IndexedDB获取所有AI分析日志`);
+  console.log(`馃摉 getAllAnalysisLogs: 寮€濮嬩粠IndexedDB鑾峰彇鎵€鏈堿I鍒嗘瀽鏃ュ織`);
 
-  // 确保analysis_logs表存在
+  // 纭繚analysis_logs琛ㄥ瓨鍦?
   await ensureAnalysisLogsStoreExists();
-  console.log(`✅ 确保analysis_logs表存在`);
+  console.log(`鉁?纭繚analysis_logs琛ㄥ瓨鍦╜);
 
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -1341,14 +1341,14 @@ export async function getAllAnalysisLogs() {
         ...log,
         timestamp: new Date(log.timestamp),
       }));
-      // 按时间戳倒序排列（最新的在前）
+      // 鎸夋椂闂存埑鍊掑簭鎺掑垪锛堟渶鏂扮殑鍦ㄥ墠锛?
       logs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
       console.log(
-        `📖 getAllAnalysisLogs: 从IndexedDB获取到 ${logs.length} 条日志`
+        `馃摉 getAllAnalysisLogs: 浠嶪ndexedDB鑾峰彇鍒?${logs.length} 鏉℃棩蹇梎
       );
       if (logs.length > 0) {
-        console.log(`📖 最新的日志:`, {
+        console.log(`馃摉 鏈€鏂扮殑鏃ュ織:`, {
           id: logs[0].id,
           imageName: logs[0].imageName,
           status: logs[0].status,
@@ -1359,16 +1359,16 @@ export async function getAllAnalysisLogs() {
       resolve(logs);
     };
     req.onerror = () => {
-      console.error(`❌ getAllAnalysisLogs失败:`, req.error);
+      console.error(`鉂?getAllAnalysisLogs澶辫触:`, req.error);
       reject(req.error);
     };
   });
 }
 
 /**
- * 根据ID获取AI分析日志
- * @param {string} logId - 日志ID
- * @returns {Promise<Object|null>} 返回分析日志或null
+ * 鏍规嵁ID鑾峰彇AI鍒嗘瀽鏃ュ織
+ * @param {string} logId - 鏃ュ織ID
+ * @returns {Promise<Object|null>} 杩斿洖鍒嗘瀽鏃ュ織鎴杗ull
  */
 export async function getAnalysisLogById(logId) {
   const db = await openDB();
@@ -1388,9 +1388,9 @@ export async function getAnalysisLogById(logId) {
 }
 
 /**
- * 根据图片名称搜索分析日志
- * @param {string} imageName - 图片名称
- * @returns {Promise<Array>} 返回匹配的分析日志
+ * 鏍规嵁鍥剧墖鍚嶇О鎼滅储鍒嗘瀽鏃ュ織
+ * @param {string} imageName - 鍥剧墖鍚嶇О
+ * @returns {Promise<Array>} 杩斿洖鍖归厤鐨勫垎鏋愭棩蹇?
  */
 export async function getAnalysisLogsByImageName(imageName) {
   const db = await openDB();
@@ -1412,9 +1412,9 @@ export async function getAnalysisLogsByImageName(imageName) {
 }
 
 /**
- * 根据AI服务搜索分析日志
- * @param {string} aiService - AI服务名称
- * @returns {Promise<Array>} 返回匹配的分析日志
+ * 鏍规嵁AI鏈嶅姟鎼滅储鍒嗘瀽鏃ュ織
+ * @param {string} aiService - AI鏈嶅姟鍚嶇О
+ * @returns {Promise<Array>} 杩斿洖鍖归厤鐨勫垎鏋愭棩蹇?
  */
 export async function getAnalysisLogsByAIService(aiService) {
   const db = await openDB();
@@ -1436,8 +1436,8 @@ export async function getAnalysisLogsByAIService(aiService) {
 }
 
 /**
- * 删除AI分析日志
- * @param {string} logId - 日志ID
+ * 鍒犻櫎AI鍒嗘瀽鏃ュ織
+ * @param {string} logId - 鏃ュ織ID
  * @returns {Promise<void>}
  */
 export async function deleteAnalysisLog(logId) {
@@ -1452,7 +1452,7 @@ export async function deleteAnalysisLog(logId) {
 }
 
 /**
- * 清空所有AI分析日志
+ * 娓呯┖鎵€鏈堿I鍒嗘瀽鏃ュ織
  * @returns {Promise<void>}
  */
 export async function clearAllAnalysisLogs() {
@@ -1467,8 +1467,8 @@ export async function clearAllAnalysisLogs() {
 }
 
 /**
- * 获取分析日志统计信息
- * @returns {Promise<Object>} 返回统计信息
+ * 鑾峰彇鍒嗘瀽鏃ュ織缁熻淇℃伅
+ * @returns {Promise<Object>} 杩斿洖缁熻淇℃伅
  */
 export async function getAnalysisLogsStatistics() {
   const logs = await getAllAnalysisLogs();
@@ -1487,19 +1487,19 @@ export async function getAnalysisLogsStatistics() {
     completed,
     failed,
     processing,
-    avgDuration: avgDuration / 1000, // 转换为秒
+    avgDuration: avgDuration / 1000, // 杞崲涓虹
     successRate: total > 0 ? ((completed / total) * 100).toFixed(1) : 0,
   };
 }
 
-// ==================== 回收站相关方法 ====================
+// ==================== 鍥炴敹绔欑浉鍏虫柟娉?====================
 
 /**
- * 确保回收站存储存在
+ * 纭繚鍥炴敹绔欏瓨鍌ㄥ瓨鍦?
  */
 async function ensureTrashStoreExists() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME);
+    const req = indexedDB.open(DB_NAME, 3);
     req.onsuccess = () => {
       const db = req.result;
       if (db.objectStoreNames.contains(TRASH_STORE_NAME)) {
@@ -1542,9 +1542,9 @@ async function ensureTrashStoreExists() {
 }
 
 /**
- * 将图片移动到回收站
- * @param {Object} image - 要删除的图片对象
- * @returns {Promise<number>} 返回回收站记录ID
+ * 灏嗗浘鐗囩Щ鍔ㄥ埌鍥炴敹绔?
+ * @param {Object} image - 瑕佸垹闄ょ殑鍥剧墖瀵硅薄
+ * @returns {Promise<number>} 杩斿洖鍥炴敹绔欒褰旾D
  */
 export async function moveImageToTrash(image) {
   await ensureTrashStoreExists();
@@ -1558,7 +1558,7 @@ export async function moveImageToTrash(image) {
       originalImageId: image.id,
       imageData: {
         ...image,
-        // 移除可能导致克隆问题的字段
+        // 绉婚櫎鍙兘瀵艰嚧鍏嬮殕闂鐨勫瓧娈?
         objectUrl: undefined,
       },
       deletedAt: now,
@@ -1571,8 +1571,8 @@ export async function moveImageToTrash(image) {
 }
 
 /**
- * 获取回收站中的所有图片
- * @returns {Promise<Array>} 返回回收站中的图片列表
+ * 鑾峰彇鍥炴敹绔欎腑鐨勬墍鏈夊浘鐗?
+ * @returns {Promise<Array>} 杩斿洖鍥炴敹绔欎腑鐨勫浘鐗囧垪琛?
  */
 export async function getTrashImages() {
   await ensureTrashStoreExists();
@@ -1585,14 +1585,14 @@ export async function getTrashImages() {
       const trashItems = req.result.map((item) => ({
         ...item.imageData,
         trashId: item.id,
-        originalImageId: item.originalImageId, // 确保 originalImageId 被保留
+        originalImageId: item.originalImageId, // 纭繚 originalImageId 琚繚鐣?
         deletedAt: item.deletedAt,
         objectUrl:
           item.imageData.blob && item.imageData.blob instanceof Blob
             ? URL.createObjectURL(item.imageData.blob)
             : item.imageData.url,
       }));
-      // 按删除时间倒序排列（最新删除的在前）
+      // 鎸夊垹闄ゆ椂闂村€掑簭鎺掑垪锛堟渶鏂板垹闄ょ殑鍦ㄥ墠锛?
       trashItems.sort((a, b) => b.deletedAt - a.deletedAt);
       resolve(trashItems);
     };
@@ -1601,15 +1601,15 @@ export async function getTrashImages() {
 }
 
 /**
- * 从回收站恢复组图（主图和所有附图）
- * @param {number} parentTrashId - 主图的回收站记录ID
- * @returns {Promise<Array<number>>} 返回恢复的图片ID数组
+ * 浠庡洖鏀剁珯鎭㈠缁勫浘锛堜富鍥惧拰鎵€鏈夐檮鍥撅級
+ * @param {number} parentTrashId - 涓诲浘鐨勫洖鏀剁珯璁板綍ID
+ * @returns {Promise<Array<number>>} 杩斿洖鎭㈠鐨勫浘鐗嘔D鏁扮粍
  */
 async function restoreGroupFromTrash(parentTrashId) {
   await ensureTrashStoreExists();
   const db = await openDB();
 
-  // 获取主图数据
+  // 鑾峰彇涓诲浘鏁版嵁
   const parentTrashItem = await new Promise((resolve, reject) => {
     const tx = db.transaction(TRASH_STORE_NAME, "readonly");
     const store = tx.objectStore(TRASH_STORE_NAME);
@@ -1624,13 +1624,13 @@ async function restoreGroupFromTrash(parentTrashId) {
 
   const parentOriginalId = parentTrashItem.originalImageId;
 
-  // 查找所有相关的回收站项目（主图+附图）
+  // 鏌ユ壘鎵€鏈夌浉鍏崇殑鍥炴敹绔欓」鐩紙涓诲浘+闄勫浘锛?
   const allTrashItems = await new Promise((resolve, reject) => {
     const tx = db.transaction(TRASH_STORE_NAME, "readonly");
     const store = tx.objectStore(TRASH_STORE_NAME);
     const req = store.getAll();
     req.onsuccess = () => {
-      // 筛选出主图和所有附图
+      // 绛涢€夊嚭涓诲浘鍜屾墍鏈夐檮鍥?
       const items = req.result.filter(
         (item) =>
           item.originalImageId === parentOriginalId ||
@@ -1641,16 +1641,16 @@ async function restoreGroupFromTrash(parentTrashId) {
     req.onerror = () => reject(req.error);
   });
 
-  // 恢复所有图片
+  // 鎭㈠鎵€鏈夊浘鐗?
   const restoredIds = [];
   const newParentId = await restoreSingleImageFromTrash(parentTrashId);
   restoredIds.push(newParentId);
 
-  // 恢复所有附图，并更新它们的parentImageId
+  // 鎭㈠鎵€鏈夐檮鍥撅紝骞舵洿鏂板畠浠殑parentImageId
   for (const trashItem of allTrashItems) {
     if (trashItem.id !== parentTrashId) {
       const newChildId = await restoreSingleImageFromTrash(trashItem.id);
-      // 更新附图的parentImageId
+      // 鏇存柊闄勫浘鐨刾arentImageId
       await updateImage(newChildId, { parentImageId: newParentId });
       restoredIds.push(newChildId);
     }
@@ -1660,9 +1660,9 @@ async function restoreGroupFromTrash(parentTrashId) {
 }
 
 /**
- * 恢复单个图片（内部函数）
- * @param {number} trashId - 回收站记录ID
- * @returns {Promise<number>} 返回恢复的图片ID
+ * 鎭㈠鍗曚釜鍥剧墖锛堝唴閮ㄥ嚱鏁帮級
+ * @param {number} trashId - 鍥炴敹绔欒褰旾D
+ * @returns {Promise<number>} 杩斿洖鎭㈠鐨勫浘鐗嘔D
  */
 async function restoreSingleImageFromTrash(trashId) {
   await ensureTrashStoreExists();
@@ -1672,7 +1672,7 @@ async function restoreSingleImageFromTrash(trashId) {
     const trashStore = tx.objectStore(TRASH_STORE_NAME);
     const imageStore = tx.objectStore(STORE_NAME);
 
-    // 从回收站获取图片数据
+    // 浠庡洖鏀剁珯鑾峰彇鍥剧墖鏁版嵁
     const getReq = trashStore.get(trashId);
     getReq.onsuccess = () => {
       const trashItem = getReq.result;
@@ -1681,21 +1681,21 @@ async function restoreSingleImageFromTrash(trashId) {
         return;
       }
 
-      // 恢复图片到主存储
+      // 鎭㈠鍥剧墖鍒颁富瀛樺偍
       const imageData = {
         ...trashItem.imageData,
-        // 完全移除id字段，让IndexedDB自动生成新的ID
+        // 瀹屽叏绉婚櫎id瀛楁锛岃IndexedDB鑷姩鐢熸垚鏂扮殑ID
         createdAt: Date.now(),
-        // 暂时清空parentImageId，稍后会重新设置
+        // 鏆傛椂娓呯┖parentImageId锛岀◢鍚庝細閲嶆柊璁剧疆
         parentImageId: null,
       };
 
-      // 确保移除id字段
+      // 纭繚绉婚櫎id瀛楁
       delete imageData.id;
 
       const addReq = imageStore.add(imageData);
       addReq.onsuccess = () => {
-        // 从回收站删除
+        // 浠庡洖鏀剁珯鍒犻櫎
         trashStore.delete(trashId);
         resolve(addReq.result);
       };
@@ -1706,15 +1706,15 @@ async function restoreSingleImageFromTrash(trashId) {
 }
 
 /**
- * 从回收站恢复图片
- * @param {number} trashId - 回收站记录ID
- * @returns {Promise<number>} 返回恢复的图片ID
+ * 浠庡洖鏀剁珯鎭㈠鍥剧墖
+ * @param {number} trashId - 鍥炴敹绔欒褰旾D
+ * @returns {Promise<number>} 杩斿洖鎭㈠鐨勫浘鐗嘔D
  */
 export async function restoreImageFromTrash(trashId) {
   await ensureTrashStoreExists();
   const db = await openDB();
 
-  // 获取回收站项目数据
+  // 鑾峰彇鍥炴敹绔欓」鐩暟鎹?
   const trashItem = await new Promise((resolve, reject) => {
     const tx = db.transaction(TRASH_STORE_NAME, "readonly");
     const store = tx.objectStore(TRASH_STORE_NAME);
@@ -1727,23 +1727,23 @@ export async function restoreImageFromTrash(trashId) {
     throw new Error("Trash item not found");
   }
 
-  // 检查是否为主图（没有parentImageId）
+  // 妫€鏌ユ槸鍚︿负涓诲浘锛堟病鏈塸arentImageId锛?
   const isParentImage = !trashItem.imageData.parentImageId;
 
   if (isParentImage) {
-    // 如果是主图，恢复整个组图
+    // 濡傛灉鏄富鍥撅紝鎭㈠鏁翠釜缁勫浘
     const restoredIds = await restoreGroupFromTrash(trashId);
-    return restoredIds[0]; // 返回主图ID
+    return restoredIds[0]; // 杩斿洖涓诲浘ID
   } else {
-    // 如果是附图，只恢复这一张图片
+    // 濡傛灉鏄檮鍥撅紝鍙仮澶嶈繖涓€寮犲浘鐗?
     return await restoreSingleImageFromTrash(trashId);
   }
 }
 
 /**
- * 批量从回收站恢复图片
- * @param {Array<number>} trashIds - 回收站记录ID数组
- * @returns {Promise<Array<number>>} 返回恢复的图片ID数组
+ * 鎵归噺浠庡洖鏀剁珯鎭㈠鍥剧墖
+ * @param {Array<number>} trashIds - 鍥炴敹绔欒褰旾D鏁扮粍
+ * @returns {Promise<Array<number>>} 杩斿洖鎭㈠鐨勫浘鐗嘔D鏁扮粍
  */
 export async function restoreImagesFromTrash(trashIds) {
   const results = [];
@@ -1752,15 +1752,15 @@ export async function restoreImagesFromTrash(trashIds) {
       const imageId = await restoreImageFromTrash(trashId);
       results.push(imageId);
     } catch (error) {
-      console.error(`恢复图片失败 (trashId: ${trashId}):`, error);
+      console.error(`鎭㈠鍥剧墖澶辫触 (trashId: ${trashId}):`, error);
     }
   }
   return results;
 }
 
 /**
- * 从回收站永久删除图片
- * @param {number} trashId - 回收站记录ID
+ * 浠庡洖鏀剁珯姘镐箙鍒犻櫎鍥剧墖
+ * @param {number} trashId - 鍥炴敹绔欒褰旾D
  * @returns {Promise<void>}
  */
 export async function permanentlyDeleteFromTrash(trashId) {
@@ -1776,8 +1776,8 @@ export async function permanentlyDeleteFromTrash(trashId) {
 }
 
 /**
- * 批量从回收站永久删除图片
- * @param {Array<number>} trashIds - 回收站记录ID数组
+ * 鎵归噺浠庡洖鏀剁珯姘镐箙鍒犻櫎鍥剧墖
+ * @param {Array<number>} trashIds - 鍥炴敹绔欒褰旾D鏁扮粍
  * @returns {Promise<void>}
  */
 export async function permanentlyDeleteFromTrashBatch(trashIds) {
@@ -1797,7 +1797,7 @@ export async function permanentlyDeleteFromTrashBatch(trashIds) {
 }
 
 /**
- * 清空回收站
+ * 娓呯┖鍥炴敹绔?
  * @returns {Promise<void>}
  */
 export async function clearTrash() {
@@ -1813,37 +1813,37 @@ export async function clearTrash() {
 }
 
 /**
- * 将组图的所有图片（主图和附图）移动到回收站
- * @param {number} parentId - 主图ID
+ * 灏嗙粍鍥剧殑鎵€鏈夊浘鐗囷紙涓诲浘鍜岄檮鍥撅級绉诲姩鍒板洖鏀剁珯
+ * @param {number} parentId - 涓诲浘ID
  * @returns {Promise<void>}
  */
 async function moveGroupToTrash(parentId) {
-  // 获取主图
+  // 鑾峰彇涓诲浘
   const parentImage = await getImageById(parentId);
   if (!parentImage) {
     throw new Error("Parent image not found");
   }
 
-  // 获取所有附图
+  // 鑾峰彇鎵€鏈夐檮鍥?
   const childrenImages = await getChildrenImages(parentId);
 
-  // 将所有图片（主图+附图）移动到回收站
+  // 灏嗘墍鏈夊浘鐗囷紙涓诲浘+闄勫浘锛夌Щ鍔ㄥ埌鍥炴敹绔?
   const allImages = [parentImage, ...childrenImages];
 
   for (const image of allImages) {
     await moveImageToTrash(image);
   }
 
-  // 从主存储中删除所有图片
+  // 浠庝富瀛樺偍涓垹闄ゆ墍鏈夊浘鐗?
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
     const store = tx.objectStore(STORE_NAME);
 
-    // 删除主图
+    // 鍒犻櫎涓诲浘
     store.delete(parentId);
 
-    // 删除所有附图
+    // 鍒犻櫎鎵€鏈夐檮鍥?
     childrenImages.forEach((child) => {
       store.delete(child.id);
     });
@@ -1854,36 +1854,36 @@ async function moveGroupToTrash(parentId) {
 }
 
 /**
- * 修改删除图片的逻辑，将图片移动到回收站而不是直接删除
- * @param {number} id - 图片ID
+ * 淇敼鍒犻櫎鍥剧墖鐨勯€昏緫锛屽皢鍥剧墖绉诲姩鍒板洖鏀剁珯鑰屼笉鏄洿鎺ュ垹闄?
+ * @param {number} id - 鍥剧墖ID
  * @returns {Promise<void>}
  */
 export async function deleteImageToTrash(id) {
-  // 先获取图片数据
+  // 鍏堣幏鍙栧浘鐗囨暟鎹?
   const image = await getImageById(id);
   if (!image) {
     throw new Error("Image not found");
   }
 
-  // 先级联删除相册关联，并维护计数/封面
+  // 鍏堢骇鑱斿垹闄ょ浉鍐屽叧鑱旓紝骞剁淮鎶よ鏁?灏侀潰
   try {
     await cascadeDeleteAlbumItemsByImageId(id);
   } catch (e) {
     console.warn("[idb] cascadeDeleteAlbumItemsByImageId failed", e);
   }
 
-  // 检查是否为组图的主图
+  // 妫€鏌ユ槸鍚︿负缁勫浘鐨勪富鍥?
   const isParentImage =
     image.parentImageId === null || image.parentImageId === undefined;
 
   if (isParentImage) {
-    // 如果是主图，将整个组图移动到回收站
+    // 濡傛灉鏄富鍥撅紝灏嗘暣涓粍鍥剧Щ鍔ㄥ埌鍥炴敹绔?
     await moveGroupToTrash(id);
   } else {
-    // 如果是附图，只移动这一张图片
+    // 濡傛灉鏄檮鍥撅紝鍙Щ鍔ㄨ繖涓€寮犲浘鐗?
     await moveImageToTrash(image);
 
-    // 从主存储中删除
+    // 浠庝富瀛樺偍涓垹闄?
     const db = await openDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readwrite");
@@ -1894,3 +1894,4 @@ export async function deleteImageToTrash(id) {
     });
   }
 }
+
