@@ -1,6 +1,6 @@
 <template>
   <div class="gallery-page">
-    <!-- 鍙姌鍙犺彍鍗曟爮 -->
+    <!-- 可折叠菜单栏 -->
     <div class="collapsible-menu-bar">
       <div class="menu-header" @click="toggleMenu">
         <div class="menu-title">
@@ -17,7 +17,7 @@
             class="menu-action-item"
             :class="{ active: uploadMode }"
             @click="toggleUploadMode"
-            title=""
+            title="上传图片"
           >
             <el-icon><icon-plus /></el-icon>
           </div>
@@ -25,7 +25,7 @@
             class="menu-action-item"
             :class="{ active: batchDeleteMode }"
             @click="startBatchDelete"
-            title=""
+            title="批量删除"
           >
             <el-icon><icon-delete /></el-icon>
           </div>
@@ -33,7 +33,7 @@
             class="menu-action-item"
             :class="{ active: showGroupSelector }"
             @click="onToggleGroupSelector"
-            title=""
+            title="选择分组"
           >
             <el-icon><icon-folder /></el-icon>
           </div>
@@ -41,7 +41,7 @@
             class="menu-action-item"
             :class="{ active: showSearchArea }"
             @click="onToggleSearchArea"
-            title=""
+            title="搜索图片"
           >
             <el-icon><icon-search /></el-icon>
           </div>
@@ -49,34 +49,34 @@
             class="menu-action-item"
             :class="{ active: albumMode }"
             @click="onStartAlbumMode"
-            title=""
+            title="组图"
           >
             <img
               src="/src/static/images/icons/group.png"
-              alt=""
+              alt="组图"
               class="album-icon"
             />
           </div>
         </div>
 
-        <!-- 鍒嗙粍閫夋嫨鍖哄煙 -->
+        <!-- 分组选择区域 -->
         <div v-if="showGroupSelector" class="group-selector slide-down-panel">
           <div class="group-tabs">
-            <!-- 鏂板缓鍒嗙粍鎸夐挳 -->
+            <!-- 新建分组按钮 -->
             <div class="group-tab create-group-tab" @click="showCreateGroup">
               <el-icon><icon-plus /></el-icon>
             </div>
 
-            <!-- 鍒嗙粍璁剧疆鎸夐挳 -->
+            <!-- 分组设置按钮 -->
             <div
               class="group-tab settings-group-tab"
               @click="showGroupManage"
-              title=""
+              title="分组设置"
             >
               <el-icon><icon-setting /></el-icon>
             </div>
 
-            <!-- 鍒嗙粍鏍囩 -->
+            <!-- 分组标签 -->
             <div
               v-for="group in groups"
               :key="group.id"
@@ -90,7 +90,7 @@
           </div>
         </div>
 
-        <!-- 涓婁紶鍖哄煙 -->
+        <!-- 上传区域 -->
         <div v-if="uploadMode" class="upload-area slide-down-panel">
           <el-upload
             class="uploader"
@@ -101,19 +101,19 @@
             :on-change="onFileChange"
           >
             <el-icon class="el-icon--upload"><icon-plus /></el-icon>
-            <div class="el-upload__text">鎷栨嫿鍥剧墖鍒版澶勶紝鎴栫偣鍑婚€夋嫨</div>
-            <!-- <div class="el-upload__tip">鏀寔 Ctrl+V 绮樿创鍥剧墖</div> -->
+            <div class="el-upload__text">拖拽图片到此处，或点击选择</div>
+            <!-- <div class="el-upload__tip">支持 Ctrl+V 粘贴图片</div> -->
           </el-upload>
         </div>
 
-        <!-- 鎵归噺鍒犻櫎/缁勫浘妯″紡鎿嶄綔锛堝叡鐢ㄩ潰鏉匡紝浜掓枼鏄剧ず锛?-->
+        <!-- 批量删除/组图模式操作（共用面板，互斥显示） -->
         <div
           v-if="batchDeleteMode || albumMode"
           class="menu-batch-bar slide-down-panel"
         >
           <div class="batch-info">
             <span class="selected-count"
-              >宸查€夋嫨 {{ selectedImages.size }} 寮犲浘鐗?/span
+              >已选择 {{ selectedImages.size }} 张图片</span
             >
           </div>
           <div class="batch-actions">
@@ -121,13 +121,13 @@
               @click="selectAll"
               :disabled="selectedImages.size === images.length"
               class="gray-button"
-              >鍏ㄩ€?/el-button
+              >全选</el-button
             >
             <el-button
               @click="clearAll"
               :disabled="selectedImages.size === 0"
               class="gray-button"
-              >鍙栨秷閫夋嫨</el-button
+              >取消选择</el-button
             >
             <template v-if="batchDeleteMode">
               <el-button
@@ -145,19 +145,19 @@
                 :disabled="selectedImages.size === 0"
                 @click="emit('createAlbumFromSelection')"
               >
-                娣诲姞鍒扮粍鍥?
+                添加到组图
               </el-button>
             </template>
           </div>
         </div>
 
-        <!-- 鎼滅储鍖哄煙 -->
+        <!-- 搜索区域 -->
         <div v-if="showSearchArea" class="search-area slide-down-panel">
           <div class="search-form">
             <div class="search-field">
               <el-input
                 v-model="searchName"
-                placeholder=""
+                placeholder="输入图片名称"
                 clearable
                 @input="onSearchChange"
                 @clear="onSearchChange"
@@ -166,7 +166,7 @@
             <div class="search-field">
               <div class="tags-container">
                 <div class="tags-display">
-                  <!-- 鐜版湁鎼滅储鏍囩 -->
+                  <!-- 现有搜索标签 -->
                   <div
                     v-for="tag in searchTags"
                     :key="tag"
@@ -177,7 +177,7 @@
                     <el-icon class="tag-remove"><icon-delete /></el-icon>
                   </div>
 
-                  <!-- 娣诲姞鏍囩鎸夐挳 -->
+                  <!-- 添加标签按钮 -->
                   <div
                     v-if="!isAddingSearchTag"
                     class="add-tag-button"
@@ -186,15 +186,15 @@
                     <el-icon><icon-plus /></el-icon>
                   </div>
 
-                  <!-- 鎻愮ず鏂囧瓧锛堝綋娌℃湁鏍囩鏃舵樉绀猴級 -->
+                  <!-- 提示文字（当没有标签时显示） -->
                   <div
                     v-if="searchTags.length === 0 && !isAddingSearchTag"
                     class="tag-hint-text"
                   >
-                    鎸夋爣绛炬悳绱?
+                    按标签搜索
                   </div>
 
-                  <!-- 姝ｅ湪娣诲姞鐨勬爣绛捐緭鍏ユ -->
+                  <!-- 正在添加的标签输入框 -->
                   <div
                     v-if="isAddingSearchTag"
                     class="tag-item adding-tag"
@@ -204,7 +204,7 @@
                       v-model="newSearchTagInput"
                       ref="searchTagInput"
                       class="tag-input-field"
-                      placeholder=""
+                      placeholder="输入标签"
                       @keyup.enter="confirmAddSearchTag"
                       @keyup.escape="cancelAddSearchTag"
                       @blur="confirmAddSearchTag"
@@ -214,9 +214,9 @@
                 </div>
               </div>
             </div>
-            <!-- 鏆傛椂闅愯棌娓呯┖鎼滅储鎸夐挳鍖哄煙 -->
+            <!-- 暂时隐藏清空搜索按钮区域 -->
             <!-- <div class="search-actions">
-              <el-button @click="clearSearch" size="small">娓呯┖鎼滅储</el-button>
+              <el-button @click="clearSearch" size="small">清空搜索</el-button>
             </div> -->
           </div>
         </div>
@@ -226,9 +226,9 @@
     <div class="gallery-scroll">
       <div v-if="!images.length" class="empty">
         <!-- <div class="empty-content">
-          <div class="empty-icon">馃摲</div>
-          <div class="empty-text">鏆傛棤鍥剧墖锛岃鍏堜笂浼?/div>
-          <div class="empty-tip">鏀寔鎷栨嫿涓婁紶銆佺偣鍑讳笂浼犳垨 Ctrl+V 绮樿创鍥剧墖</div>
+          <div class="empty-icon">📷</div>
+          <div class="empty-text">暂无图片，请先上传</div>
+          <div class="empty-tip">支持拖拽上传、点击上传或 Ctrl+V 粘贴图片</div>
         </div> -->
       </div>
 
@@ -259,7 +259,7 @@
           <div v-if="isDeleting(img.id)" class="deleting-overlay">
             <div class="spinner" />
           </div>
-          <!-- 閫変腑鐘舵€侀伄缃?-->
+          <!-- 选中状态遮罩 -->
           <div
             v-if="(batchDeleteMode || albumMode) && selectedImages.has(img.id)"
             class="selection-overlay"
@@ -273,7 +273,7 @@
       </div>
     </div>
 
-    <!-- 鍙抽敭鑿滃崟 -->
+    <!-- 右键菜单 -->
     <div
       v-show="contextMenuVisible"
       class="context-menu"
@@ -285,22 +285,22 @@
         @click="copyImageToClipboard(contextMenuImage)"
       >
         <el-icon><icon-copy /></el-icon>
-        <span>澶嶅埗</span>
+        <span>复制</span>
       </div>
       <div class="context-menu-item" @click="downloadImage(contextMenuImage)">
         <el-icon><icon-download /></el-icon>
-        <span>涓嬭浇</span>
+        <span>下载</span>
       </div>
       <div class="context-menu-item" @click="showGroupMenu(contextMenuImage)">
         <el-icon><icon-folder /></el-icon>
-        <span>鍒嗙粍</span>
+        <span>分组</span>
       </div>
       <div
         class="context-menu-item"
         @click="addToAlbumFromContext(contextMenuImage)"
       >
         <el-icon><icon-plus /></el-icon>
-        <span>鏂板缁勫浘</span>
+        <span>新增组图</span>
       </div>
       <div
         v-if="isContextMenuImageGroup"
@@ -308,7 +308,7 @@
         @click="restoreGroupFromContext(contextMenuImage)"
       >
         <el-icon><icon-setting /></el-icon>
-        <span>缁勫浘杩樺師</span>
+        <span>组图还原</span>
       </div>
       <div class="context-menu-divider"></div>
       <div
@@ -316,14 +316,14 @@
         @click="deleteImageFromContext(contextMenuImage)"
       >
         <el-icon><icon-delete /></el-icon>
-        <span>鍒犻櫎</span>
+        <span>删除</span>
       </div>
     </div>
 
-    <!-- 棰勮瀵硅瘽妗?-->
+    <!-- 预览对话框 -->
     <el-dialog
       v-model="viewerVisible"
-      :title=""
+      :title="current?.name || '预览'"
       width="70%"
     >
       <div class="viewer">
@@ -335,7 +335,7 @@
       </div>
     </el-dialog>
 
-    <!-- 鑷畾涔夌‘璁ゅ垹闄ゅ璇濇 -->
+    <!-- 自定义确认删除对话框 -->
     <CustomDialog
       :visible="dialogVisible"
       :title="dialogConfig.title"
@@ -445,34 +445,34 @@ const { dialogVisible, dialogConfig, deleteConfirm } = useConfirmDelete();
 
 const images = ref([]);
 const coverCounts = ref({}); // { [imageId]: number }
-const hiddenImageIds = ref(new Set()); // 闇€瑕佸湪涓诲垪琛ㄩ殣钘忕殑鍥剧墖锛堢浉鍐屽唴闈炲皝闈級
-// 绉婚櫎灏忓崱灞曞紑鎵€闇€鐨勬湰鍦扮姸鎬?
+const hiddenImageIds = ref(new Set()); // 需要在主列表隐藏的图片（相册内非封面）
+// 移除小卡展开所需的本地状态
 const viewerVisible = ref(false);
 const current = ref(null);
 const deletingIds = ref([]);
-const MIN_DELETE_MS = 800; // 璋冭瘯鐢ㄦ渶灏忓睍绀烘椂闀?
+const MIN_DELETE_MS = 800; // 调试用最小展示时长
 
-// 鍒楁暟璁剧疆
-const columnCount = ref(3); // 榛樿涓夊垪
+// 列数设置
+const columnCount = ref(3); // 默认三列
 
-// 鍙栨秷鍙鏁伴噺闄愬埗锛屾敼涓哄畬鏁村睍绀猴紙缁撳悎鏍峰紡鍋氭崲琛?甯冨眬锛?
+// 取消可见数量限制，改为完整展示（结合样式做换行/布局）
 
-// 鑿滃崟鏍忕姸鎬?
+// 菜单栏状态
 const isMenuCollapsed = ref(false);
 
-// 鎼滅储鐩稿叧鐘舵€?
+// 搜索相关状态
 const showSearchArea = ref(false);
 const searchName = ref("");
 const searchTagsInput = ref("");
 const searchTags = ref([]);
 const isSearchActive = ref(false);
-const originalImages = ref([]); // 淇濆瓨鍘熷鍥剧墖鍒楄〃锛岀敤浜庢悳绱㈠悗鎭㈠
+const originalImages = ref([]); // 保存原始图片列表，用于搜索后恢复
 
-// 鎼滅储鏍囩娣诲姞鐩稿叧鐘舵€?
+// 搜索标签添加相关状态
 const isAddingSearchTag = ref(false);
 const newSearchTagInput = ref("");
 const searchTagInput = ref(null);
-const searchTagInputWidth = ref(80); // 榛樿鏈€灏忓搴?
+const searchTagInputWidth = ref(80); // 默认最小宽度
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -490,29 +490,29 @@ function isDeleting(id) {
   return deletingIds.value.includes(id);
 }
 
-// 鍒ゆ柇鏄惁涓虹粍鍥炬ā寮忎笅鐨勪富鍥撅紙绗竴涓€変腑鐨勫浘鐗囷級
+// 判断是否为组图模式下的主图（第一个选中的图片）
 function isMainImage(id) {
   if (!props.albumMode || props.selectedImages.size === 0) return false;
   const selectedArray = Array.from(props.selectedImages);
   return selectedArray.length > 0 && selectedArray[0] === id;
 }
 
-// 鍒ゆ柇鍥剧墖鏄惁鍙互琚€夋嫨锛堢粍鍥炬ā寮忎笅鐨勯€夋嫨闄愬埗锛?
+// 判断图片是否可以被选择（组图模式下的选择限制）
 function canSelectImage(id) {
   if (!props.albumMode) return true;
 
   const selectedArray = Array.from(props.selectedImages);
 
-  // 濡傛灉杩樻病鏈夐€夋嫨浠讳綍鍥剧墖锛屽彲浠ラ€夋嫨浠讳綍鍥剧墖锛堝寘鎷粍鍥撅級
+  // 如果还没有选择任何图片，可以选择任何图片（包括组图）
   if (selectedArray.length === 0) {
     return true;
   }
 
-  // 濡傛灉宸茬粡閫夋嫨浜嗗浘鐗囷紝鍚庣画鍙兘閫夋嫨鐙珛鍥剧墖锛堥潪缁勫浘锛?
+  // 如果已经选择了图片，后续只能选择独立图片（非组图）
   const img = images.value.find((img) => img.id === id);
   if (!img) return false;
 
-  // 妫€鏌ユ槸鍚︿负鐙珛鍥剧墖锛堟病鏈夐檮鍥剧殑涓诲浘锛?
+  // 检查是否为独立图片（没有附图的主图）
   return coverCounts.value[id] === undefined || coverCounts.value[id] === 0;
 }
 
@@ -524,7 +524,7 @@ function stopDeleting(id) {
   deletingIds.value = deletingIds.value.filter((x) => x !== id);
 }
 
-// 鍙抽敭鑿滃崟鐩稿叧
+// 右键菜单相关
 const contextMenuVisible = ref(false);
 const contextMenuX = ref(0);
 const contextMenuY = ref(0);
@@ -544,21 +544,21 @@ async function load() {
   const data = await getAllImages();
   revokeObjectUrls(prev);
 
-  // 鏍规嵁閫変腑鐨勫垎缁勭瓫閫夊浘鐗?
+  // 根据选中的分组筛选图片
   let filteredData = data;
   if (props.selectedGroupId !== null && props.selectedGroupId !== undefined) {
     if (props.selectedGroupId === -1) {
-      // ""鍒嗙粍锛氭樉绀烘墍鏈夊浘鐗?
+      // "全部"分组：显示所有图片
       filteredData = data;
     } else {
-      // 鍏朵粬鍒嗙粍锛氳繃婊ゅ嚭鎸囧畾鍒嗙粍鐨勫浘鐗?
+      // 其他分组：过滤出指定分组的图片
       filteredData = data.filter(
         (img) => (img.groupId || 0) === props.selectedGroupId
       );
     }
   }
 
-  // 鍩轰簬 parentImageId 缁熻锛氶檮鍥鹃殣钘忥紝涓诲浘鏄剧ず +N
+  // 基于 parentImageId 统计：附图隐藏，主图显示 +N
   const newCoverCounts = {};
   const newHidden = new Set();
   for (const img of filteredData) {
@@ -571,7 +571,7 @@ async function load() {
   coverCounts.value = newCoverCounts;
   hiddenImageIds.value = newHidden;
 
-  // 浠呮樉绀轰富鍥?
+  // 仅显示主图
   const visibleData = filteredData.filter(
     (r) => r.parentImageId === null || r.parentImageId === undefined
   );
@@ -582,7 +582,7 @@ async function load() {
       r.blob && r.blob instanceof Blob ? URL.createObjectURL(r.blob) : r.url,
   }));
 
-  // 濡傛灉褰撳墠澶勪簬鎼滅储鐘舵€侊紝鍒欏熀浜庢柊鐨勫垎缁勬暟鎹噸鏂板簲鐢ㄦ悳绱㈡潯浠?
+  // 如果当前处于搜索状态，则基于新的分组数据重新应用搜索条件
   if (isSearchActive.value) {
     originalImages.value = [...images.value];
     performRealtimeSearch();
@@ -590,25 +590,25 @@ async function load() {
 }
 
 onMounted(() => {
-  // 璁╁嚭涓€娆℃覆鏌撴椂鏈猴紝浼樺厛缁樺埗渚ц竟鏍忛€変腑鎬侊紝鍐嶅紑濮嬪姞杞?
+  // 让出一次渲染时机，优先绘制侧边栏选中态，再开始加载
   setTimeout(() => {
     load();
   }, 0);
-  // 娣诲姞鍏ㄥ眬鐐瑰嚮浜嬩欢鐩戝惉锛岀偣鍑诲叾浠栧湴鏂归殣钘忓彸閿彍鍗?
+  // 添加全局点击事件监听，点击其他地方隐藏右键菜单
   document.addEventListener("click", hideContextMenu);
-  // 娣诲姞婊氬姩浜嬩欢鐩戝惉锛屾粴鍔ㄦ椂闅愯棌鍙抽敭鑿滃崟
+  // 添加滚动事件监听，滚动时隐藏右键菜单
   document.addEventListener("scroll", hideContextMenu, true);
-  // 鐩戝惉涓婁紶瀹屾垚浜嬩欢锛屽埛鏂板垪琛?
+  // 监听上传完成事件，刷新列表
   window.addEventListener("imageAdded", load);
 
-  // 鐩戝惉鍒楁暟鍙樺寲浜嬩欢
+  // 监听列数变化事件
   window.addEventListener("columnCountChanged", handleColumnCountChanged);
 
-  // 鍒濆鍖栧垪鏁拌缃?
+  // 初始化列数设置
   initializeColumnCount();
 });
 
-// 鐩戝惉鍒嗙粍鍙樺寲锛岄噸鏂板姞杞藉浘鐗?
+// 监听分组变化，重新加载图片
 watch(
   () => props.selectedGroupId,
   () => {
@@ -632,7 +632,7 @@ async function remove(id) {
     await withMinDuration(deleteImageToTrash(id), MIN_DELETE_MS);
     console.timeEnd(`delete-image-${id}`);
     await load();
-    // 閫氱煡涓婂眰鍚屾鍒嗙粍璁℃暟绛夋淳鐢熸暟鎹?
+    // 通知上层同步分组计数等派生数据
     window.dispatchEvent(new CustomEvent("imageAdded"));
   } finally {
     stopDeleting(id);
@@ -652,44 +652,44 @@ function onCardClick(img) {
   if (isDeleting(img.id)) return;
 
   if (props.batchDeleteMode || props.albumMode) {
-    // 鎵归噺鍒犻櫎 / 缁勫浘妯″紡 涓嬶紝鍒囨崲閫変腑鐘舵€?
-    // 鍦ㄧ粍鍥炬ā寮忎笅锛岄渶瑕佹鏌ラ€夋嫨闄愬埗
+    // 批量删除 / 组图模式 下，切换选中状态
+    // 在组图模式下，需要检查选择限制
     if (props.albumMode && !canSelectImage(img.id)) {
       return;
     }
     emit("toggleImageSelection", img.id);
   } else {
-    // 姝ｅ父妯″紡涓嬶紝璺宠浆鍒拌鎯呴〉
+    // 正常模式下，跳转到详情页
     goToDetail(img);
   }
 }
 
-// 鍙抽敭鑿滃崟鐩稿叧鍑芥暟
+// 右键菜单相关函数
 async function showContextMenu(event, img) {
   event.preventDefault();
   contextMenuImage.value = img;
 
-  // 妫€鏌ユ槸鍚︿负缁勫浘
+  // 检查是否为组图
   try {
     const children = await getChildrenImages(img.id);
     isContextMenuImageGroup.value = children.length > 0;
   } catch (err) {
-    console.error("", err);
+    console.error("检查组图状态失败:", err);
     isContextMenuImageGroup.value = false;
   }
 
-  // 鍏堟樉绀鸿彍鍗曚互鑾峰彇瀹為檯灏哄
+  // 先显示菜单以获取实际尺寸
   contextMenuX.value = event.clientX;
   contextMenuY.value = event.clientY;
   contextMenuVisible.value = true;
 
-  // 浣跨敤 nextTick 纭繚鑿滃崟宸叉覆鏌擄紝鐒跺悗璋冩暣浣嶇疆
+  // 使用 nextTick 确保菜单已渲染，然后调整位置
   nextTick(() => {
     adjustContextMenuPosition(event.clientX, event.clientY);
   });
 }
 
-// 璋冩暣鍙抽敭鑿滃崟浣嶇疆鐨勫嚱鏁?
+// 调整右键菜单位置的函数
 function adjustContextMenuPosition(originalX, originalY) {
   const menuElement = document.querySelector(".context-menu");
   if (!menuElement) return;
@@ -697,7 +697,7 @@ function adjustContextMenuPosition(originalX, originalY) {
   const menuRect = menuElement.getBoundingClientRect();
   const menuWidth = menuRect.width;
   const menuHeight = menuRect.height;
-  const padding = 10; // 璺濈灞忓箷杈圭紭鐨勬渶灏忚窛绂?
+  const padding = 10; // 距离屏幕边缘的最小距离
 
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
@@ -705,21 +705,21 @@ function adjustContextMenuPosition(originalX, originalY) {
   let x = originalX;
   let y = originalY;
 
-  // 姘村钩鏂瑰悜锛氬鏋滀細瓒呭嚭鍙宠竟鐣岋紝鍒欒创鍙宠竟鐣?
+  // 水平方向：如果会超出右边界，则贴右边界
   if (x + menuWidth + padding > viewportWidth) {
     x = viewportWidth - menuWidth - padding;
   }
 
-  // 鍨傜洿鏂瑰悜锛氬鏋滀細瓒呭嚭涓嬭竟鐣岋紝鍒欒创涓嬭竟鐣?
+  // 垂直方向：如果会超出下边界，则贴下边界
   if (y + menuHeight + padding > viewportHeight) {
     y = viewportHeight - menuHeight - padding;
   }
 
-  // 纭繚涓嶈秴鍑哄乏杈圭晫鍜屼笂杈圭晫
+  // 确保不超出左边界和上边界
   x = Math.max(padding, x);
   y = Math.max(padding, y);
 
-  // 鏇存柊鑿滃崟浣嶇疆
+  // 更新菜单位置
   contextMenuX.value = x;
   contextMenuY.value = y;
 }
@@ -739,38 +739,38 @@ async function copyImageToClipboard(img) {
   if (!img) return;
 
   try {
-    console.log("", img.name);
+    console.log("开始复制图片:", img.name);
 
-    // 鑾峰彇鍥剧墖鐨刡lob鏁版嵁
+    // 获取图片的blob数据
     let imageBlob;
     if (img.blob) {
       imageBlob = img.blob;
       console.log(
-        "",
+        "使用原始blob数据，大小:",
         imageBlob.size,
-        "",
+        "类型:",
         imageBlob.type
       );
     } else if (img.objectUrl) {
-      // 濡傛灉鍙湁objectUrl锛岄渶瑕佸厛鑾峰彇blob
-      console.log("");
+      // 如果只有objectUrl，需要先获取blob
+      console.log("从objectUrl获取blob数据");
       const response = await fetch(img.objectUrl);
       imageBlob = await response.blob();
       console.log(
-        "",
+        "获取到blob数据，大小:",
         imageBlob.size,
-        "",
+        "类型:",
         imageBlob.type
       );
     } else {
-      error("");
+      error("无法获取图片数据");
       return;
     }
 
-    // 纭繚blob鏈夋纭殑MIME绫诲瀷
+    // 确保blob有正确的MIME类型
     if (!imageBlob.type || imageBlob.type === "application/octet-stream") {
-      console.log("");
-      // 鏍规嵁鏂囦欢鎵╁睍鍚嶆帹鏂璏IME绫诲瀷
+      console.log("修正MIME类型");
+      // 根据文件扩展名推断MIME类型
       const fileName = img.name || "image";
       if (fileName.toLowerCase().includes(".png")) {
         imageBlob = new Blob([imageBlob], { type: "image/png" });
@@ -784,34 +784,34 @@ async function copyImageToClipboard(img) {
       } else if (fileName.toLowerCase().includes(".webp")) {
         imageBlob = new Blob([imageBlob], { type: "image/webp" });
       } else {
-        // 榛樿涓篜NG
+        // 默认为PNG
         imageBlob = new Blob([imageBlob], { type: "image/png" });
       }
-      console.log("", imageBlob.type);
+      console.log("修正后的MIME类型:", imageBlob.type);
     }
 
-    // 鍏堝皾璇曟竻绌哄壀璐存澘
+    // 先尝试清空剪贴板
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText("");
-        console.log("");
-        // 绛夊緟涓€灏忔鏃堕棿纭繚娓呯┖鎿嶄綔瀹屾垚
+        console.log("剪贴板已清空");
+        // 等待一小段时间确保清空操作完成
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
     } catch (clearError) {
-      console.warn("", clearError);
+      console.warn("清空剪贴板失败:", clearError);
     }
 
-    // 鏂规硶1锛氫紭鍏堜娇鐢ㄧ幇浠ｅ壀璐存澘API锛堥渶瑕佽浆鎹负PNG锛?
+    // 方法1：优先使用现代剪贴板API（需要转换为PNG）
     if (navigator.clipboard && window.ClipboardItem) {
       try {
-        console.log("");
+        console.log("尝试使用现代剪贴板API");
 
-        // 鐜颁唬鍓创鏉緼PI涓昏鏀寔PNG鏍煎紡锛岄渶瑕佽浆鎹?
+        // 现代剪贴板API主要支持PNG格式，需要转换
         let clipboardBlob = imageBlob;
         if (imageBlob.type === "image/jpeg" || imageBlob.type === "image/jpg") {
-          console.log("");
-          // 鍒涘缓canvas鏉ヨ浆鎹PEG涓篜NG
+          console.log("JPEG格式需要转换为PNG");
+          // 创建canvas来转换JPEG为PNG
           const tempCanvas = document.createElement("canvas");
           const tempCtx = tempCanvas.getContext("2d");
           const tempImg = document.createElement("img");
@@ -823,7 +823,7 @@ async function copyImageToClipboard(img) {
           await new Promise((resolve, reject) => {
             tempImg.onload = resolve;
             tempImg.onerror = reject;
-            setTimeout(() => reject(new Error("")), 5000);
+            setTimeout(() => reject(new Error("图片加载超时")), 5000);
           });
 
           tempCanvas.width = tempImg.naturalWidth;
@@ -835,13 +835,13 @@ async function copyImageToClipboard(img) {
               if (blob) {
                 resolve(blob);
               } else {
-                reject(new Error(""));
+                reject(new Error("Canvas转换失败"));
               }
             }, "image/png");
           });
 
           URL.revokeObjectURL(tempImg.src);
-          console.log("", clipboardBlob.size);
+          console.log("JPEG转换为PNG成功，大小:", clipboardBlob.size);
         }
 
         const clipboardItem = new ClipboardItem({
@@ -849,37 +849,37 @@ async function copyImageToClipboard(img) {
         });
         await navigator.clipboard.write([clipboardItem]);
 
-        // 楠岃瘉澶嶅埗鏄惁鎴愬姛
+        // 验证复制是否成功
         try {
           const clipboardItems = await navigator.clipboard.read();
-          console.log("", clipboardItems.length);
+          console.log("剪贴板验证成功，项目数量:", clipboardItems.length);
           if (clipboardItems.length > 0) {
             const item = clipboardItems[0];
             const types = item.types;
-            console.log("", types);
-            success("");
+            console.log("剪贴板中的类型:", types);
+            success("图片已复制到剪贴板");
             hideContextMenu();
             return;
           }
         } catch (verifyError) {
-          console.warn("", verifyError);
-          // 鍗充娇楠岃瘉澶辫触锛屼篃鍙兘澶嶅埗鎴愬姛浜?
-          success("");
+          console.warn("剪贴板验证失败:", verifyError);
+          // 即使验证失败，也可能复制成功了
+          success("图片已复制到剪贴板");
           hideContextMenu();
           return;
         }
       } catch (clipboardError) {
-        console.warn("", clipboardError);
-        // 缁х画灏濊瘯鍏朵粬鏂规硶
+        console.warn("现代剪贴板API失败:", clipboardError);
+        // 继续尝试其他方法
       }
     }
 
-    // 鏂规硶2锛氫娇鐢–anvas + 鐜颁唬鍓创鏉緼PI
-    console.log("");
+    // 方法2：使用Canvas + 现代剪贴板API
+    console.log("尝试使用Canvas方法");
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    // 鍒涘缓涓€涓复鏃剁殑闅愯棌鍥剧墖鍏冪礌鐢ㄤ簬缁樺埗鍒癱anvas
+    // 创建一个临时的隐藏图片元素用于绘制到canvas
     const tempImg = document.createElement("img");
     tempImg.style.position = "absolute";
     tempImg.style.left = "-9999px";
@@ -890,58 +890,58 @@ async function copyImageToClipboard(img) {
       imageBlob instanceof Blob ? URL.createObjectURL(imageBlob) : imageBlob;
     document.body.appendChild(tempImg);
 
-    // 绛夊緟鍥剧墖鍔犺浇瀹屾垚
+    // 等待图片加载完成
     await new Promise((resolve, reject) => {
       tempImg.onload = resolve;
       tempImg.onerror = reject;
-      setTimeout(() => reject(new Error("")), 5000);
+      setTimeout(() => reject(new Error("图片加载超时")), 5000);
     });
 
     canvas.width = tempImg.naturalWidth;
     canvas.height = tempImg.naturalHeight;
     ctx.drawImage(tempImg, 0, 0);
-    console.log("", canvas.width, "x", canvas.height);
+    console.log("Canvas绘制完成，尺寸:", canvas.width, "x", canvas.height);
 
     try {
-      // 灏哻anvas杞崲涓篵lob锛堝己鍒朵娇鐢≒NG鏍煎紡锛?
+      // 将canvas转换为blob（强制使用PNG格式）
       const canvasBlob = await new Promise((resolve, reject) => {
         canvas.toBlob((blob) => {
           if (blob) {
             resolve(blob);
           } else {
-            reject(new Error(""));
+            reject(new Error("Canvas转换失败"));
           }
-        }, "image/png"); // 寮哄埗浣跨敤PNG鏍煎紡
+        }, "image/png"); // 强制使用PNG格式
       });
       console.log(
-        "",
+        "Canvas转换为blob成功，大小:",
         canvasBlob.size,
-        "",
+        "类型:",
         canvasBlob.type
       );
 
-      // 灏濊瘯浣跨敤鐜颁唬鍓创鏉緼PI
+      // 尝试使用现代剪贴板API
       if (navigator.clipboard && navigator.clipboard.write) {
         try {
-          console.log("");
+          console.log("尝试使用Canvas + 剪贴板API");
           await navigator.clipboard.write([
             new ClipboardItem({ [canvasBlob.type]: canvasBlob }),
           ]);
 
-          success("");
+          success("图片已复制到剪贴板");
           hideContextMenu();
           return;
         } catch (error) {
-          console.warn("", error);
-          // 缁х画灏濊瘯鍏朵粬鏂规硶
+          console.warn("Canvas剪贴板API失败:", error);
+          // 继续尝试其他方法
         }
       }
 
-      // 鏂规硶3锛氫娇鐢╡xecCommand锛堝吋瀹规€ф柟娉曪級
+      // 方法3：使用execCommand（兼容性方法）
       try {
-        console.log("");
+        console.log("尝试使用execCommand方法");
 
-        // 鍒涘缓涓€涓彲閫夋嫨鐨勫厓绱?
+        // 创建一个可选择的元素
         const selectableDiv = document.createElement("div");
         selectableDiv.style.position = "absolute";
         selectableDiv.style.left = "-9999px";
@@ -950,11 +950,11 @@ async function copyImageToClipboard(img) {
         selectableDiv.style.height = "1px";
         selectableDiv.style.overflow = "hidden";
 
-        // 灏哻anvas娣诲姞鍒板彲閫夋嫨鐨刣iv涓?
+        // 将canvas添加到可选择的div中
         selectableDiv.appendChild(canvas);
         document.body.appendChild(selectableDiv);
 
-        // 閫夋嫨canvas骞跺鍒?
+        // 选择canvas并复制
         const selection = window.getSelection();
         const range = document.createRange();
         range.selectNodeContents(canvas);
@@ -962,36 +962,36 @@ async function copyImageToClipboard(img) {
         selection.addRange(range);
 
         const execSuccess = document.execCommand("copy");
-        console.log("", execSuccess);
+        console.log("execCommand复制结果:", execSuccess);
 
-        // 娓呯悊
+        // 清理
         document.body.removeChild(selectableDiv);
         selection.removeAllRanges();
 
         if (execSuccess) {
-          success("");
+          success("图片已复制到剪贴板");
           hideContextMenu();
           return;
         }
       } catch (execError) {
-        console.warn("", execError);
+        console.warn("execCommand失败:", execError);
       }
 
-      // 鏂规硶4锛氭渶鍚庣殑澶囬€夋柟妗?- 鎻愮ず鐢ㄦ埛涓嬭浇
-      warning("");
+      // 方法4：最后的备选方案 - 提示用户下载
+      warning("复制失败，是否要下载图片？");
       hideContextMenu();
     } catch (canvasError) {
-      console.warn("", canvasError);
-      info("");
+      console.warn("Canvas处理失败:", canvasError);
+      info("复制失败，请使用下载功能");
       hideContextMenu();
     } finally {
-      // 娓呯悊涓存椂鍏冪礌
+      // 清理临时元素
       document.body.removeChild(tempImg);
       URL.revokeObjectURL(tempImg.src);
     }
   } catch (error) {
-    console.error("", error);
-    info("");
+    console.error("复制失败:", error);
+    info("复制失败，请使用下载功能");
     hideContextMenu();
   }
 }
@@ -1000,20 +1000,20 @@ async function downloadImage(img) {
   if (!img) return;
 
   try {
-    // 鑾峰彇鍥剧墖鐨刡lob鏁版嵁
+    // 获取图片的blob数据
     let imageBlob;
     if (img.blob) {
       imageBlob = img.blob;
     } else if (img.objectUrl) {
-      // 濡傛灉鍙湁objectUrl锛岄渶瑕佸厛鑾峰彇blob
+      // 如果只有objectUrl，需要先获取blob
       const response = await fetch(img.objectUrl);
       imageBlob = await response.blob();
     } else {
-      error("");
+      error("无法获取图片数据");
       return;
     }
 
-    // 鍒涘缓涓嬭浇閾炬帴
+    // 创建下载链接
     const url =
       imageBlob instanceof Blob ? URL.createObjectURL(imageBlob) : imageBlob;
     const link = document.createElement("a");
@@ -1024,11 +1024,11 @@ async function downloadImage(img) {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    success("");
+    success("图片已下载到本地");
     hideContextMenu();
   } catch (error) {
-    console.error("", error);
-    error("");
+    console.error("下载失败:", error);
+    error("下载失败，请重试");
     hideContextMenu();
   }
 }
@@ -1038,26 +1038,26 @@ async function deleteImageFromContext(img) {
 
   try {
     if (isDeleting(img.id)) return;
-    // 鍏抽棴鑿滃崟鍚庡睍绀哄垹闄や腑鐨勯伄缃?
+    // 关闭菜单后展示删除中的遮罩
     hideContextMenu();
     startDeleting(img.id);
     console.time(`delete-image-${img.id}`);
     await withMinDuration(deleteImageToTrash(img.id), MIN_DELETE_MS);
     console.timeEnd(`delete-image-${img.id}`);
-    success("");
+    success("图片已移动到回收站");
     await load();
 
-    // 瑙﹀彂鍒嗙粍鏁伴噺鏇存柊浜嬩欢
+    // 触发分组数量更新事件
     window.dispatchEvent(new CustomEvent("imageAdded"));
   } catch (error) {
-    error("");
+    error("删除失败");
   } finally {
     stopDeleting(img.id);
   }
 }
 
 function showGroupMenu(img) {
-  // 瑙﹀彂鍏ㄥ眬浜嬩欢锛屾樉绀哄垎缁勯€夋嫨瀵硅瘽妗?
+  // 触发全局事件，显示分组选择对话框
   window.dispatchEvent(
     new CustomEvent("showImageGroupDialog", {
       detail: { image: img },
@@ -1066,18 +1066,18 @@ function showGroupMenu(img) {
   hideContextMenu();
 }
 
-// 浠庡彸閿彍鍗曟柊澧炵粍鍥?
+// 从右键菜单新增组图
 function addToAlbumFromContext(img) {
   if (!img) return;
 
-  // 瑙﹀彂缁勫浘妯″紡骞堕€変腑璇ュ浘鐗?
+  // 触发组图模式并选中该图片
   emit("startAlbumMode");
   emit("toggleImageSelection", img.id);
 
   hideContextMenu();
 }
 
-// 澶勭悊纭鍒犻櫎瀵硅瘽妗?
+// 处理确认删除对话框
 function handleConfirm() {
   if (dialogConfig.value._onConfirm) {
     dialogConfig.value._onConfirm();
@@ -1090,55 +1090,55 @@ function handleCancel() {
   }
 }
 
-// 浠庡彸閿彍鍗曡繕鍘熺粍鍥?
+// 从右键菜单还原组图
 async function restoreGroupFromContext(img) {
   if (!img) return;
 
   try {
-    // 鑾峰彇闄勫浘鏁伴噺
+    // 获取附图数量
     const children = await getChildrenImages(img.id);
     const childrenCount = children.length;
 
     if (childrenCount === 0) {
-      error("");
+      error("该图片没有附图，无法还原组图");
       return;
     }
 
-    // 鏄剧ず纭瀵硅瘽妗?
+    // 显示确认对话框
     await deleteConfirm(
-      `纭畾瑕佸皢缁勫浘 "${img.name}" 杩樺師涓?${
+      `确定要将组图 "${img.name}" 还原为 ${
         childrenCount + 1
-      } 寮犵嫭绔嬪浘鐗囧悧锛焅n杩樺師鍚庯紝鎵€鏈夊浘鐗囧皢鍙樹负鐙珛鍥剧墖锛岀粍鍥惧叧绯诲皢琚В闄ゃ€俙,
-      "",
+      } 张独立图片吗？\n还原后，所有图片将变为独立图片，组图关系将被解除。`,
+      "组图还原确认",
       {
-        confirmButtonText: "",
-        cancelButtonText: "",
+        confirmButtonText: "确定还原",
+        cancelButtonText: "取消",
       }
     );
 
-    // 鎵ц杩樺師鎿嶄綔
+    // 执行还原操作
     const restoredCount = await restoreGroupToIndividualImages(img.id);
 
-    success(`缁勫浘宸茶繕鍘燂紝${restoredCount + 1} 寮犲浘鐗囧凡鍙樹负鐙珛鍥剧墖`);
+    success(`组图已还原，${restoredCount + 1} 张图片已变为独立图片`);
 
-    // 閲嶆柊鍔犺浇鍥剧墖鍒楄〃
+    // 重新加载图片列表
     await load();
 
-    // 瑙﹀彂鍒嗙粍鏁伴噺鏇存柊浜嬩欢
+    // 触发分组数量更新事件
     window.dispatchEvent(new CustomEvent("imageAdded"));
   } catch (err) {
-    if (err.message === "") {
-      // 鐢ㄦ埛鍙栨秷杩樺師锛屼笉鏄剧ず閿欒淇℃伅
+    if (err.message === "用户取消") {
+      // 用户取消还原，不显示错误信息
       return;
     }
-    console.error("", err);
-    error("");
+    console.error("还原组图失败:", err);
+    error("还原组图失败，请重试");
   } finally {
     hideContextMenu();
   }
 }
 
-// 鎵归噺鍒犻櫎鐩稿叧鍑芥暟
+// 批量删除相关函数
 function selectAll() {
   images.value.forEach((img) => {
     if (!props.selectedImages.has(img.id)) {
@@ -1157,27 +1157,26 @@ function exitBatchMode() {
 
 function confirmBatchDelete() {
   if (props.selectedImages.size === 0) {
-    warning("");
+    warning("请先选择要删除的图片");
     return;
   }
 
-  // 鐩存帴瑙﹀彂鎵归噺鍒犻櫎浜嬩欢锛岃鐖剁粍浠跺鐞嗙‘璁ら€昏緫
+  // 直接触发批量删除事件，让父组件处理确认逻辑
   emit("batchDelete");
 }
 
-// 鑿滃崟鏍忕浉鍏冲嚱鏁?
+// 菜单栏相关函数
 function toggleMenu() {
   isMenuCollapsed.value = !isMenuCollapsed.value;
 }
 
-// 椤堕儴鍒锋柊鎸夐挳宸茬Щ闄?
+// 顶部刷新按钮已移除
 
 function toggleUploadMode() {
   emit("toggleUploadMode");
 }
 
 function onFileChange(file) {
-  console.log("[drag:1] ImageGallery onFileChange called", file?.name, file?.raw?.name);
   emit("fileChange", file);
 }
 
@@ -1205,40 +1204,40 @@ function onStartAlbumMode() {
   emit("startAlbumMode");
 }
 
-// 鎼滅储鐩稿叧鍑芥暟
+// 搜索相关函数
 function onToggleSearchArea() {
   showSearchArea.value = !showSearchArea.value;
   if (!showSearchArea.value) {
-    // 鍏抽棴鎼滅储鍖哄煙鏃讹紝娓呴櫎鎼滅储鐘舵€?
+    // 关闭搜索区域时，清除搜索状态
     clearSearch();
   }
 }
 
 function onSearchChange() {
-  // 瀹炴椂鎼滅储
+  // 实时搜索
   performRealtimeSearch();
 }
 
 function addTagFromInput() {
-  // 澶勭悊鏍囩杈撳叆锛屾坊鍔犲綋鍓嶈緭鍏ユ鐨勫唴瀹逛綔涓烘爣绛?
+  // 处理标签输入，添加当前输入框的内容作为标签
   if (searchTagsInput.value) {
     const tag = searchTagsInput.value.trim();
     if (tag && !searchTags.value.includes(tag)) {
       searchTags.value.push(tag);
       searchTagsInput.value = "";
-      // 娣诲姞鏍囩鍚庤Е鍙戞悳绱?
+      // 添加标签后触发搜索
       performRealtimeSearch();
     }
   }
 }
 
-// 鎼滅储鏍囩绠＄悊鍑芥暟
+// 搜索标签管理函数
 function startAddingSearchTag() {
   isAddingSearchTag.value = true;
   newSearchTagInput.value = "";
-  searchTagInputWidth.value = 80; // 閲嶇疆涓洪粯璁ゅ搴?
+  searchTagInputWidth.value = 80; // 重置为默认宽度
 
-  // 绛夊緟DOM鏇存柊鍚庤仛鐒﹁緭鍏ユ
+  // 等待DOM更新后聚焦输入框
   setTimeout(() => {
     if (searchTagInput.value) {
       searchTagInput.value.focus();
@@ -1259,40 +1258,40 @@ function confirmAddSearchTag() {
 
   const tag = newSearchTagInput.value.trim();
 
-  // 妫€鏌ユ爣绛炬槸鍚﹀凡瀛樺湪
+  // 检查标签是否已存在
   if (searchTags.value.includes(tag)) {
-    error("");
+    error("标签已存在");
     cancelAddSearchTag();
     return;
   }
 
-  // 娣诲姞鏍囩鍒版悳绱㈠垪琛?
+  // 添加标签到搜索列表
   searchTags.value.push(tag);
 
-  // 娓呯┖杈撳叆妗嗗苟閫€鍑烘坊鍔犳ā寮?
+  // 清空输入框并退出添加模式
   newSearchTagInput.value = "";
   isAddingSearchTag.value = false;
 
-  // 瑙﹀彂鎼滅储
+  // 触发搜索
   performRealtimeSearch();
 }
 
-// 鍔ㄦ€佽皟鏁存悳绱㈡爣绛捐緭鍏ユ瀹藉害
+// 动态调整搜索标签输入框宽度
 function adjustSearchTagInputWidth() {
   if (!searchTagInput.value) return;
 
-  // 浣跨敤Canvas API鏉ョ簿纭祴閲忔枃鏈搴?
+  // 使用Canvas API来精确测量文本宽度
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
 
-  // 璁剧疆瀛椾綋鏍峰紡锛屼笌CSS涓殑鏍峰紡淇濇寔涓€鑷?
+  // 设置字体样式，与CSS中的样式保持一致
   context.font =
     '500 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
-  const text = newSearchTagInput.value || "";
+  const text = newSearchTagInput.value || "输入标签";
   const textWidth = context.measureText(text).width;
 
-  // 璁剧疆鏈€灏忓搴?0px锛屾渶澶у搴?00px锛屽苟鍔犱笂涓€浜沺adding
+  // 设置最小宽度80px，最大宽度200px，并加上一些padding
   searchTagInputWidth.value = Math.min(Math.max(textWidth + 24, 80), 200);
 }
 
@@ -1300,13 +1299,13 @@ function removeTag(tag) {
   const index = searchTags.value.indexOf(tag);
   if (index > -1) {
     searchTags.value.splice(index, 1);
-    // 鍒犻櫎鏍囩鍚庤Е鍙戝疄鏃舵悳绱?
+    // 删除标签后触发实时搜索
     performRealtimeSearch();
   }
 }
 
 function performRealtimeSearch() {
-  // 濡傛灉娌℃湁鎼滅储鏉′欢锛屾仮澶嶅師濮嬬姸鎬?
+  // 如果没有搜索条件，恢复原始状态
   if (!searchName.value && searchTags.value.length === 0) {
     if (isSearchActive.value) {
       clearSearch();
@@ -1314,15 +1313,15 @@ function performRealtimeSearch() {
     return;
   }
 
-  // 淇濆瓨鍘熷鍥剧墖鍒楄〃锛堝鏋滆繕娌℃湁淇濆瓨锛?
+  // 保存原始图片列表（如果还没有保存）
   if (!isSearchActive.value) {
     originalImages.value = [...images.value];
   }
 
-  // 鎵ц鎼滅储
+  // 执行搜索
   let filteredImages = [...originalImages.value];
 
-  // 鎸夊悕绉版悳绱紙鍓嶇紑鍖归厤锛?
+  // 按名称搜索（前缀匹配）
   if (searchName.value) {
     const nameKeyword = searchName.value.toLowerCase();
     filteredImages = filteredImages.filter(
@@ -1330,12 +1329,12 @@ function performRealtimeSearch() {
     );
   }
 
-  // 鎸夋爣绛炬悳绱紙鍓嶇紑鍖归厤锛?
+  // 按标签搜索（前缀匹配）
   if (searchTags.value.length > 0) {
     filteredImages = filteredImages.filter((img) => {
       return searchTags.value.some((searchTag) => {
         const searchTagLower = searchTag.toLowerCase();
-        // 妫€鏌ュ浘鐗囨槸鍚︽湁鏍囩锛屽苟涓旀爣绛句腑鍖呭惈鎼滅储鍏抽敭璇?
+        // 检查图片是否有标签，并且标签中包含搜索关键词
         if (img.tags && Array.isArray(img.tags)) {
           return img.tags.some((imgTag) =>
             imgTag.toLowerCase().includes(searchTagLower)
@@ -1356,18 +1355,18 @@ function clearSearch() {
   searchTags.value = [];
   isSearchActive.value = false;
 
-  // 娓呯悊鎼滅储鏍囩娣诲姞鐘舵€?
+  // 清理搜索标签添加状态
   isAddingSearchTag.value = false;
   newSearchTagInput.value = "";
 
-  // 鎭㈠鍘熷鍥剧墖鍒楄〃
+  // 恢复原始图片列表
   if (originalImages.value.length > 0) {
     images.value = [...originalImages.value];
     originalImages.value = [];
   }
 }
 
-// 鍒濆鍖栧垪鏁拌缃?
+// 初始化列数设置
 function initializeColumnCount() {
   const savedColumnCount = localStorage.getItem("imageGalleryColumnCount");
   if (savedColumnCount) {
@@ -1380,12 +1379,12 @@ function initializeColumnCount() {
   }
 }
 
-// 澶勭悊鍒楁暟鍙樺寲
+// 处理列数变化
 function handleColumnCountChanged(event) {
   columnCount.value = event.detail.columnCount;
 }
 
-// 璁＄畻缃戞牸鏍峰紡
+// 计算网格样式
 const gridStyle = computed(() => {
   if (columnCount.value === "auto") {
     return {
@@ -1416,30 +1415,30 @@ const gridStyle = computed(() => {
   padding: 16px;
 }
 
-/* 浠呭浘鐗囧尯鍩熸粴鍔?*/
+/* 仅图片区域滚动 */
 .gallery-scroll {
   flex: 1;
   min-height: 0;
-  /* 浼樺厛浣跨敤 overlay锛屽鏋滀笉鏀寔鍒欏洖閫€鍒?auto */
+  /* 优先使用 overlay，如果不支持则回退到 auto */
   overflow-y: overlay;
-  /* 濮嬬粓涓烘粴鍔ㄦ潯棰勭暀绌洪棿锛岄伩鍏嶅搴︽尝鍔?*/
+  /* 始终为滚动条预留空间，避免宽度波动 */
   scrollbar-gutter: stable;
-  /* 骞虫粦婊氬姩 */
+  /* 平滑滚动 */
   scroll-behavior: smooth;
 }
 
-/* 鍥為€€鏂规锛氬浜庝笉鏀寔 overlay 鐨勬祻瑙堝櫒 */
+/* 回退方案：对于不支持 overlay 的浏览器 */
 @supports not (overflow-y: overlay) {
   .gallery-scroll {
     overflow-y: auto;
   }
 }
 
-/* 鑷畾涔夋粴鍔ㄦ潯鏍峰紡 - 閫忔槑鑳屾櫙锛屾偓鍋滄樉绀?*/
+/* 自定义滚动条样式 - 透明背景，悬停显示 */
 .gallery-scroll::-webkit-scrollbar {
   width: 8px;
   background: transparent;
-  /* 纭繚婊氬姩鏉″缁堝崰鐢ㄧ┖闂?*/
+  /* 确保滚动条始终占用空间 */
   scrollbar-gutter: stable;
 }
 
@@ -1452,27 +1451,27 @@ const gridStyle = computed(() => {
   background: rgba(0, 0, 0, 0.15);
   border-radius: 4px;
   transition: background-color 0.2s ease;
-  /* 鏈€灏忛珮搴︼紝纭繚婊氬姩鏉″彲瑙佹€?*/
+  /* 最小高度，确保滚动条可见性 */
   min-height: 20px;
 }
 
-/* 婊氬姩鏉℃偓鍋滄椂鏇存槑鏄?*/
+/* 滚动条悬停时更明显 */
 .gallery-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.3);
 }
 
-/* Firefox 婊氬姩鏉℃牱寮?*/
+/* Firefox 滚动条样式 */
 .gallery-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
 }
 
-/* 閽堝 Edge 娴忚鍣ㄧ殑婊氬姩鏉℃牱寮?*/
+/* 针对 Edge 浏览器的滚动条样式 */
 .gallery-scroll {
   -ms-overflow-style: -ms-autohiding-scrollbar;
 }
 
-/* 纭繚婊氬姩鏉″湪瑙︽懜璁惧涓婄殑琛ㄧ幇 */
+/* 确保滚动条在触摸设备上的表现 */
 @media (hover: none) {
   .gallery-scroll::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.2);
@@ -1483,7 +1482,7 @@ const gridStyle = computed(() => {
   }
 }
 
-/* 楂樺姣斿害妯″紡鏀寔 */
+/* 高对比度模式支持 */
 @media (prefers-contrast: high) {
   .gallery-scroll::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.5);
@@ -1508,14 +1507,14 @@ const gridStyle = computed(() => {
   position: relative;
 }
 
-/* 涓诲浘鐗规畩鏍峰紡 */
+/* 主图特殊样式 */
 .card.is-main-image {
-  /* 涓诲浘鏍峰紡鍙互鍦ㄨ繖閲屾坊鍔?*/
+  /* 主图样式可以在这里添加 */
   position: relative;
 }
 
 .card.is-main-image::before {
-  content: "";
+  content: "主图";
   position: absolute;
   top: 8px;
   left: 8px;
@@ -1603,7 +1602,7 @@ const gridStyle = computed(() => {
   object-fit: contain;
 }
 
-/* 鍙抽敭鑿滃崟鏍峰紡 */
+/* 右键菜单样式 */
 .context-menu {
   position: fixed;
   background: white;
@@ -1643,7 +1642,7 @@ const gridStyle = computed(() => {
   margin: 2px 0;
 }
 
-/* 鎵归噺鍒犻櫎鐘舵€佹潯鏍峰紡 */
+/* 批量删除状态条样式 */
 .batch-delete-bar {
   position: sticky;
   top: 0;
@@ -1657,7 +1656,7 @@ const gridStyle = computed(() => {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* 鎶樺彔鍖哄煙鍐呯殑鎵归噺鎿嶄綔鏉″鐢ㄦ牱寮?*/
+/* 折叠区域内的批量操作条复用样式 */
 .menu-batch-bar {
   padding: 12px 16px;
   border-top: 1px solid #e0e0e0;
@@ -1691,7 +1690,7 @@ const gridStyle = computed(() => {
   padding: 6px 12px;
 }
 
-/* 鐏拌壊涓婚鎸夐挳鏍峰紡 */
+/* 灰色主题按钮样式 */
 .gray-button {
   background: #f5f5f5 !important;
   border-color: #d9d9d9 !important;
@@ -1750,7 +1749,7 @@ const gridStyle = computed(() => {
   font-size: 18px !important;
 }
 
-/* 閫変腑鐘舵€佹牱寮?*/
+/* 选中状态样式 */
 .card.is-selected {
   border-color: #409eff;
   /* box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2); */
@@ -1766,7 +1765,7 @@ const gridStyle = computed(() => {
   border-radius: 6px;
 }
 
-/* 缁勫浘鏁伴噺寰芥爣 */
+/* 组图数量徽标 */
 .album-count-badge {
   position: absolute;
   right: 6px;
@@ -1792,7 +1791,7 @@ const gridStyle = computed(() => {
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
 }
 
-/* 鍙姌鍙犺彍鍗曟爮鏍峰紡 */
+/* 可折叠菜单栏样式 */
 .collapsible-menu-bar {
   border-bottom: 1px solid #e0e0e0;
 
@@ -1841,8 +1840,8 @@ const gridStyle = computed(() => {
 }
 
 .menu-content {
-  max-height: none; /* 绉婚櫎楂樺害闄愬埗锛岃鍐呭鑷劧灞曞紑 */
-  overflow: visible; /* 绉婚櫎婊氬姩锛岃鍐呭瀹屽叏鍙 */
+  max-height: none; /* 移除高度限制，让内容自然展开 */
+  overflow: visible; /* 移除滚动，让内容完全可见 */
   transition: padding 0.3s ease;
   background: rgba(245, 245, 245, 0.9);
 }
@@ -1876,7 +1875,7 @@ const gridStyle = computed(() => {
   color: #333;
 }
 
-/* 鍖哄垎涓婁紶鎸夐挳鐨勬牱寮忥紙濮嬬粓绐佸嚭锛?*/
+/* 区分上传按钮的样式（始终突出） */
 .menu-action-item.upload {
   background: #f0f0f0;
   color: #666;
@@ -1886,25 +1885,25 @@ const gridStyle = computed(() => {
   color: #333;
 }
 
-/* 鍏朵粬鎸夐挳鐨勯€変腑鎬佹牱寮?*/
+/* 其他按钮的选中态样式 */
 .menu-action-item.active {
   background: #e0e0e0;
   color: #333;
 }
 
-/* 缁勫浘鍥炬爣鏍峰紡 */
+/* 组图图标样式 */
 .menu-action-item .album-icon {
   width: 22px;
   height: auto;
   object-fit: contain;
 }
 
-/* 涓婁紶鍖哄煙鏍峰紡 */
+/* 上传区域样式 */
 .upload-area {
   border-top: 1px solid #e0e0e0;
   background-color: rgba(245, 245, 245, 0.9);
   padding: 16px;
-  height: 120px; /* 鍥哄畾楂樺害 */
+  height: 120px; /* 固定高度 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1920,7 +1919,7 @@ const gridStyle = computed(() => {
 }
 
 .uploader {
-  border: none; /* 绉婚櫎榛樿杈规锛岄伩鍏嶅弻灞傝櫄绾?*/
+  border: none; /* 移除默认边框，避免双层虚线 */
   border-radius: 6px;
   cursor: pointer;
   position: relative;
@@ -1939,7 +1938,7 @@ const gridStyle = computed(() => {
   background: #f0f9ff;
 }
 
-/* 瑕嗙洊 el-upload 鐨勯粯璁ゆ牱寮?*/
+/* 覆盖 el-upload 的默认样式 */
 .uploader :deep(.el-upload-dragger) {
   border: none;
   background: transparent;
@@ -1961,7 +1960,7 @@ const gridStyle = computed(() => {
   background: transparent;
 }
 
-/* 璋冩暣涓婁紶鍥炬爣澶у皬 */
+/* 调整上传图标大小 */
 .uploader :deep(.el-icon--upload) {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.5);
@@ -1980,10 +1979,10 @@ const gridStyle = computed(() => {
   margin-top: 8px;
 }
 
-/* 鍒嗙粍閫夋嫨鍣ㄦ牱寮?*/
+/* 分组选择器样式 */
 .group-selector {
   border-top: 1px solid #e0e0e0;
-  padding: 8px 16px; /* 缂╁皬涓婁笅鍐呰竟璺濓紝閬垮厤椤舵爮琚尋鍘?*/
+  padding: 8px 16px; /* 缩小上下内边距，避免顶栏被挤压 */
   background-color: rgba(245, 245, 245, 0.9);
 }
 
@@ -1998,7 +1997,7 @@ const gridStyle = computed(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap; /* 鍏佽鎹㈣锛屽畬鏁村睍绀?*/
+  flex-wrap: wrap; /* 允许换行，完整展示 */
 }
 
 .group-tab {
@@ -2057,7 +2056,7 @@ const gridStyle = computed(() => {
   opacity: 0.8;
 }
 
-/* 鎼滅储鍖哄煙鏍峰紡 */
+/* 搜索区域样式 */
 .search-area {
   border-top: 1px solid #e0e0e0;
   padding: 16px;
@@ -2106,7 +2105,7 @@ const gridStyle = computed(() => {
   font-weight: 400;
 }
 
-/* 鎼滅储鏍囩瀹瑰櫒鏍峰紡 */
+/* 搜索标签容器样式 */
 .tags-container {
   position: relative;
 }
@@ -2158,7 +2157,7 @@ const gridStyle = computed(() => {
   opacity: 1;
 }
 
-/* 娣诲姞鏍囩鎸夐挳鏍峰紡 */
+/* 添加标签按钮样式 */
 .add-tag-button {
   display: inline-flex;
   align-items: center;
@@ -2183,7 +2182,7 @@ const gridStyle = computed(() => {
   font-size: 16px;
 }
 
-/* 鎻愮ず鏂囧瓧鏍峰紡 */
+/* 提示文字样式 */
 .tag-hint-text {
   color: #8a9ba8;
   font-size: 13px;
@@ -2192,7 +2191,7 @@ const gridStyle = computed(() => {
   user-select: none;
 }
 
-/* 姝ｅ湪娣诲姞鐨勬爣绛炬牱寮?*/
+/* 正在添加的标签样式 */
 .adding-tag {
   background: rgba(102, 126, 234, 0.1) !important;
   border: 2px solid #667eea !important;
@@ -2228,12 +2227,12 @@ const gridStyle = computed(() => {
   padding: 6px 12px;
 }
 
-/* 婊戝姩闈㈡澘鍔ㄧ敾鏁堟灉 */
+/* 滑动面板动画效果 */
 .slide-down-panel {
   overflow: hidden;
 }
 
-/* 涓轰笉鍚岀被鍨嬬殑闈㈡澘璁剧疆鍚堥€傜殑鏈€澶ч珮搴?*/
+/* 为不同类型的面板设置合适的最大高度 */
 .group-selector.slide-down-panel {
   animation: slideDownGroup 0.3s ease-out;
 }

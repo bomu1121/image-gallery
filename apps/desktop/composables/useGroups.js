@@ -16,8 +16,8 @@ export function useGroups() {
   const { groupDeleteConfirm } = useConfirmDelete();
 
   const groups = ref([
-    { id: -1, name: "", description: "", imageCount: 0 },
-    { id: 0, name: "", description: "", imageCount: 0 },
+    { id: -1, name: "全部", description: "显示所有图片", imageCount: 0 },
+    { id: 0, name: "未分组", description: "默认分组", imageCount: 0 },
   ]);
   const currentGroupId = ref(-1);
   const currentGroupImages = ref([]);
@@ -26,7 +26,7 @@ export function useGroups() {
   const selectedImageGroupId = ref(0);
   const contextMenuImage = ref(null);
 
-  // 鐩戝惉鍒嗙粍椤甸潰鏄剧ず鐘舵€侊紝鑷姩鍒濆鍖栨暟鎹?
+  // 监听分组页面显示状态，自动初始化数据
   watch(
     () => groups.value,
     async (newValue) => {
@@ -36,39 +36,39 @@ export function useGroups() {
     }
   );
 
-  // 鍒嗙粍绠＄悊鍑芥暟
+  // 分组管理函数
   async function selectGroup(groupId) {
     currentGroupId.value = groupId;
     await loadGroupImages(groupId);
   }
 
-  // 鍒濆鍖栧垎缁勬暟鎹?
+  // 初始化分组数据
   async function initializeGroups() {
     try {
-      // 浠庢暟鎹簱鍔犺浇鍒嗙粍鏁版嵁
+      // 从数据库加载分组数据
       const savedGroups = await getAllGroups();
 
-      // 鍒涘缓""鍒嗙粍锛堝缁堝瓨鍦紝涓嶄繚瀛樺埌鏁版嵁搴擄級
+      // 创建"全部"分组（始终存在，不保存到数据库）
       const allGroup = {
         id: -1,
-        name: "",
-        description: "",
+        name: "全部",
+        description: "显示所有图片",
         imageCount: 0,
       };
 
-      // 濡傛灉鏁版嵁搴撲腑娌℃湁鍒嗙粍鏁版嵁锛屽垱寤洪粯璁ょ殑鏈垎缁?
+      // 如果数据库中没有分组数据，创建默认的未分组
       if (savedGroups.length === 0) {
         const defaultGroup = {
           id: 0,
-          name: "",
-          description: "",
+          name: "未分组",
+          description: "默认分组",
           imageCount: 0,
         };
         groups.value = [allGroup, defaultGroup];
-        // 淇濆瓨榛樿鍒嗙粍鍒版暟鎹簱
+        // 保存默认分组到数据库
         await putGroup(defaultGroup);
       } else {
-        // 浣跨敤鏁版嵁搴撲腑鐨勫垎缁勬暟鎹紝骞剁‘淇濇湭鍒嗙粍鎺掑湪绗簩浣嶏紙鍏ㄩ儴鍒嗙粍濮嬬粓绗竴浣嶏級
+        // 使用数据库中的分组数据，并确保未分组排在第二位（全部分组始终第一位）
         const sortedGroups = savedGroups.sort((a, b) => {
           if (a.id === 0) return -1;
           if (b.id === 0) return 1;
@@ -79,7 +79,7 @@ export function useGroups() {
         groups.value = [allGroup, ...sortedGroups];
       }
 
-      // 璁＄畻姣忎釜鍒嗙粍鐨勫浘鐗囨暟閲?
+      // 计算每个分组的图片数量
       const allImages = await getAllImages();
       const groupCounts = {};
       allImages.forEach((img) => {
@@ -87,17 +87,17 @@ export function useGroups() {
         groupCounts[groupId] = (groupCounts[groupId] || 0) + 1;
       });
 
-      // 鏇存柊鎵€鏈夊垎缁勭殑鍥剧墖鏁伴噺
+      // 更新所有分组的图片数量
       groups.value.forEach((group) => {
         if (group.id === -1) {
-          // ""鍒嗙粍鐨勬暟閲忔槸鎵€鏈夊浘鐗囩殑鎬绘暟
+          // "全部"分组的数量是所有图片的总数
           group.imageCount = allImages.length;
         } else {
           group.imageCount = groupCounts[group.id] || 0;
         }
       });
 
-      // 涓烘湁鍥剧墖浣嗘病鏈夊搴斿垎缁勭殑ID鍒涘缓涓存椂鍒嗙粍
+      // 为有图片但没有对应分组的ID创建临时分组
       const existingGroupIds = new Set(groups.value.map((g) => g.id));
       const imageGroupIds = new Set(Object.keys(groupCounts).map(Number));
 
@@ -105,21 +105,21 @@ export function useGroups() {
         if (!existingGroupIds.has(groupId) && groupId !== 0) {
           const newGroup = {
             id: groupId,
-            name: `鍒嗙粍 ${groupId}`,
-            description: "",
+            name: `分组 ${groupId}`,
+            description: "自动创建的分组",
             imageCount: groupCounts[groupId],
           };
           groups.value.push(newGroup);
-          // 淇濆瓨鏂板垎缁勫埌鏁版嵁搴?
+          // 保存新分组到数据库
           await putGroup(newGroup);
         }
       });
     } catch (error) {
-      console.error("", error);
-      // 濡傛灉鍑洪敊锛岃嚦灏戜繚璇佹湁""鍜岄粯璁ょ殑鏈垎缁?
+      console.error("初始化分组数据失败:", error);
+      // 如果出错，至少保证有"全部"和默认的未分组
       groups.value = [
-        { id: -1, name: "", description: "", imageCount: 0 },
-        { id: 0, name: "", description: "", imageCount: 0 },
+        { id: -1, name: "全部", description: "显示所有图片", imageCount: 0 },
+        { id: 0, name: "未分组", description: "默认分组", imageCount: 0 },
       ];
     }
   }
@@ -130,14 +130,14 @@ export function useGroups() {
 
       let groupImages;
       if (groupId === -1) {
-        // ""鍒嗙粍锛氭樉绀烘墍鏈夊浘鐗?
+        // "全部"分组：显示所有图片
         groupImages = allImages;
       } else {
-        // 鍏朵粬鍒嗙粍锛氳繃婊ゅ嚭鎸囧畾鍒嗙粍鐨勫浘鐗?
+        // 其他分组：过滤出指定分组的图片
         groupImages = allImages.filter((img) => (img.groupId || 0) === groupId);
       }
 
-      // 涓哄浘鐗囧垱寤?objectUrl
+      // 为图片创建 objectUrl
       currentGroupImages.value = groupImages.map((img) => ({
         ...img,
         objectUrl:
@@ -146,25 +146,25 @@ export function useGroups() {
             : img.url,
       }));
 
-      // 鏇存柊鍒嗙粍鐨勫浘鐗囨暟閲?
+      // 更新分组的图片数量
       const group = groups.value.find((g) => g.id === groupId);
       if (group) {
         if (groupId === -1) {
-          // ""鍒嗙粍鐨勬暟閲忔槸鎵€鏈夊浘鐗囩殑鎬绘暟
+          // "全部"分组的数量是所有图片的总数
           group.imageCount = allImages.length;
         } else {
           group.imageCount = groupImages.length;
         }
       }
     } catch (error) {
-      console.error("", error);
+      console.error("加载分组图片失败:", error);
       currentGroupImages.value = [];
     }
   }
 
   async function createGroup() {
     if (!newGroup.value.name.trim()) {
-      warning("");
+      warning("请输入分组名称");
       return;
     }
 
@@ -176,53 +176,53 @@ export function useGroups() {
     };
 
     try {
-      // 淇濆瓨鍒版暟鎹簱锛岃幏鍙栦富閿紙鍙兘绛変簬浼犲叆鐨?id 鎴栫敱 IDB 鐢熸垚锛?
+      // 保存到数据库，获取主键（可能等于传入的 id 或由 IDB 生成）
       const key = await putGroup(group);
       const persistedId = typeof key === "number" ? key : group.id;
-      // 鐢ㄦ寔涔呭寲鍚庣殑 id 瑙勮寖鍖栧璞?
+      // 用持久化后的 id 规范化对象
       const normalized = { ...group, id: persistedId };
-      // 娣诲姞鍒版湰鍦扮姸鎬?
+      // 添加到本地状态
       groups.value.push(normalized);
       newGroup.value = { name: "", description: "" };
-      success("");
+      success("分组创建成功");
       return normalized.id;
     } catch (err) {
-      console.error("", err);
-      error("");
+      console.error("创建分组失败:", err);
+      error("创建分组失败，请重试");
       return null;
     }
   }
 
   function showGroupContextMenu(event, group) {
-    if (group.id === 0) return; // 鏈垎缁勪笉鑳界紪杈?
+    if (group.id === 0) return; // 未分组不能编辑
 
     editingGroup.value = { ...group };
   }
 
   async function updateGroup() {
     if (!editingGroup.value.name.trim()) {
-      warning("");
+      warning("请输入分组名称");
       return;
     }
 
     try {
-      // 鏇存柊鏁版嵁搴?
+      // 更新数据库
       await updateGroupInDB(editingGroup.value.id, {
         name: editingGroup.value.name.trim(),
         description: editingGroup.value.description.trim(),
       });
 
-      // 鏇存柊鏈湴鐘舵€?
+      // 更新本地状态
       const index = groups.value.findIndex(
         (g) => g.id === editingGroup.value.id
       );
       if (index !== -1) {
         groups.value[index] = { ...editingGroup.value };
-        success("");
+        success("分组更新成功");
       }
     } catch (err) {
-      console.error("", err);
-      error("");
+      console.error("更新分组失败:", err);
+      error("更新分组失败，请重试");
     }
   }
 
@@ -232,38 +232,38 @@ export function useGroups() {
         editingGroup.value.name,
         editingGroup.value.imageCount,
         {
-          confirmButtonText: "",
-          cancelButtonText: "",
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
         }
       );
 
       const deletedGroup = editingGroup.value;
 
-      // 1. 鍏堝皢璇ュ垎缁勫唴鐨勬墍鏈夊浘鐗囩Щ鍔ㄥ埌鏈垎缁?
+      // 1. 先将该分组内的所有图片移动到未分组
       const allImages = await getAllImages();
       const imagesInGroup = allImages.filter(
         (img) => (img.groupId || 0) === deletedGroup.id
       );
 
-      // 鎵归噺鏇存柊鍥剧墖鐨勫垎缁処D涓?锛堟湭鍒嗙粍锛?
+      // 批量更新图片的分组ID为0（未分组）
       for (const img of imagesInGroup) {
         await updateImage(img.id, { groupId: 0 });
       }
 
-      // 2. 浠庢暟鎹簱鍒犻櫎鍒嗙粍
+      // 2. 从数据库删除分组
       await deleteGroupFromDB(deletedGroup.id);
 
-      // 3. 鏇存柊鏈湴鐘舵€?
+      // 3. 更新本地状态
       const index = groups.value.findIndex((g) => g.id === deletedGroup.id);
       if (index !== -1) {
-        // 灏嗗垹闄ゅ垎缁勭殑鍥剧墖鏁伴噺娣诲姞鍒版湭鍒嗙粍
+        // 将删除分组的图片数量添加到未分组
         const ungroupedGroup = groups.value.find((g) => g.id === 0);
         if (ungroupedGroup) {
           ungroupedGroup.imageCount += deletedGroup.imageCount;
         }
 
         groups.value.splice(index, 1);
-        success(`鍒嗙粍鍒犻櫎鎴愬姛锛?{imagesInGroup.length} 寮犲浘鐗囧凡绉诲姩鍒版湭鍒嗙粍`);
+        success(`分组删除成功，${imagesInGroup.length} 张图片已移动到未分组`);
 
         if (currentGroupId.value === deletedGroup.id) {
           currentGroupId.value = 0;
@@ -271,20 +271,20 @@ export function useGroups() {
         }
       }
     } catch (err) {
-      if (err.message !== "") {
-        console.error("", err);
-        error("");
+      if (err.message !== "用户取消") {
+        console.error("删除分组失败:", err);
+        error("删除分组失败，请重试");
       }
     }
   }
 
-  // 閲嶆柊鎺掑簭鍒嗙粍锛堜紶鍏?[{id, order}]锛?
+  // 重新排序分组（传入 [{id, order}]）
   async function reorderGroups(ordered) {
     try {
-      // 鏇存柊鏈湴椤哄簭瀛楁
+      // 更新本地顺序字段
       const orderMap = new Map(ordered.map((o) => [o.id, o.order]));
 
-      // 纭繚鏈垎缁勭殑order涓?锛屽叾浠栧垎缁勪粠1寮€濮?
+      // 确保未分组的order为0，其他分组从1开始
       groups.value = groups.value
         .map((g) => ({
           ...g,
@@ -296,65 +296,65 @@ export function useGroups() {
               : g.order,
         }))
         .sort((a, b) => {
-          // 鏈垎缁勫缁堟帓鍦ㄧ涓€浣?
+          // 未分组始终排在第一位
           if (a.id === 0) return -1;
           if (b.id === 0) return 1;
-          // 鍏朵粬鍒嗙粍鎸塷rder鎺掑簭
+          // 其他分组按order排序
           const ao = typeof a.order === "number" ? a.order : a.createdAt || 0;
           const bo = typeof b.order === "number" ? b.order : b.createdAt || 0;
           return ao - bo;
         });
 
-      // 鎸佷箙鍖栨瘡涓垎缁勭殑 order
+      // 持久化每个分组的 order
       for (const g of groups.value) {
         await updateGroupInDB(g.id, { order: g.order });
       }
     } catch (e) {
-      console.error("", e);
-      error("");
+      console.error("保存分组顺序失败:", e);
+      error("保存分组顺序失败，请重试");
     }
   }
 
-  // 閲嶅懡鍚嶅垎缁?
+  // 重命名分组
   async function renameGroup(id, name) {
     try {
       await updateGroupInDB(id, { name: name.trim() });
       const idx = groups.value.findIndex((g) => g.id === id);
       if (idx !== -1) groups.value[idx].name = name.trim();
     } catch (e) {
-      console.error("", e);
-      error("");
+      console.error("重命名失败:", e);
+      error("重命名失败，请重试");
     }
   }
 
-  // 鎵归噺鍒犻櫎鍒嗙粍锛堟嫋鎷藉垹闄ゅ尯锛?
+  // 批量删除分组（拖拽删除区）
   async function bulkDeleteGroups(ids) {
     try {
       let totalMovedImages = 0;
 
       for (const id of ids) {
-        if (id === 0) continue; // 璺宠繃鏈垎缁?
+        if (id === 0) continue; // 跳过未分组
 
-        // 1. 鍏堝皢璇ュ垎缁勫唴鐨勬墍鏈夊浘鐗囩Щ鍔ㄥ埌鏈垎缁?
+        // 1. 先将该分组内的所有图片移动到未分组
         const allImages = await getAllImages();
         const imagesInGroup = allImages.filter(
           (img) => (img.groupId || 0) === id
         );
 
-        // 鎵归噺鏇存柊鍥剧墖鐨勫垎缁処D涓?锛堟湭鍒嗙粍锛?
+        // 批量更新图片的分组ID为0（未分组）
         for (const img of imagesInGroup) {
           await updateImage(img.id, { groupId: 0 });
         }
 
         totalMovedImages += imagesInGroup.length;
 
-        // 2. 浠庢暟鎹簱鍒犻櫎鍒嗙粍
+        // 2. 从数据库删除分组
         await deleteGroupFromDB(id);
 
-        // 3. 浠庢湰鍦扮姸鎬佷腑绉婚櫎鍒嗙粍
+        // 3. 从本地状态中移除分组
         const idx = groups.value.findIndex((g) => g.id === id);
         if (idx !== -1) {
-          // 灏嗗垹闄ゅ垎缁勭殑鍥剧墖鏁伴噺娣诲姞鍒版湭鍒嗙粍
+          // 将删除分组的图片数量添加到未分组
           const ungroupedGroup = groups.value.find((g) => g.id === 0);
           if (ungroupedGroup) {
             ungroupedGroup.imageCount += imagesInGroup.length;
@@ -364,13 +364,13 @@ export function useGroups() {
         }
       }
 
-      // 鍒锋柊褰撳墠鍒嗙粍鍥剧墖鏄剧ず
+      // 刷新当前分组图片显示
       await loadGroupImages(currentGroupId.value);
 
-      success(`鎵归噺鍒犻櫎鎴愬姛锛?{totalMovedImages} 寮犲浘鐗囧凡绉诲姩鍒版湭鍒嗙粍`);
+      success(`批量删除成功，${totalMovedImages} 张图片已移动到未分组`);
     } catch (e) {
-      console.error("", e);
-      error("");
+      console.error("批量删除分组失败:", e);
+      error("批量删除分组失败，请重试");
     }
   }
 
@@ -390,18 +390,18 @@ export function useGroups() {
     const newGroupId = selectedImageGroupId.value;
 
     if (oldGroupId === newGroupId) {
-      warning("");
+      warning("图片已在当前分组中");
       return;
     }
 
     try {
-      // 鏇存柊鏁版嵁搴撲腑鐨勫浘鐗囧垎缁勪俊鎭?
+      // 更新数据库中的图片分组信息
       await updateImage(contextMenuImage.value.id, { groupId: newGroupId });
 
-      // 鏇存柊鍐呭瓨涓殑鍥剧墖鍒嗙粍淇℃伅
+      // 更新内存中的图片分组信息
       contextMenuImage.value.groupId = newGroupId;
 
-      // 鏇存柊鍒嗙粍鍥剧墖鏁伴噺
+      // 更新分组图片数量
       const oldGroup = groups.value.find((g) => g.id === oldGroupId);
       const newGroup = groups.value.find((g) => g.id === newGroupId);
 
@@ -412,22 +412,21 @@ export function useGroups() {
         newGroup.imageCount++;
       }
 
-      success("");
+      success("图片已移动到指定分组");
     } catch (err) {
-      console.error("", err);
-      error("");
+      console.error("移动图片失败:", err);
+      error("移动图片失败，请重试");
     }
   }
 
-  // 鏂囦欢涓婁紶澶勭悊
+  // 文件上传处理
   async function onFileChange(file, targetGroupId = null) {
-    console.log("[drag:2] useGroups onFileChange", file?.name, file?.raw?.name);
     try {
       const raw = file.raw;
       if (!raw) return;
       const arrayBuffer = await raw.arrayBuffer();
       const blob = new Blob([arrayBuffer], { type: raw.type || "image/*" });
-      // 濡傛灉鐩爣鍒嗙粍鏄?鍏ㄩ儴""鏈垎缁?浣滀负瀹為檯瀛樺偍鍒嗙粍
+      // 如果目标分组是"全部"分组，则使用"未分组"作为实际存储分组
       const actualGroupId =
         targetGroupId !== null ? targetGroupId : currentGroupId.value;
       const finalGroupId = actualGroupId === -1 ? 0 : actualGroupId;
@@ -437,40 +436,40 @@ export function useGroups() {
         type: raw.type,
         size: raw.size,
         blob,
-        groupId: finalGroupId, // 浣跨敤瀹為檯鐨勫垎缁処D
-        createdAt: Date.now(), // 娣诲姞涓婁紶鏃堕棿
-        tags: [], // 鍒濆鍖栫┖鐨勬爣绛炬暟缁?
+        groupId: finalGroupId, // 使用实际的分组ID
+        createdAt: Date.now(), // 添加上传时间
+        tags: [], // 初始化空的标签数组
       };
       await putImage(record);
 
-      // 鏇存柊瀵瑰簲鍒嗙粍鐨勫浘鐗囨暟閲?
+      // 更新对应分组的图片数量
       const targetGroup = groups.value.find((g) => g.id === record.groupId);
       if (targetGroup) {
         targetGroup.imageCount++;
       }
 
-      // 鏇存柊""鍒嗙粍鐨勬暟閲?
+      // 更新"全部"分组的数量
       const allGroup = groups.value.find((g) => g.id === -1);
       if (allGroup) {
         allGroup.imageCount++;
       }
 
-      // 濡傛灉褰撳墠鍦ㄥ垎缁勯〉闈笖鏄剧ず鐨勬槸鐩爣鍒嗙粍锛屽埛鏂板浘鐗囨樉绀?
+      // 如果当前在分组页面且显示的是目标分组，刷新图片显示
       if (currentGroupId.value === record.groupId) {
         await loadGroupImages(record.groupId);
       }
 
-      // 瑙﹀彂鍥剧墖搴撳埛鏂颁簨浠?
+      // 触发图片库刷新事件
       window.dispatchEvent(new CustomEvent("imageAdded"));
 
-      success("");
+      success("图片上传成功");
     } catch (e) {
-      console.error("", e);
-      error("");
+      console.error("上传失败:", e);
+      error("上传失败，请重试");
     }
   }
 
-  // 澶勭悊绮樿创鐨勫浘鐗囷紙涓庝笂浼犵被浼硷紝浣嗕笉闇€瑕佹枃浠跺璞★級
+  // 处理粘贴的图片（与上传类似，但不需要文件对象）
   async function onPasteImages(
     processedImages,
     targetGroupId = null,
@@ -479,7 +478,7 @@ export function useGroups() {
     try {
       const actualGroupId =
         targetGroupId !== null ? targetGroupId : currentGroupId.value;
-      // 濡傛灉鐩爣鍒嗙粍鏄?鍏ㄩ儴""鏈垎缁?浣滀负瀹為檯瀛樺偍鍒嗙粍
+      // 如果目标分组是"全部"分组，则使用"未分组"作为实际存储分组
       const finalGroupId = actualGroupId === -1 ? 0 : actualGroupId;
 
       if (!processedImages || processedImages.length === 0) {
@@ -497,7 +496,7 @@ export function useGroups() {
             await putImage(toInsert);
           }
         } else {
-          // 澶氬浘绮樿创锛氫互缁勫浘褰㈠紡淇濆瓨锛岄鍥句负涓诲浘锛屽叾浣欎负闄勫浘
+          // 多图粘贴：以组图形式保存，首图为主图，其余为附图
           const first = {
             ...processedImages[0],
             groupId: finalGroupId,
@@ -517,30 +516,30 @@ export function useGroups() {
         }
       }
 
-      // 鏇存柊瀵瑰簲鍒嗙粍鐨勫浘鐗囨暟閲?
+      // 更新对应分组的图片数量
       const targetGroup = groups.value.find((g) => g.id === finalGroupId);
       if (targetGroup) {
         targetGroup.imageCount += processedImages.length;
       }
 
-      // 鏇存柊""鍒嗙粍鐨勬暟閲?
+      // 更新"全部"分组的数量
       const allGroup = groups.value.find((g) => g.id === -1);
       if (allGroup) {
         allGroup.imageCount += processedImages.length;
       }
 
-      // 濡傛灉褰撳墠鍦ㄥ垎缁勯〉闈笖鏄剧ず鐨勬槸鐩爣鍒嗙粍锛屽埛鏂板浘鐗囨樉绀?
+      // 如果当前在分组页面且显示的是目标分组，刷新图片显示
       if (currentGroupId.value === actualGroupId) {
         await loadGroupImages(actualGroupId);
       }
 
-      // 瑙﹀彂鍥剧墖搴撳埛鏂颁簨浠?
+      // 触发图片库刷新事件
       window.dispatchEvent(new CustomEvent("imageAdded"));
 
-      // success(`鎴愬姛绮樿创 ${processedImages.length} 寮犲浘鐗嘸);
+      // success(`成功粘贴 ${processedImages.length} 张图片`);
     } catch (e) {
-      console.error("", e);
-      error("");
+      console.error("粘贴失败:", e);
+      error("粘贴失败，请重试");
     }
   }
 
