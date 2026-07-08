@@ -1,4 +1,4 @@
-﻿export interface TagSuggestion {
+export interface TagSuggestion {
   name: string;
   confidence: number;
   source: 'ai' | 'similarity' | 'semantic' | 'visual';

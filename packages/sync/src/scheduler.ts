@@ -1,4 +1,4 @@
-﻿import type { SyncAdapter, SyncResult } from './adapters/types';
+import type { SyncAdapter, SyncResult } from './adapters/types';
 
 export type SyncCallback = (result: SyncResult) => void;
 

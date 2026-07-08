@@ -1,4 +1,4 @@
-﻿import type { SyncAdapter, ServerConfig } from './types';
+import type { SyncAdapter, ServerConfig } from './types';
 import axios from 'axios';
 
 export function createHTTPAdapter(config: ServerConfig): SyncAdapter {

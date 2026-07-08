@@ -1,2 +1,2 @@
-﻿// @gallery/shared - Shared types, constants, and utilities
+// @gallery/shared - Shared types, constants, and utilities
 export {};

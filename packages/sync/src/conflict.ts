@@ -1,4 +1,4 @@
-﻿import type { ConflictResolution } from './adapters/types';
+import type { ConflictResolution } from './adapters/types';
 
 export function resolveConflict<T extends { updatedAt: number }>(
   localItem: T,

@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createSyncAdapter, resolveConflict, SyncScheduler } from '../index';
 
 describe('Sync Package', () => {

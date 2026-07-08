@@ -1,4 +1,4 @@
-﻿import sharp from 'sharp';
+import sharp from 'sharp';
 
 const THUMBNAIL_SIZE = 256;
 

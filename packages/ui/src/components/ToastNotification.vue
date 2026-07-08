@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 export interface Notification {
   id: string;
   title: string;

@@ -1,4 +1,4 @@
-﻿export { createAIProvider, getAvailableProviders } from './factory';
+export { createAIProvider, getAvailableProviders } from './factory';
 export type {
   AIVisionProvider,
   AnalyzeOptions,

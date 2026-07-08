@@ -1,4 +1,4 @@
-﻿export type ServerType = 'webdav' | 'http' | 'ftp' | 'sftp' | 'custom';
+export type ServerType = 'webdav' | 'http' | 'ftp' | 'sftp' | 'custom';
 
 export type ConflictResolution = 'local' | 'remote' | 'ask';
 

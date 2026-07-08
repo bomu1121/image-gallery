@@ -1,4 +1,4 @@
-﻿import { ref } from 'vue';
+import { ref } from 'vue';
 import type { Notification } from './types';
 
 export interface Notification {

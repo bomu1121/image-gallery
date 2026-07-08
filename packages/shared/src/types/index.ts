@@ -1,4 +1,4 @@
-﻿export interface ImageRecord {
+export interface ImageRecord {
   id?: number;
   name: string;
   size: number;

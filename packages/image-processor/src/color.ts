@@ -1,4 +1,4 @@
-﻿import sharp from 'sharp';
+import sharp from 'sharp';
 
 export interface ColorPalette {
   dominant: string[];

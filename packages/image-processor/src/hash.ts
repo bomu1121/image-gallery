@@ -1,4 +1,4 @@
-﻿import sharp from 'sharp';
+import sharp from 'sharp';
 
 /**
  * Generate a perceptual hash (pHash) for image comparison.

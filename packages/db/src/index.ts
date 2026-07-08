@@ -1,4 +1,4 @@
-﻿export { GalleryDB, db } from './schema';
+export { GalleryDB, db } from './schema';
 export { imagesRepo } from './repositories/imagesRepo';
 export { groupsRepo, trashRepo, backgroundRepo } from './repositories/groupsRepo';
 export { albumsRepo, albumItemsRepo, analysisLogsRepo } from './repositories/albumsRepo';

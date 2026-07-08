@@ -1,4 +1,4 @@
-﻿import { db } from '../schema';
+import { db } from '../schema';
 import type { AlbumRecord, AlbumItemRecord } from '@gallery/shared/types';
 
 export const albumsRepo = {

@@ -1,4 +1,4 @@
-﻿import type { AIVisionProvider } from './types';
+import type { AIVisionProvider } from './types';
 
 const providerRegistry = new Map<string, () => Promise<{ createProvider: (config: any) => AIVisionProvider }>>();
 

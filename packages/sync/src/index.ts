@@ -1,4 +1,4 @@
-﻿import type { SyncAdapter, SyncResult, ServerConfig, SyncSettings, ConflictResolution } from './adapters/types';
+import type { SyncAdapter, SyncResult, ServerConfig, SyncSettings, ConflictResolution } from './adapters/types';
 
 // Adapter factory
 import { createWebDAVAdapter } from './adapters/webdav';

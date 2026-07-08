@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createAIProvider, getAvailableProviders } from '../factory';
 
 describe('AI Provider Factory', () => {
