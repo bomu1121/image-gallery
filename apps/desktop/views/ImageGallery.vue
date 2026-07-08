@@ -91,7 +91,11 @@
         </div>
 
         <!-- 上传区域 -->
-        <div v-if="uploadMode" class="upload-area slide-down-panel">
+        <div v-if="uploadMode" class="upload-area slide-down-panel" 
+    @dragover.prevent="console.log('[drag:raw] dragover on upload-area')"
+    @dragenter="console.log('[drag:raw] dragenter on upload-area')"  
+    @drop.prevent="console.log('[drag:raw] drop on upload-area', $event.dataTransfer?.files)"
+  >
           <el-upload
             class="uploader"
             drag
