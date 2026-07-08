@@ -31,7 +31,7 @@ function openDB() {
 }
 
 
-// 纭繚鍒嗙粍瀵硅薄浠撳簱瀛樺湪锛堣嫢缂哄け鍒欒Е鍙戜竴娆＄増鏈崌绾у垱寤轰箣锛?
+// 绾喕绻氶崚鍡欑矋鐎电钖勬禒鎾崇氨鐎涙ê婀敍鍫ｅ缂傚搫銇戦崚娆捫曢崣鎴滅濞嗭紕澧楅張顒€宕岀痪褍鍨卞杞扮閿?
 async function ensureGroupsStoreExists() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 3);
@@ -73,7 +73,7 @@ async function ensureGroupsStoreExists() {
   });
 }
 
-// 纭繚鑳屾櫙瀵硅薄浠撳簱瀛樺湪锛堣嫢缂哄け鍒欒Е鍙戜竴娆＄増鏈崌绾у垱寤轰箣锛?
+// 绾喕绻氶懗灞炬珯鐎电钖勬禒鎾崇氨鐎涙ê婀敍鍫ｅ缂傚搫銇戦崚娆捫曢崣鎴滅濞嗭紕澧楅張顒€宕岀痪褍鍨卞杞扮閿?
 async function ensureBackgroundStoreExists() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 3);
@@ -117,129 +117,17 @@ async function ensureBackgroundStoreExists() {
   });
 }
 
-// 纭繚AI鍒嗘瀽鏃ュ織瀵硅薄浠撳簱瀛樺湪锛堣嫢缂哄け鍒欒Е鍙戜竴娆＄増鏈崌绾у垱寤轰箣锛?
+// 绾喕绻欰I閸掑棙鐎介弮銉ョ箶鐎电钖勬禒鎾崇氨鐎涙ê婀敍鍫ｅ缂傚搫銇戦崚娆捫曢崣鎴滅濞嗭紕澧楅張顒€宕岀痪褍鍨卞杞扮閿?
 async function ensureAnalysisLogsStoreExists() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 3);
-    req.onsuccess = () => {
-      const db = req.result;
-      if (db.objectStoreNames.contains(ANALYSIS_LOGS_STORE_NAME)) {
-        db.close();
-        resolve();
-        return;
-      }
-
-      const nextVersion = db.version + 1;
-      db.close();
-
-      const upgradeReq = indexedDB.open(DB_NAME, nextVersion);
-      upgradeReq.onupgradeneeded = () => {
-        const udb = upgradeReq.result;
-        if (!udb.objectStoreNames.contains(ANALYSIS_LOGS_STORE_NAME)) {
-          const analysisLogsStore = udb.createObjectStore(
-            ANALYSIS_LOGS_STORE_NAME,
-            {
-              keyPath: "id",
-              autoIncrement: true,
-            }
-          );
-          analysisLogsStore.createIndex("timestamp", "timestamp", {
-            unique: false,
-          });
-          analysisLogsStore.createIndex("imageName", "imageName", {
-            unique: false,
-          });
-          analysisLogsStore.createIndex("aiService", "aiService", {
-            unique: false,
-          });
-          analysisLogsStore.createIndex("status", "status", { unique: false });
-        }
-      };
-      upgradeReq.onblocked = () => {
-        console.warn("[idb] ensureAnalysisLogsStoreExists upgrade blocked");
-      };
-      upgradeReq.onsuccess = () => {
-        upgradeReq.result.close();
-        resolve();
-      };
-      upgradeReq.onerror = () => reject(upgradeReq.error);
-    };
-    req.onblocked = () => {
-      console.warn("[idb] ensureAnalysisLogsStoreExists open blocked");
-    };
-    req.onerror = () => reject(req.error);
-  });
+  await openDB();
 }
 
-// 纭繚鐩稿唽涓庣浉鍐岄」瀵硅薄浠撳簱瀛樺湪
+// 绾喕绻氶惄绋垮斀娑撳海娴夐崘宀勩€嶇€电钖勬禒鎾崇氨鐎涙ê婀?
 async function ensureAlbumsStoresExist() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 3);
-    req.onsuccess = () => {
-      const db = req.result;
-      const needAlbums = !db.objectStoreNames.contains(ALBUMS_STORE_NAME);
-      const needAlbumItems = !db.objectStoreNames.contains(
-        ALBUM_ITEMS_STORE_NAME
-      );
-      if (!needAlbums && !needAlbumItems) {
-        db.close();
-        resolve();
-        return;
-      }
-
-      const nextVersion = db.version + 1;
-      db.close();
-
-      const upgradeReq = indexedDB.open(DB_NAME, nextVersion);
-      upgradeReq.onupgradeneeded = () => {
-        const udb = upgradeReq.result;
-        if (!udb.objectStoreNames.contains(ALBUMS_STORE_NAME)) {
-          const albumsStore = udb.createObjectStore(ALBUMS_STORE_NAME, {
-            keyPath: "id",
-            autoIncrement: true,
-          });
-          albumsStore.createIndex("updatedAt", "updatedAt", { unique: false });
-          albumsStore.createIndex("name", "name", { unique: false });
-        }
-        if (!udb.objectStoreNames.contains(ALBUM_ITEMS_STORE_NAME)) {
-          const albumItemsStore = udb.createObjectStore(
-            ALBUM_ITEMS_STORE_NAME,
-            {
-              keyPath: "id",
-              autoIncrement: true,
-            }
-          );
-          albumItemsStore.createIndex("albumId", "albumId", { unique: false });
-          albumItemsStore.createIndex("imageId", "imageId", { unique: false });
-          albumItemsStore.createIndex(
-            "albumId_imageId",
-            ["albumId", "imageId"],
-            { unique: true }
-          );
-          albumItemsStore.createIndex(
-            "albumId_sortOrder",
-            ["albumId", "sortOrder"],
-            { unique: false }
-          );
-        }
-      };
-      upgradeReq.onblocked = () => {
-        console.warn("[idb] ensureAlbumsStoresExist upgrade blocked");
-      };
-      upgradeReq.onsuccess = () => {
-        upgradeReq.result.close();
-        resolve();
-      };
-      upgradeReq.onerror = () => reject(upgradeReq.error);
-    };
-    req.onblocked = () => {
-      console.warn("[idb] ensureAlbumsStoresExist open blocked");
-    };
-    req.onerror = () => reject(req.error);
-  });
+  await openDB();
 }
 
-// ==================== 鐩稿唽锛堢粍鍥撅級鐩稿叧 API ====================
+// ==================== 閻╃鍞介敍鍫㈢矋閸ユ拝绱氶惄绋垮彠 API ====================
 export async function createAlbum(album) {
   await ensureAlbumsStoresExist();
   const db = await openDB();
@@ -290,14 +178,14 @@ export async function updateAlbum(id, updates) {
         return;
       }
       const data = { ...existed };
-      // 澶勭悊璁℃暟澧為噺
+      // 婢跺嫮鎮婄拋鈩冩殶婢х偤鍣?
       if (typeof updates.itemCountDelta === "number") {
         data.itemCount = Math.max(
           0,
           (data.itemCount || 0) + updates.itemCountDelta
         );
       }
-      // 鍏朵粬瀛楁鍚堝苟
+      // 閸忔湹绮€涙顔岄崥鍫濊嫙
       Object.keys(updates).forEach((k) => {
         if (k === "itemCountDelta") return;
         if (k === "tags") {
@@ -326,7 +214,7 @@ export async function deleteAlbum(id) {
     const albumsStore = tx.objectStore(ALBUMS_STORE_NAME);
     const itemsStore = tx.objectStore(ALBUM_ITEMS_STORE_NAME);
 
-    // 鍒犻櫎 album_items 鍐呯殑鍏宠仈
+    // 閸掔娀娅?album_items 閸愬懐娈戦崗瀹犱粓
     const idx = itemsStore.index("albumId");
     const range = IDBKeyRange.only(id);
     const toDelete = [];
@@ -337,7 +225,7 @@ export async function deleteAlbum(id) {
         cursor.continue();
       } else {
         toDelete.forEach((pk) => itemsStore.delete(pk));
-        // 鍒犻櫎鐩稿唽鏈韩
+        // 閸掔娀娅庨惄绋垮斀閺堫剝闊?
         albumsStore.delete(id);
       }
     };
@@ -347,7 +235,7 @@ export async function deleteAlbum(id) {
   });
 }
 
-// 鐩稿唽椤癸紙鍥剧墖鍔犲叆/绉婚櫎/鎺掑簭锛?
+// 閻╃鍞芥い鐧哥礄閸ュ墽澧栭崝鐘插弳/缁夊娅?閹烘帒绨敍?
 export async function addImagesToAlbum(
   albumId,
   imageIds,
@@ -379,7 +267,7 @@ export async function addImagesToAlbum(
         added += 1;
       };
       req.onerror = () => {
-        // 鑻ヨ繚鍙嶅敮涓€绾︽潫锛堝凡瀛樺湪锛夛紝蹇界暐鍗冲彲
+        // 閼汇儴绻氶崣宥呮暜娑撯偓缁撅附娼敍鍫濆嚒鐎涙ê婀敍澶涚礉韫囩晫鏆愰崡鍐插讲
         if (req.error && req.error.name === "ConstraintError") {
           return;
         }
@@ -389,7 +277,7 @@ export async function addImagesToAlbum(
     imageIds.forEach((id, i) => addOne(id, i));
 
     tx.oncomplete = () => {
-      // 鏇存柊璁℃暟涓庢洿鏂版椂闂?
+      // 閺囧瓨鏌婄拋鈩冩殶娑撳孩娲块弬鐗堟闂?
       updateAlbum(albumId, { itemCountDelta: added }).finally(resolve);
     };
     tx.onerror = () => reject(tx.error);
@@ -487,7 +375,7 @@ export async function updateAlbumItem(id, updates) {
   });
 }
 
-// 鍒犻櫎鍥剧墖鏃剁殑绾ц仈娓呯悊锛氫緵澶栭儴鍦ㄥ垹闄ゅ浘鐗囧墠璋冪敤
+// 閸掔娀娅庨崶鍓у閺冨墎娈戠痪褑浠堝〒鍛倞閿涙矮绶垫径鏍劥閸︺劌鍨归梽銈呮禈閻楀洤澧犵拫鍐暏
 export async function cascadeDeleteAlbumItemsByImageId(imageId) {
   await ensureAlbumsStoresExist();
   const db = await openDB();
@@ -513,17 +401,17 @@ export async function cascadeDeleteAlbumItemsByImageId(imageId) {
       }
     };
     tx.oncomplete = async () => {
-      // 鎵归噺鏇存柊鐩稿唽璁℃暟锛屽苟澶勭悊灏侀潰鍥為€€
+      // 閹靛綊鍣洪弴瀛樻煀閻╃鍞界拋鈩冩殶閿涘苯鑻熸径鍕倞鐏忎線娼伴崶鐐衡偓鈧?
       const entries = Array.from(affectedAlbumIds.entries());
       for (const [aid, cnt] of entries) {
         try {
-          // 鍏堟洿鏂拌鏁?
+          // 閸忓牊娲块弬鎷岊吀閺?
           await updateAlbum(aid, { itemCountDelta: -cnt });
-          // 妫€鏌ュ皝闈㈡槸鍚﹂渶瑕佸洖閫€
+          // 濡偓閺屻儱鐨濋棃銏℃Ц閸氾箓娓剁憰浣告礀闁偓
           const albums = await getAllAlbums();
           const album = albums.find((a) => a.id === aid);
           if (album && album.coverImageId === imageId) {
-            // 鎵捐鐩稿唽鍓╀綑鐨勭涓€寮犲浘鐗囦綔涓烘柊灏侀潰
+            // 閹垫崘顕氶惄绋垮斀閸撯晙缍戦惃鍕儑娑撯偓瀵姴娴橀悧鍥︾稊娑撶儤鏌婄亸渚€娼?
             const items = await getAlbumItems(aid);
             const newCover = items.length > 0 ? items[0].imageId : null;
             await updateAlbum(aid, { coverImageId: newCover });
@@ -546,7 +434,7 @@ export async function putImage(image) {
     const store = tx.objectStore(STORE_NAME);
     const now = Date.now();
 
-    // 纭繚鏁版嵁鍙互琚獻ndexedDB鍏嬮殕
+    // 绾喕绻氶弫鐗堝祦閸欘垯浜掔悮鐛籲dexedDB閸忓娈?
     const data = {
       ...image,
       createdAt: image.createdAt || now,
@@ -554,18 +442,18 @@ export async function putImage(image) {
         image.parentImageId === null || image.parentImageId === undefined
           ? null
           : image.parentImageId,
-      // 纭繚tags鏄函鏁扮粍
+      // 绾喕绻歵ags閺勵垳鍑介弫鎵矋
       tags: image.tags ? [...image.tags] : [],
     };
 
-    // 璋冭瘯鏃ュ織
+    // 鐠嬪啳鐦弮銉ョ箶
     console.log(`putImage: ${image.name}`, {
       originalTags: image.tags,
       finalTags: data.tags,
       notes: data.notes,
     });
 
-    // 绉婚櫎鍙兘瀵艰嚧鍏嬮殕闂鐨勫瓧娈?
+    // 缁夊娅庨崣顖濆厴鐎佃壈鍤ч崗瀣畷闂傤噣顣介惃鍕摟濞?
     delete data.objectUrl;
 
     const req = store.add(data);
@@ -594,16 +482,16 @@ export async function getAllImages() {
   });
 }
 
-// 纭繚 images 琛ㄥ瓨鍦?parentImageId 绱㈠紩锛堟棫搴撳崌绾э級
+// 绾喕绻?images 鐞涖劌鐡ㄩ崷?parentImageId 缁便垹绱╅敍鍫熸＋鎼存挸宕岀痪褝绱?
 async function ensureParentIndexOnImages() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 3);
     req.onsuccess = () => {
       const db = req.result;
-      // 鑻?images 琛ㄤ笉瀛樺湪锛屼氦缁?onupgradeneeded 鍒涘缓
+      // 閼?images 鐞涖劋绗夌€涙ê婀敍灞兼唉缂?onupgradeneeded 閸掓稑缂?
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.close();
-        // 瑙﹀彂涓€娆″崌绾у垱寤?
+        // 鐟欙箑褰傛稉鈧▎鈥冲磳缁狙冨灡瀵?
         const upgradeReq = indexedDB.open(DB_NAME, db.version + 1);
         upgradeReq.onupgradeneeded = () => {
           const udb = upgradeReq.result;
@@ -626,12 +514,12 @@ async function ensureParentIndexOnImages() {
         return;
       }
 
-      // 妫€鏌ョ储寮曟槸鍚﹀凡瀛樺湪
+      // 濡偓閺屻儳鍌ㄥ鏇熸Ц閸氾箑鍑＄€涙ê婀?
       let needUpgrade = false;
       try {
         const tx = db.transaction(STORE_NAME, "readonly");
         const store = tx.objectStore(STORE_NAME);
-        // 璁块棶绱㈠紩鍚嶏紱鑻ヤ笉瀛樺湪浼氭姏閿?
+        // 鐠佸潡妫剁槐銏犵穿閸氬稄绱遍懟銉ょ瑝鐎涙ê婀导姘闁?
         store.index("parentImageId");
       } catch (e) {
         needUpgrade = true;
@@ -691,7 +579,7 @@ export async function updateImage(id, updates) {
     const tx = db.transaction(STORE_NAME, "readwrite");
     const store = tx.objectStore(STORE_NAME);
 
-    // 鍏堣幏鍙栫幇鏈夋暟鎹?
+    // 閸忓牐骞忛崣鏍箛閺堝鏆熼幑?
     const getReq = store.get(id);
     getReq.onsuccess = () => {
       const existingData = getReq.result;
@@ -700,7 +588,7 @@ export async function updateImage(id, updates) {
         return;
       }
 
-      // 鍚堝苟鏇存柊鏁版嵁锛岀‘淇濇暟鎹彲浠ヨIndexedDB鍏嬮殕
+      // 閸氬牆鑻熼弴瀛樻煀閺佺増宓侀敍宀€鈥樻穱婵囨殶閹诡喖褰叉禒銉潶IndexedDB閸忓娈?
       const updatedData = {
         ...existingData,
         ...updates,
@@ -708,7 +596,7 @@ export async function updateImage(id, updates) {
           updates.parentImageId === undefined
             ? existingData.parentImageId ?? null
             : updates.parentImageId ?? null,
-        // 纭繚tags鏄函鏁扮粍锛屼笉鍖呭惈浠讳綍澶嶆潅瀵硅薄
+        // 绾喕绻歵ags閺勵垳鍑介弫鎵矋閿涘奔绗夐崠鍛儓娴犺缍嶆径宥嗘絽鐎电钖?
         tags: updates.tags
           ? [...updates.tags]
           : existingData.tags
@@ -716,7 +604,7 @@ export async function updateImage(id, updates) {
           : [],
       };
 
-      // 绉婚櫎鍙兘瀵艰嚧鍏嬮殕闂鐨勫瓧娈?
+      // 缁夊娅庨崣顖濆厴鐎佃壈鍤ч崗瀣畷闂傤噣顣介惃鍕摟濞?
       delete updatedData.objectUrl;
 
       const putReq = store.put(updatedData);
@@ -728,14 +616,14 @@ export async function updateImage(id, updates) {
 }
 
 export async function deleteImage(id) {
-  // 鍏堢骇鑱斿垹闄ょ浉鍐屽叧鑱旓紝骞剁淮鎶よ鏁?灏侀潰
+  // 閸忓牏楠囬懕鏂垮灩闂勩倗娴夐崘灞藉彠閼辨棑绱濋獮鍓佹樊閹躲倛顓搁弫?鐏忎線娼?
   try {
     await cascadeDeleteAlbumItemsByImageId(id);
   } catch (e) {
     console.warn("[idb] cascadeDeleteAlbumItemsByImageId failed", e);
   }
 
-  // 闄勫浘妯″紡锛氳嫢鍒犻櫎鐨勬槸涓诲浘锛岃€冭檻鏁寸粍鍒犻櫎锛堣繖閲岄噰鐢ㄦ暣缁勫垹闄ょ瓥鐣ワ級
+  // 闂勫嫬娴樺Ο鈥崇础閿涙俺瀚㈤崚鐘绘珟閻ㄥ嫭妲告稉璇叉禈閿涘矁鈧啳妾婚弫瀵哥矋閸掔娀娅庨敍鍫ｇ箹闁插矂鍣伴悽銊︽殻缂佸嫬鍨归梽銈囩摜閻ｃ儻绱?
   try {
     const dbForRead = await openDB();
     await new Promise((resolve, reject) => {
@@ -748,7 +636,7 @@ export async function deleteImage(id) {
           row &&
           (row.parentImageId === null || row.parentImageId === undefined)
         ) {
-          // 鍒犻櫎鍏舵墍鏈夐檮鍥?
+          // 閸掔娀娅庨崗鑸靛閺堝妾崶?
           try {
             await detachChildren(id, { deleteChildren: true });
           } catch (e) {
@@ -771,7 +659,7 @@ export async function deleteImage(id) {
   });
 }
 
-// ==================== 闄勫浘 API ====================
+// ==================== 闂勫嫬娴?API ====================
 export async function getRootImages() {
   const all = await getAllImages();
   return all.filter((r) => r.parentImageId === null);
@@ -810,7 +698,7 @@ export async function attachImagesToParent(parentId, imageIds) {
         const row = getReq.result;
         if (!row) return;
         const updated = { ...row, parentImageId: parentId };
-        // 缁ф壙涓诲浘鐨勫垎缁勪笌鏍囩闇€鍦ㄨ皟鐢ㄥ眰鎵ц锛堣繖閲屼繚鎸佽交閲忥級
+        // 缂佈勫娑撹娴橀惃鍕瀻缂佸嫪绗岄弽鍥╊劮闂団偓閸︺劏鐨熼悽銊ョ湴閹笛嗩攽閿涘牐绻栭柌灞肩箽閹镐浇浜ら柌蹇ョ礆
         store.put(updated);
       };
     });
@@ -870,8 +758,8 @@ export async function detachChildren(
 }
 
 /**
- * 浠庣粍鍥句腑绉婚櫎鍗曚釜鍥剧墖锛堝皢闄勫浘鍙樹负鐙珛鍥剧墖锛?
- * @param {number} imageId - 瑕佺Щ闄ょ殑鍥剧墖ID
+ * 娴犲海绮嶉崶鍙ヨ厬缁夊娅庨崡鏇氶嚋閸ュ墽澧栭敍鍫濈殺闂勫嫬娴橀崣妯硅礋閻欘剛鐝涢崶鍓у閿?
+ * @param {number} imageId - 鐟曚胶些闂勩倗娈戦崶鍓уID
  * @returns {Promise<void>}
  */
 export async function removeImageFromGroup(imageId) {
@@ -880,7 +768,7 @@ export async function removeImageFromGroup(imageId) {
     const tx = db.transaction(STORE_NAME, "readwrite");
     const store = tx.objectStore(STORE_NAME);
 
-    // 鑾峰彇鍥剧墖淇℃伅
+    // 閼惧嘲褰囬崶鍓у娣団剝浼?
     const getReq = store.get(imageId);
     getReq.onsuccess = () => {
       const image = getReq.result;
@@ -889,13 +777,13 @@ export async function removeImageFromGroup(imageId) {
         return;
       }
 
-      // 妫€鏌ユ槸鍚︿负闄勫浘
+      // 濡偓閺屻儲妲搁崥锔胯礋闂勫嫬娴?
       if (image.parentImageId === null || image.parentImageId === undefined) {
         reject(new Error(""));
         return;
       }
 
-      // 灏唒arentImageId璁剧疆涓簄ull锛屼娇鍏舵垚涓虹嫭绔嬪浘鐗?
+      // 鐏忓敀arentImageId鐠佸墽鐤嗘稉绨剈ll閿涘奔濞囬崗鑸靛灇娑撹櫣瀚粩瀣禈閻?
       const updatedImage = { ...image, parentImageId: null };
       const putReq = store.put(updatedImage);
 
@@ -908,9 +796,9 @@ export async function removeImageFromGroup(imageId) {
 }
 
 /**
- * 杩樺師鏁翠釜缁勫浘锛堝皢缁勫浘鎷嗗垎涓虹嫭绔嬪浘鐗囷級
- * @param {number} parentImageId - 涓诲浘ID
- * @returns {Promise<number>} 杩斿洖琚繕鍘熺殑鍥剧墖鏁伴噺
+ * 鏉╂ê甯弫缈犻嚋缂佸嫬娴橀敍鍫濈殺缂佸嫬娴橀幏鍡楀瀻娑撹櫣瀚粩瀣禈閻楀浄绱?
+ * @param {number} parentImageId - 娑撹娴業D
+ * @returns {Promise<number>} 鏉╂柨娲栫悮顐ョ箷閸樼喓娈戦崶鍓у閺佷即鍣?
  */
 export async function restoreGroupToIndividualImages(parentImageId) {
   const db = await openDB();
@@ -918,7 +806,7 @@ export async function restoreGroupToIndividualImages(parentImageId) {
     const tx = db.transaction(STORE_NAME, "readwrite");
     const store = tx.objectStore(STORE_NAME);
 
-    // 鑾峰彇涓诲浘淇℃伅
+    // 閼惧嘲褰囨稉璇叉禈娣団剝浼?
     const getParentReq = store.get(parentImageId);
     getParentReq.onsuccess = () => {
       const parentImage = getParentReq.result;
@@ -927,16 +815,16 @@ export async function restoreGroupToIndividualImages(parentImageId) {
         return;
       }
 
-      // 妫€鏌ユ槸鍚︿负涓诲浘
+      // 濡偓閺屻儲妲搁崥锔胯礋娑撹娴?
       if (
         parentImage.parentImageId !== null &&
         parentImage.parentImageId !== undefined
       ) {
-        reject(new Error("璇ュ浘鐗囦笉鏄富鍥撅紝鏃犳硶杩樺師缁勫浘"));
+        reject(new Error(""));
         return;
       }
 
-      // 鏌ユ壘鎵€鏈夐檮鍥?
+      // 閺屻儲澹橀幍鈧張澶愭閸?
       const idx = store.index("parentImageId");
       const range = IDBKeyRange.only(parentImageId);
       const childrenToUpdate = [];
@@ -947,16 +835,16 @@ export async function restoreGroupToIndividualImages(parentImageId) {
           childrenToUpdate.push(cursor.primaryKey);
           cursor.continue();
         } else {
-          // 鎵€鏈夐檮鍥鹃兘宸叉壘鍒帮紝寮€濮嬫洿鏂?
+          // 閹碘偓閺堝妾崶楣冨厴瀹稿弶澹橀崚甯礉瀵偓婵娲块弬?
           let updateCount = 0;
           const totalCount = childrenToUpdate.length;
 
           if (totalCount === 0) {
-            reject(new Error("璇ュ浘鐗囨病鏈夐檮鍥撅紝鏃犳硶杩樺師缁勫浘"));
+            reject(new Error(""));
             return;
           }
 
-          // 鏇存柊鎵€鏈夐檮鍥撅紝灏唒arentImageId璁剧疆涓簄ull
+          // 閺囧瓨鏌婇幍鈧張澶愭閸ユ拝绱濈亸鍞抋rentImageId鐠佸墽鐤嗘稉绨剈ll
           childrenToUpdate.forEach((childId) => {
             const getChildReq = store.get(childId);
             getChildReq.onsuccess = () => {
@@ -994,7 +882,7 @@ export async function clearAll() {
   });
 }
 
-// 鍒嗙粍鐩稿叧鍑芥暟
+// 閸掑棛绮嶉惄绋垮彠閸戣姤鏆?
 export async function putGroup(group) {
   await ensureGroupsStoreExists();
   const db = await openDB();
@@ -1003,7 +891,7 @@ export async function putGroup(group) {
     const store = tx.objectStore(GROUPS_STORE_NAME);
     const now = Date.now();
     const data = { ...group, createdAt: group.createdAt || now };
-    // 浣跨敤 put 浠ュ吋瀹瑰凡瀛樺湪涓婚敭锛堜緥濡傞粯璁ゅ垎缁?id=0锛?
+    // 娴ｈ法鏁?put 娴犮儱鍚嬬€圭懓鍑＄€涙ê婀稉濠氭暛閿涘牅绶ユ俊鍌炵帛鐠併倕鍨庣紒?id=0閿?
     const req = store.put(data);
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -1042,7 +930,7 @@ export async function updateGroup(id, updates) {
     const tx = db.transaction(GROUPS_STORE_NAME, "readwrite");
     const store = tx.objectStore(GROUPS_STORE_NAME);
 
-    // 鍏堣幏鍙栫幇鏈夋暟鎹?
+    // 閸忓牐骞忛崣鏍箛閺堝鏆熼幑?
     const getReq = store.get(id);
     getReq.onsuccess = () => {
       const existingData = getReq.result;
@@ -1051,10 +939,10 @@ export async function updateGroup(id, updates) {
         return;
       }
 
-      // 鍚堝苟鏇存柊鏁版嵁锛岀‘淇濇暟鎹彲浠ヨIndexedDB鍏嬮殕
+      // 閸氬牆鑻熼弴瀛樻煀閺佺増宓侀敍宀€鈥樻穱婵囨殶閹诡喖褰叉禒銉潶IndexedDB閸忓娈?
       const updatedData = { ...existingData, ...updates };
 
-      // 绉婚櫎鍙兘瀵艰嚧鍏嬮殕闂鐨勫瓧娈?
+      // 缁夊娅庨崣顖濆厴鐎佃壈鍤ч崗瀣畷闂傤噣顣介惃鍕摟濞?
       delete updatedData.objectUrl;
 
       const putReq = store.put(updatedData);
@@ -1089,7 +977,7 @@ export async function clearAllGroups() {
   });
 }
 
-// 鑳屾櫙鍥剧浉鍏冲嚱鏁?
+// 閼冲本娅欓崶鍓ф祲閸忓啿鍤遍弫?
 export async function putBackground(backgroundData) {
   await ensureBackgroundStoreExists();
   const db = await openDB();
@@ -1101,7 +989,7 @@ export async function putBackground(backgroundData) {
       ...backgroundData,
       createdAt: backgroundData.createdAt || now,
     };
-    // 浣跨敤 put 浠ヨ鐩栫幇鏈夎儗鏅浘锛堝彧淇濆瓨涓€寮犺儗鏅浘锛?
+    // 娴ｈ法鏁?put 娴犮儴顩惄鏍箛閺堝鍎楅弲顖氭禈閿涘牆褰ф穱婵嗙摠娑撯偓瀵姾鍎楅弲顖氭禈閿?
     const req = store.put({ id: 1, ...data });
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -1114,7 +1002,7 @@ export async function getBackground() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(BACKGROUND_STORE_NAME, "readonly");
     const store = tx.objectStore(BACKGROUND_STORE_NAME);
-    const req = store.get(1); // 鑾峰彇 id 涓?1 鐨勮儗鏅浘
+    const req = store.get(1); // 閼惧嘲褰?id 娑?1 閻ㄥ嫯鍎楅弲顖氭禈
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
@@ -1126,18 +1014,18 @@ export async function deleteBackground() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(BACKGROUND_STORE_NAME, "readwrite");
     const store = tx.objectStore(BACKGROUND_STORE_NAME);
-    const req = store.delete(1); // 鍒犻櫎 id 涓?1 鐨勮儗鏅浘
+    const req = store.delete(1); // 閸掔娀娅?id 娑?1 閻ㄥ嫯鍎楅弲顖氭禈
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
   });
 }
 
-// ==================== AI鍒嗘瀽鏃ュ織鐩稿叧鏂规硶 ====================
+// ==================== AI閸掑棙鐎介弮銉ョ箶閻╃鍙ч弬瑙勭《 ====================
 
 /**
- * 淇濆瓨AI鍒嗘瀽鏃ュ織
- * @param {Object} analysisLog - 鍒嗘瀽鏃ュ織瀵硅薄
- * @returns {Promise<number>} 杩斿洖淇濆瓨鐨勬棩蹇桰D
+ * 娣囨繂鐡ˋI閸掑棙鐎介弮銉ョ箶
+ * @param {Object} analysisLog - 閸掑棙鐎介弮銉ョ箶鐎电钖?
+ * @returns {Promise<number>} 鏉╂柨娲栨穱婵嗙摠閻ㄥ嫭妫╄箛妗癉
  */
 export async function putAnalysisLog(analysisLog) {
   const db = await openDB();
@@ -1145,7 +1033,7 @@ export async function putAnalysisLog(analysisLog) {
     const tx = db.transaction(ANALYSIS_LOGS_STORE_NAME, "readwrite");
     const store = tx.objectStore(ANALYSIS_LOGS_STORE_NAME);
 
-    // 纭繚timestamp鏄疍ate瀵硅薄
+    // 绾喕绻歵imestamp閺勭枍ate鐎电钖?
     const logToSave = {
       ...analysisLog,
       timestamp:
@@ -1162,14 +1050,14 @@ export async function putAnalysisLog(analysisLog) {
 }
 
 /**
- * 鎵归噺淇濆瓨AI鍒嗘瀽鏃ュ織
- * @param {Array} analysisLogs - 鍒嗘瀽鏃ュ織鏁扮粍
- * @returns {Promise<Array>} 杩斿洖淇濆瓨鐨勬棩蹇桰D鏁扮粍
+ * 閹靛綊鍣烘穱婵嗙摠AI閸掑棙鐎介弮銉ョ箶
+ * @param {Array} analysisLogs - 閸掑棙鐎介弮銉ョ箶閺佹壆绮?
+ * @returns {Promise<Array>} 鏉╂柨娲栨穱婵嗙摠閻ㄥ嫭妫╄箛妗癉閺佹壆绮?
  */
 export async function putAnalysisLogs(analysisLogs) {
   console.log("");
 
-  // 纭繚analysis_logs琛ㄥ瓨鍦?
+  // 绾喕绻歛nalysis_logs鐞涖劌鐡ㄩ崷?
   await ensureAnalysisLogsStoreExists();
   console.log("");
 
@@ -1221,13 +1109,13 @@ export async function putAnalysisLogs(analysisLogs) {
 }
 
 /**
- * 鑾峰彇鎵€鏈堿I鍒嗘瀽鏃ュ織
- * @returns {Promise<Array>} 杩斿洖鎵€鏈夊垎鏋愭棩蹇?
+ * 閼惧嘲褰囬幍鈧張鍫縄閸掑棙鐎介弮銉ョ箶
+ * @returns {Promise<Array>} 鏉╂柨娲栭幍鈧張澶婂瀻閺嬫劖妫╄箛?
  */
 export async function getAllAnalysisLogs() {
   console.log("");
 
-  // 纭繚analysis_logs琛ㄥ瓨鍦?
+  // 绾喕绻歛nalysis_logs鐞涖劌鐡ㄩ崷?
   await ensureAnalysisLogsStoreExists();
   console.log("");
 
@@ -1241,7 +1129,7 @@ export async function getAllAnalysisLogs() {
         ...log,
         timestamp: new Date(log.timestamp),
       }));
-      // 鎸夋椂闂存埑鍊掑簭鎺掑垪锛堟渶鏂扮殑鍦ㄥ墠锛?
+      // 閹稿妞傞梻瀛樺煈閸婃帒绨幒鎺戝灙閿涘牊娓堕弬鎵畱閸︺劌澧犻敍?
       logs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
       console.log(
@@ -1266,9 +1154,9 @@ export async function getAllAnalysisLogs() {
 }
 
 /**
- * 鏍规嵁ID鑾峰彇AI鍒嗘瀽鏃ュ織
- * @param {string} logId - 鏃ュ織ID
- * @returns {Promise<Object|null>} 杩斿洖鍒嗘瀽鏃ュ織鎴杗ull
+ * 閺嶈宓両D閼惧嘲褰嘇I閸掑棙鐎介弮銉ョ箶
+ * @param {string} logId - 閺冦儱绻擨D
+ * @returns {Promise<Object|null>} 鏉╂柨娲栭崚鍡樼€介弮銉ョ箶閹存潡ull
  */
 export async function getAnalysisLogById(logId) {
   const db = await openDB();
@@ -1288,9 +1176,9 @@ export async function getAnalysisLogById(logId) {
 }
 
 /**
- * 鏍规嵁鍥剧墖鍚嶇О鎼滅储鍒嗘瀽鏃ュ織
- * @param {string} imageName - 鍥剧墖鍚嶇О
- * @returns {Promise<Array>} 杩斿洖鍖归厤鐨勫垎鏋愭棩蹇?
+ * 閺嶈宓侀崶鍓у閸氬秶袨閹兼粎鍌ㄩ崚鍡樼€介弮銉ョ箶
+ * @param {string} imageName - 閸ュ墽澧栭崥宥囆?
+ * @returns {Promise<Array>} 鏉╂柨娲栭崠褰掑帳閻ㄥ嫬鍨庨弸鎰）韫?
  */
 export async function getAnalysisLogsByImageName(imageName) {
   const db = await openDB();
@@ -1312,9 +1200,9 @@ export async function getAnalysisLogsByImageName(imageName) {
 }
 
 /**
- * 鏍规嵁AI鏈嶅姟鎼滅储鍒嗘瀽鏃ュ織
- * @param {string} aiService - AI鏈嶅姟鍚嶇О
- * @returns {Promise<Array>} 杩斿洖鍖归厤鐨勫垎鏋愭棩蹇?
+ * 閺嶈宓丄I閺堝秴濮熼幖婊呭偍閸掑棙鐎介弮銉ョ箶
+ * @param {string} aiService - AI閺堝秴濮熼崥宥囆?
+ * @returns {Promise<Array>} 鏉╂柨娲栭崠褰掑帳閻ㄥ嫬鍨庨弸鎰）韫?
  */
 export async function getAnalysisLogsByAIService(aiService) {
   const db = await openDB();
@@ -1336,8 +1224,8 @@ export async function getAnalysisLogsByAIService(aiService) {
 }
 
 /**
- * 鍒犻櫎AI鍒嗘瀽鏃ュ織
- * @param {string} logId - 鏃ュ織ID
+ * 閸掔娀娅嶢I閸掑棙鐎介弮銉ョ箶
+ * @param {string} logId - 閺冦儱绻擨D
  * @returns {Promise<void>}
  */
 export async function deleteAnalysisLog(logId) {
@@ -1352,7 +1240,7 @@ export async function deleteAnalysisLog(logId) {
 }
 
 /**
- * 娓呯┖鎵€鏈堿I鍒嗘瀽鏃ュ織
+ * 濞撳懐鈹栭幍鈧張鍫縄閸掑棙鐎介弮銉ョ箶
  * @returns {Promise<void>}
  */
 export async function clearAllAnalysisLogs() {
@@ -1367,8 +1255,8 @@ export async function clearAllAnalysisLogs() {
 }
 
 /**
- * 鑾峰彇鍒嗘瀽鏃ュ織缁熻淇℃伅
- * @returns {Promise<Object>} 杩斿洖缁熻淇℃伅
+ * 閼惧嘲褰囬崚鍡樼€介弮銉ョ箶缂佺喕顓告穱鈩冧紖
+ * @returns {Promise<Object>} 鏉╂柨娲栫紒鐔活吀娣団剝浼?
  */
 export async function getAnalysisLogsStatistics() {
   const logs = await getAllAnalysisLogs();
@@ -1387,15 +1275,15 @@ export async function getAnalysisLogsStatistics() {
     completed,
     failed,
     processing,
-    avgDuration: avgDuration / 1000, // 杞崲涓虹
+    avgDuration: avgDuration / 1000, // 鏉烆剚宕叉稉铏诡潡
     successRate: total > 0 ? ((completed / total) * 100).toFixed(1) : 0,
   };
 }
 
-// ==================== 鍥炴敹绔欑浉鍏虫柟娉?====================
+// ==================== 閸ョ偞鏁圭粩娆戞祲閸忚櫕鏌熷▔?====================
 
 /**
- * 纭繚鍥炴敹绔欏瓨鍌ㄥ瓨鍦?
+ * 绾喕绻氶崶鐐存暪缁旀瑥鐡ㄩ崒銊ョ摠閸?
  */
 async function ensureTrashStoreExists() {
   return new Promise((resolve, reject) => {
@@ -1442,9 +1330,9 @@ async function ensureTrashStoreExists() {
 }
 
 /**
- * 灏嗗浘鐗囩Щ鍔ㄥ埌鍥炴敹绔?
- * @param {Object} image - 瑕佸垹闄ょ殑鍥剧墖瀵硅薄
- * @returns {Promise<number>} 杩斿洖鍥炴敹绔欒褰旾D
+ * 鐏忓棗娴橀悧鍥┬╅崝銊ュ煂閸ョ偞鏁圭粩?
+ * @param {Object} image - 鐟曚礁鍨归梽銈囨畱閸ュ墽澧栫€电钖?
+ * @returns {Promise<number>} 鏉╂柨娲栭崶鐐存暪缁旀瑨顔囪ぐ鏃綝
  */
 export async function moveImageToTrash(image) {
   await ensureTrashStoreExists();
@@ -1458,7 +1346,7 @@ export async function moveImageToTrash(image) {
       originalImageId: image.id,
       imageData: {
         ...image,
-        // 绉婚櫎鍙兘瀵艰嚧鍏嬮殕闂鐨勫瓧娈?
+        // 缁夊娅庨崣顖濆厴鐎佃壈鍤ч崗瀣畷闂傤噣顣介惃鍕摟濞?
         objectUrl: undefined,
       },
       deletedAt: now,
@@ -1471,8 +1359,8 @@ export async function moveImageToTrash(image) {
 }
 
 /**
- * 鑾峰彇鍥炴敹绔欎腑鐨勬墍鏈夊浘鐗?
- * @returns {Promise<Array>} 杩斿洖鍥炴敹绔欎腑鐨勫浘鐗囧垪琛?
+ * 閼惧嘲褰囬崶鐐存暪缁旀瑤鑵戦惃鍕閺堝娴橀悧?
+ * @returns {Promise<Array>} 鏉╂柨娲栭崶鐐存暪缁旀瑤鑵戦惃鍕禈閻楀洤鍨悰?
  */
 export async function getTrashImages() {
   await ensureTrashStoreExists();
@@ -1485,14 +1373,14 @@ export async function getTrashImages() {
       const trashItems = req.result.map((item) => ({
         ...item.imageData,
         trashId: item.id,
-        originalImageId: item.originalImageId, // 纭繚 originalImageId 琚繚鐣?
+        originalImageId: item.originalImageId, // 绾喕绻?originalImageId 鐞氼偂绻氶悾?
         deletedAt: item.deletedAt,
         objectUrl:
           item.imageData.blob && item.imageData.blob instanceof Blob
             ? URL.createObjectURL(item.imageData.blob)
             : item.imageData.url,
       }));
-      // 鎸夊垹闄ゆ椂闂村€掑簭鎺掑垪锛堟渶鏂板垹闄ょ殑鍦ㄥ墠锛?
+      // 閹稿鍨归梽銈嗘闂傛潙鈧帒绨幒鎺戝灙閿涘牊娓堕弬鏉垮灩闂勩倗娈戦崷銊ュ閿?
       trashItems.sort((a, b) => b.deletedAt - a.deletedAt);
       resolve(trashItems);
     };
@@ -1501,15 +1389,15 @@ export async function getTrashImages() {
 }
 
 /**
- * 浠庡洖鏀剁珯鎭㈠缁勫浘锛堜富鍥惧拰鎵€鏈夐檮鍥撅級
- * @param {number} parentTrashId - 涓诲浘鐨勫洖鏀剁珯璁板綍ID
- * @returns {Promise<Array<number>>} 杩斿洖鎭㈠鐨勫浘鐗嘔D鏁扮粍
+ * 娴犲骸娲栭弨鍓佺彲閹垹顦茬紒鍕禈閿涘牅瀵岄崶鎯ф嫲閹碘偓閺堝妾崶鎾呯礆
+ * @param {number} parentTrashId - 娑撹娴橀惃鍕礀閺€鍓佺彲鐠佹澘缍岻D
+ * @returns {Promise<Array<number>>} 鏉╂柨娲栭幁銏狀槻閻ㄥ嫬娴橀悧鍢擠閺佹壆绮?
  */
 async function restoreGroupFromTrash(parentTrashId) {
   await ensureTrashStoreExists();
   const db = await openDB();
 
-  // 鑾峰彇涓诲浘鏁版嵁
+  // 閼惧嘲褰囨稉璇叉禈閺佺増宓?
   const parentTrashItem = await new Promise((resolve, reject) => {
     const tx = db.transaction(TRASH_STORE_NAME, "readonly");
     const store = tx.objectStore(TRASH_STORE_NAME);
@@ -1524,13 +1412,13 @@ async function restoreGroupFromTrash(parentTrashId) {
 
   const parentOriginalId = parentTrashItem.originalImageId;
 
-  // 鏌ユ壘鎵€鏈夌浉鍏崇殑鍥炴敹绔欓」鐩紙涓诲浘+闄勫浘锛?
+  // 閺屻儲澹橀幍鈧張澶屾祲閸忓磭娈戦崶鐐存暪缁旀瑩銆嶉惄顕嗙礄娑撹娴?闂勫嫬娴橀敍?
   const allTrashItems = await new Promise((resolve, reject) => {
     const tx = db.transaction(TRASH_STORE_NAME, "readonly");
     const store = tx.objectStore(TRASH_STORE_NAME);
     const req = store.getAll();
     req.onsuccess = () => {
-      // 绛涢€夊嚭涓诲浘鍜屾墍鏈夐檮鍥?
+      // 缁涙盯鈧鍤稉璇叉禈閸滃本澧嶉張澶愭閸?
       const items = req.result.filter(
         (item) =>
           item.originalImageId === parentOriginalId ||
@@ -1541,16 +1429,16 @@ async function restoreGroupFromTrash(parentTrashId) {
     req.onerror = () => reject(req.error);
   });
 
-  // 鎭㈠鎵€鏈夊浘鐗?
+  // 閹垹顦查幍鈧張澶婃禈閻?
   const restoredIds = [];
   const newParentId = await restoreSingleImageFromTrash(parentTrashId);
   restoredIds.push(newParentId);
 
-  // 鎭㈠鎵€鏈夐檮鍥撅紝骞舵洿鏂板畠浠殑parentImageId
+  // 閹垹顦查幍鈧張澶愭閸ユ拝绱濋獮鑸垫纯閺傛澘鐣犳禒顒傛畱parentImageId
   for (const trashItem of allTrashItems) {
     if (trashItem.id !== parentTrashId) {
       const newChildId = await restoreSingleImageFromTrash(trashItem.id);
-      // 鏇存柊闄勫浘鐨刾arentImageId
+      // 閺囧瓨鏌婇梽鍕禈閻ㄥ埦arentImageId
       await updateImage(newChildId, { parentImageId: newParentId });
       restoredIds.push(newChildId);
     }
@@ -1560,9 +1448,9 @@ async function restoreGroupFromTrash(parentTrashId) {
 }
 
 /**
- * 鎭㈠鍗曚釜鍥剧墖锛堝唴閮ㄥ嚱鏁帮級
- * @param {number} trashId - 鍥炴敹绔欒褰旾D
- * @returns {Promise<number>} 杩斿洖鎭㈠鐨勫浘鐗嘔D
+ * 閹垹顦查崡鏇氶嚋閸ュ墽澧栭敍鍫濆敶闁劌鍤遍弫甯礆
+ * @param {number} trashId - 閸ョ偞鏁圭粩娆掝唶瑜版椌D
+ * @returns {Promise<number>} 鏉╂柨娲栭幁銏狀槻閻ㄥ嫬娴橀悧鍢擠
  */
 async function restoreSingleImageFromTrash(trashId) {
   await ensureTrashStoreExists();
@@ -1572,7 +1460,7 @@ async function restoreSingleImageFromTrash(trashId) {
     const trashStore = tx.objectStore(TRASH_STORE_NAME);
     const imageStore = tx.objectStore(STORE_NAME);
 
-    // 浠庡洖鏀剁珯鑾峰彇鍥剧墖鏁版嵁
+    // 娴犲骸娲栭弨鍓佺彲閼惧嘲褰囬崶鍓у閺佺増宓?
     const getReq = trashStore.get(trashId);
     getReq.onsuccess = () => {
       const trashItem = getReq.result;
@@ -1581,21 +1469,21 @@ async function restoreSingleImageFromTrash(trashId) {
         return;
       }
 
-      // 鎭㈠鍥剧墖鍒颁富瀛樺偍
+      // 閹垹顦查崶鍓у閸掗瀵岀€涙ê鍋?
       const imageData = {
         ...trashItem.imageData,
-        // 瀹屽叏绉婚櫎id瀛楁锛岃IndexedDB鑷姩鐢熸垚鏂扮殑ID
+        // 鐎瑰苯鍙忕粔濠氭珟id鐎涙顔岄敍宀冾唨IndexedDB閼奉亜濮╅悽鐔稿灇閺傛壆娈慖D
         createdAt: Date.now(),
-        // 鏆傛椂娓呯┖parentImageId锛岀◢鍚庝細閲嶆柊璁剧疆
+        // 閺嗗倹妞傚〒鍛敄parentImageId閿涘瞼鈼㈤崥搴濈窗闁插秵鏌婄拋鍓х枂
         parentImageId: null,
       };
 
-      // 纭繚绉婚櫎id瀛楁
+      // 绾喕绻氱粔濠氭珟id鐎涙顔?
       delete imageData.id;
 
       const addReq = imageStore.add(imageData);
       addReq.onsuccess = () => {
-        // 浠庡洖鏀剁珯鍒犻櫎
+        // 娴犲骸娲栭弨鍓佺彲閸掔娀娅?
         trashStore.delete(trashId);
         resolve(addReq.result);
       };
@@ -1606,15 +1494,15 @@ async function restoreSingleImageFromTrash(trashId) {
 }
 
 /**
- * 浠庡洖鏀剁珯鎭㈠鍥剧墖
- * @param {number} trashId - 鍥炴敹绔欒褰旾D
- * @returns {Promise<number>} 杩斿洖鎭㈠鐨勫浘鐗嘔D
+ * 娴犲骸娲栭弨鍓佺彲閹垹顦查崶鍓у
+ * @param {number} trashId - 閸ョ偞鏁圭粩娆掝唶瑜版椌D
+ * @returns {Promise<number>} 鏉╂柨娲栭幁銏狀槻閻ㄥ嫬娴橀悧鍢擠
  */
 export async function restoreImageFromTrash(trashId) {
   await ensureTrashStoreExists();
   const db = await openDB();
 
-  // 鑾峰彇鍥炴敹绔欓」鐩暟鎹?
+  // 閼惧嘲褰囬崶鐐存暪缁旀瑩銆嶉惄顔芥殶閹?
   const trashItem = await new Promise((resolve, reject) => {
     const tx = db.transaction(TRASH_STORE_NAME, "readonly");
     const store = tx.objectStore(TRASH_STORE_NAME);
@@ -1627,23 +1515,23 @@ export async function restoreImageFromTrash(trashId) {
     throw new Error("Trash item not found");
   }
 
-  // 妫€鏌ユ槸鍚︿负涓诲浘锛堟病鏈塸arentImageId锛?
+  // 濡偓閺屻儲妲搁崥锔胯礋娑撹娴橀敍鍫熺梾閺堝「arentImageId閿?
   const isParentImage = !trashItem.imageData.parentImageId;
 
   if (isParentImage) {
-    // 濡傛灉鏄富鍥撅紝鎭㈠鏁翠釜缁勫浘
+    // 婵″倹鐏夐弰顖欏瘜閸ユ拝绱濋幁銏狀槻閺佺繝閲滅紒鍕禈
     const restoredIds = await restoreGroupFromTrash(trashId);
-    return restoredIds[0]; // 杩斿洖涓诲浘ID
+    return restoredIds[0]; // 鏉╂柨娲栨稉璇叉禈ID
   } else {
-    // 濡傛灉鏄檮鍥撅紝鍙仮澶嶈繖涓€寮犲浘鐗?
+    // 婵″倹鐏夐弰顖炴閸ユ拝绱濋崣顏呬划婢跺秷绻栨稉鈧鐘叉禈閻?
     return await restoreSingleImageFromTrash(trashId);
   }
 }
 
 /**
- * 鎵归噺浠庡洖鏀剁珯鎭㈠鍥剧墖
- * @param {Array<number>} trashIds - 鍥炴敹绔欒褰旾D鏁扮粍
- * @returns {Promise<Array<number>>} 杩斿洖鎭㈠鐨勫浘鐗嘔D鏁扮粍
+ * 閹靛綊鍣烘禒搴℃礀閺€鍓佺彲閹垹顦查崶鍓у
+ * @param {Array<number>} trashIds - 閸ョ偞鏁圭粩娆掝唶瑜版椌D閺佹壆绮?
+ * @returns {Promise<Array<number>>} 鏉╂柨娲栭幁銏狀槻閻ㄥ嫬娴橀悧鍢擠閺佹壆绮?
  */
 export async function restoreImagesFromTrash(trashIds) {
   const results = [];
@@ -1659,8 +1547,8 @@ export async function restoreImagesFromTrash(trashIds) {
 }
 
 /**
- * 浠庡洖鏀剁珯姘镐箙鍒犻櫎鍥剧墖
- * @param {number} trashId - 鍥炴敹绔欒褰旾D
+ * 娴犲骸娲栭弨鍓佺彲濮橀晲绠欓崚鐘绘珟閸ュ墽澧?
+ * @param {number} trashId - 閸ョ偞鏁圭粩娆掝唶瑜版椌D
  * @returns {Promise<void>}
  */
 export async function permanentlyDeleteFromTrash(trashId) {
@@ -1676,8 +1564,8 @@ export async function permanentlyDeleteFromTrash(trashId) {
 }
 
 /**
- * 鎵归噺浠庡洖鏀剁珯姘镐箙鍒犻櫎鍥剧墖
- * @param {Array<number>} trashIds - 鍥炴敹绔欒褰旾D鏁扮粍
+ * 閹靛綊鍣烘禒搴℃礀閺€鍓佺彲濮橀晲绠欓崚鐘绘珟閸ュ墽澧?
+ * @param {Array<number>} trashIds - 閸ョ偞鏁圭粩娆掝唶瑜版椌D閺佹壆绮?
  * @returns {Promise<void>}
  */
 export async function permanentlyDeleteFromTrashBatch(trashIds) {
@@ -1697,7 +1585,7 @@ export async function permanentlyDeleteFromTrashBatch(trashIds) {
 }
 
 /**
- * 娓呯┖鍥炴敹绔?
+ * 濞撳懐鈹栭崶鐐存暪缁?
  * @returns {Promise<void>}
  */
 export async function clearTrash() {
@@ -1713,37 +1601,37 @@ export async function clearTrash() {
 }
 
 /**
- * 灏嗙粍鍥剧殑鎵€鏈夊浘鐗囷紙涓诲浘鍜岄檮鍥撅級绉诲姩鍒板洖鏀剁珯
- * @param {number} parentId - 涓诲浘ID
+ * 鐏忓棛绮嶉崶鍓ф畱閹碘偓閺堝娴橀悧鍥风礄娑撹娴橀崪宀勬閸ユ拝绱氱粔璇插З閸掓澘娲栭弨鍓佺彲
+ * @param {number} parentId - 娑撹娴業D
  * @returns {Promise<void>}
  */
 async function moveGroupToTrash(parentId) {
-  // 鑾峰彇涓诲浘
+  // 閼惧嘲褰囨稉璇叉禈
   const parentImage = await getImageById(parentId);
   if (!parentImage) {
     throw new Error("Parent image not found");
   }
 
-  // 鑾峰彇鎵€鏈夐檮鍥?
+  // 閼惧嘲褰囬幍鈧張澶愭閸?
   const childrenImages = await getChildrenImages(parentId);
 
-  // 灏嗘墍鏈夊浘鐗囷紙涓诲浘+闄勫浘锛夌Щ鍔ㄥ埌鍥炴敹绔?
+  // 鐏忓棙澧嶉張澶婃禈閻楀浄绱欐稉璇叉禈+闂勫嫬娴橀敍澶屝╅崝銊ュ煂閸ョ偞鏁圭粩?
   const allImages = [parentImage, ...childrenImages];
 
   for (const image of allImages) {
     await moveImageToTrash(image);
   }
 
-  // 浠庝富瀛樺偍涓垹闄ゆ墍鏈夊浘鐗?
+  // 娴犲簼瀵岀€涙ê鍋嶆稉顓炲灩闂勩倖澧嶉張澶婃禈閻?
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
     const store = tx.objectStore(STORE_NAME);
 
-    // 鍒犻櫎涓诲浘
+    // 閸掔娀娅庢稉璇叉禈
     store.delete(parentId);
 
-    // 鍒犻櫎鎵€鏈夐檮鍥?
+    // 閸掔娀娅庨幍鈧張澶愭閸?
     childrenImages.forEach((child) => {
       store.delete(child.id);
     });
@@ -1754,36 +1642,36 @@ async function moveGroupToTrash(parentId) {
 }
 
 /**
- * 淇敼鍒犻櫎鍥剧墖鐨勯€昏緫锛屽皢鍥剧墖绉诲姩鍒板洖鏀剁珯鑰屼笉鏄洿鎺ュ垹闄?
- * @param {number} id - 鍥剧墖ID
+ * 娣囶喗鏁奸崚鐘绘珟閸ュ墽澧栭惃鍕偓鏄忕帆閿涘苯鐨㈤崶鍓у缁夎濮╅崚鏉挎礀閺€鍓佺彲閼板奔绗夐弰顖滄纯閹恒儱鍨归梽?
+ * @param {number} id - 閸ュ墽澧朓D
  * @returns {Promise<void>}
  */
 export async function deleteImageToTrash(id) {
-  // 鍏堣幏鍙栧浘鐗囨暟鎹?
+  // 閸忓牐骞忛崣鏍ф禈閻楀洦鏆熼幑?
   const image = await getImageById(id);
   if (!image) {
     throw new Error("Image not found");
   }
 
-  // 鍏堢骇鑱斿垹闄ょ浉鍐屽叧鑱旓紝骞剁淮鎶よ鏁?灏侀潰
+  // 閸忓牏楠囬懕鏂垮灩闂勩倗娴夐崘灞藉彠閼辨棑绱濋獮鍓佹樊閹躲倛顓搁弫?鐏忎線娼?
   try {
     await cascadeDeleteAlbumItemsByImageId(id);
   } catch (e) {
     console.warn("[idb] cascadeDeleteAlbumItemsByImageId failed", e);
   }
 
-  // 妫€鏌ユ槸鍚︿负缁勫浘鐨勪富鍥?
+  // 濡偓閺屻儲妲搁崥锔胯礋缂佸嫬娴橀惃鍕瘜閸?
   const isParentImage =
     image.parentImageId === null || image.parentImageId === undefined;
 
   if (isParentImage) {
-    // 濡傛灉鏄富鍥撅紝灏嗘暣涓粍鍥剧Щ鍔ㄥ埌鍥炴敹绔?
+    // 婵″倹鐏夐弰顖欏瘜閸ユ拝绱濈亸鍡樻殻娑擃亞绮嶉崶鍓╅崝銊ュ煂閸ョ偞鏁圭粩?
     await moveGroupToTrash(id);
   } else {
-    // 濡傛灉鏄檮鍥撅紝鍙Щ鍔ㄨ繖涓€寮犲浘鐗?
+    // 婵″倹鐏夐弰顖炴閸ユ拝绱濋崣顏喰╅崝銊ㄧ箹娑撯偓瀵姴娴橀悧?
     await moveImageToTrash(image);
 
-    // 浠庝富瀛樺偍涓垹闄?
+    // 娴犲簼瀵岀€涙ê鍋嶆稉顓炲灩闂?
     const db = await openDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readwrite");
