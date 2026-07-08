@@ -13,10 +13,13 @@
                     "typecheck":  "pnpm -r typecheck",
                     "test":  "vitest \u0026\u0026 pnpm --filter @gallery/ui test",
                     "test:run":  "vitest run \u0026\u0026 pnpm --filter @gallery/ui test",
-                    "prepare":  "lefthook install"
+                    "prepare":  "lefthook install",
+                    "test:e2e":  "playwright test",
+                    "test:e2e:ui":  "playwright test --ui"
                 },
     "devDependencies":  {
                             "@antfu/eslint-config":  "^2.0.0",
+                            "@playwright/test":  "^1.61.1",
                             "@types/node":  "^20.0.0",
                             "eslint":  "^9.0.0",
                             "jsdom":  "^29.1.1",
