@@ -87,13 +87,32 @@
         <img v-if="overlaySrc" :src="overlaySrc" class="overlay-image" :style="overlayStyle" draggable="false" @mousedown="onOverlayMouseDown" @touchstart.prevent="onOverlayTouchStart" />
       </div>
     </div>
+
+    <!-- Export Preview Modal -->
+    <div v-if="exportPreviewUrl" class="export-preview-overlay" @click.self="exportPreviewUrl = null">
+      <div class="export-preview-card">
+        <div class="export-preview-header">
+          <span>????</span>
+          <el-button size="small" circle @click="exportPreviewUrl = null">
+            <el-icon><icon-close /></el-icon>
+          </el-button>
+        </div>
+        <div class="export-preview-body">
+          <img :src="exportPreviewUrl" alt="????" />
+        </div>
+        <div class="export-preview-actions">
+          <el-button size="small" @click="doDownloadPreview">????</el-button>
+          <el-button size="small" plain @click="exportPreviewUrl = null">??</el-button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { ElButton, ElIcon, ElPopover, ElUpload, ElSlider } from "element-plus";
-import { Picture as IconPicture, Upload as IconUpload, Download as IconDownload, Refresh as IconRefresh, CopyDocument as IconCopyDocument } from "@element-plus/icons-vue";
+import { Picture as IconPicture, Upload as IconUpload, Download as IconDownload, Refresh as IconRefresh, CopyDocument as IconCopyDocument, Close as IconClose } from "@element-plus/icons-vue";
 import { getAllImages } from "@/utils/idb.js";
 
 const galleryImages = ref([]);
@@ -193,6 +212,7 @@ function onTouchMove(e) { if (!dragging) return; e.preventDefault(); overlayX.va
 function onTouchEnd() { dragging = false; clamp(); document.removeEventListener("touchmove", onTouchMove); document.removeEventListener("touchend", onTouchEnd); }
 
 const exporting = ref(false);
+const exportPreviewUrl = ref(null);
 
 async function doExport() {
   console.log("[overlay:export] START");
@@ -249,17 +269,18 @@ async function doExport() {
     const url = c.toDataURL("image/png");
     console.log("[overlay:export] Data URL length:", url.length);
 
-    // Try multiple download approaches
+    // Set preview URL to show the result
+    exportPreviewUrl.value = url;
+    console.log("[overlay:export] Preview URL set");
+
+    // Also try browser download (works in regular browsers, may be blocked in webview)
     const a = document.createElement("a");
     a.href = url;
     a.download = "composite.png";
     a.style.display = "none";
     document.body.appendChild(a);
-    console.log("[overlay:export] Clicking download link...");
     a.click();
-    console.log("[overlay:export] Download triggered");
-    // Remove after a moment to ensure download starts
-    setTimeout(() => { document.body.removeChild(a); console.log("[overlay:export] Cleanup done"); }, 200);
+    setTimeout(() => { document.body.removeChild(a); }, 200);
   } catch (err) {
     console.error("[overlay:export] FAILED:", err);
   } finally {
@@ -304,4 +325,53 @@ onBeforeUnmount(() => {
 .overlay-image:active { cursor: grabbing; }
 .toolbar :deep(.el-button) { font-size: 12px; }
 .toolbar :deep(.el-button--small) { padding: 5px 10px; }
+.export-preview-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.export-preview-card {
+  background: #1e1e32;
+  border-radius: 8px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.export-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  color: #ccd;
+  font-size: 14px;
+  font-weight: 500;
+}
+.export-preview-body {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.export-preview-body img {
+  max-width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  border-radius: 4px;
+}
+.export-preview-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  justify-content: flex-end;
+}
 </style>
