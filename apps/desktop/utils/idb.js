@@ -14,104 +14,22 @@ function openDB() {
   return new Promise((resolve, reject) => {
     // 涓嶆樉寮忔寚瀹氱増鏈紝閬垮厤鍑虹幇鈥滆姹傜増鏈皬浜庣幇鏈夌増鏈€濈殑閿欒
     const request = indexedDB.open(DB_NAME, 3);
-    request.onupgradeneeded = (event) => {
-      const db = request.result;
-
-      // 鍒涘缓鍥剧墖瀛樺偍
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, {
-          keyPath: "id",
-          autoIncrement: true,
-        });
-        store.createIndex("createdAt", "createdAt", { unique: false });
-        // 鏂板绱㈠紩锛歱arentImageId锛堥檮鍥炬ā寮忥級
-        store.createIndex("parentImageId", "parentImageId", {
-          unique: false,
-        });
-      }
-
-      // 鍒涘缓鍒嗙粍瀛樺偍
-      if (!db.objectStoreNames.contains(GROUPS_STORE_NAME)) {
-        const groupsStore = db.createObjectStore(GROUPS_STORE_NAME, {
-          keyPath: "id",
-          autoIncrement: true,
-        });
-        groupsStore.createIndex("createdAt", "createdAt", { unique: false });
-      }
-
-      // 鍒涘缓鑳屾櫙鍥惧瓨鍌?
-      if (!db.objectStoreNames.contains(BACKGROUND_STORE_NAME)) {
-        const backgroundStore = db.createObjectStore(BACKGROUND_STORE_NAME, {
-          keyPath: "id",
-          autoIncrement: true,
-        });
-        backgroundStore.createIndex("createdAt", "createdAt", {
-          unique: false,
-        });
-      }
-
-      // 鍒涘缓AI鍒嗘瀽鏃ュ織瀛樺偍
-      if (!db.objectStoreNames.contains(ANALYSIS_LOGS_STORE_NAME)) {
-        const analysisLogsStore = db.createObjectStore(
-          ANALYSIS_LOGS_STORE_NAME,
-          {
-            keyPath: "id",
-            autoIncrement: true,
-          }
-        );
-        analysisLogsStore.createIndex("timestamp", "timestamp", {
-          unique: false,
-        });
-        analysisLogsStore.createIndex("imageName", "imageName", {
-          unique: false,
-        });
-        analysisLogsStore.createIndex("aiService", "aiService", {
-          unique: false,
-        });
-        analysisLogsStore.createIndex("status", "status", { unique: false });
-      }
-
-      // 鍒涘缓鐩稿唽锛堢粍鍥撅級瀛樺偍
-      if (!db.objectStoreNames.contains(ALBUMS_STORE_NAME)) {
-        const albumsStore = db.createObjectStore(ALBUMS_STORE_NAME, {
-          keyPath: "id",
-          autoIncrement: true,
-        });
-        albumsStore.createIndex("updatedAt", "updatedAt", { unique: false });
-        albumsStore.createIndex("name", "name", { unique: false });
-      }
-
-      // 鍒涘缓鐩稿唽椤癸紙缁勫浘-鍥剧墖鍏宠仈锛夊瓨鍌?
-      if (!db.objectStoreNames.contains(ALBUM_ITEMS_STORE_NAME)) {
-        const albumItemsStore = db.createObjectStore(ALBUM_ITEMS_STORE_NAME, {
-          keyPath: "id",
-          autoIncrement: true,
-        });
-        albumItemsStore.createIndex("albumId", "albumId", { unique: false });
-        albumItemsStore.createIndex("imageId", "imageId", { unique: false });
-        // 澶嶅悎绱㈠紩鐢ㄤ簬鍞竴鎬ф牎楠岋紙鍚屼竴鍥剧墖涓嶅彲閲嶅鍔犲叆鍚屼竴鐩稿唽锛?
-        albumItemsStore.createIndex("albumId_imageId", ["albumId", "imageId"], {
-          unique: true,
-        });
-        albumItemsStore.createIndex(
-          "albumId_sortOrder",
-          ["albumId", "sortOrder"],
-          { unique: false }
-        );
-      }
-
-      // 鍒涘缓鍥炴敹绔欏瓨鍌?
-      if (!db.objectStoreNames.contains(TRASH_STORE_NAME)) {
-        const trashStore = db.createObjectStore(TRASH_STORE_NAME, {
-          keyPath: "id",
-          autoIncrement: true,
-        });
-        trashStore.createIndex("deletedAt", "deletedAt", { unique: false });
-        trashStore.createIndex("originalImageId", "originalImageId", {
-          unique: false,
-        });
-      }
-    };
+  console.log('[idb:debug] openDB v' + request.transaction?.db?.version + ' -> requesting v3');
+  request.onupgradeneeded = (event) => {
+    console.log('[idb:debug] upgrade: ' + event.oldVersion + ' -> ' + event.newVersion);
+    const db = request.result;
+    // create stores
+    if (!db.objectStoreNames.contains('images')) db.createObjectStore('images',{keyPath:'id',autoIncrement:true});
+    if (!db.objectStoreNames.contains('groups')) db.createObjectStore('groups',{keyPath:'id',autoIncrement:true});
+    if (!db.objectStoreNames.contains('background')) db.createObjectStore('background',{keyPath:'id',autoIncrement:true});
+    if (!db.objectStoreNames.contains('analysis_logs')) db.createObjectStore('analysis_logs',{keyPath:'id',autoIncrement:true});
+    if (!db.objectStoreNames.contains('albums')) db.createObjectStore('albums',{keyPath:'id',autoIncrement:true});
+    if (!db.objectStoreNames.contains('album_items')) db.createObjectStore('album_items',{keyPath:'id',autoIncrement:true});
+    if (!db.objectStoreNames.contains('trash')) db.createObjectStore('trash',{keyPath:'id',autoIncrement:true});
+    console.log('[idb:debug] stores created:', Array.from(db.objectStoreNames));
+    return;
+  };
+    ;
     request.onblocked = () => {
       console.warn(
         "[idb] openDB blocked: another connection is preventing upgrade"
