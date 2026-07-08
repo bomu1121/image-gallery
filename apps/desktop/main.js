@@ -35,8 +35,16 @@ app.use(createPinia());
 
 // === Global drag-and-drop support ===
 (function() {
+  document.addEventListener("dragenter", function(e) {
+    e.preventDefault();
+    console.log("[drag:main] dragenter", e.target.tagName);
+  });
   document.addEventListener("dragover", function(e) {
     e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  });
+  document.addEventListener("dragleave", function(e) {
+    console.log("[drag:main] dragleave", e.target.tagName);
   });
   
   document.addEventListener("drop", function(e) {
