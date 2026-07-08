@@ -1,4 +1,53 @@
-﻿<template>
+﻿function doDownloadPreview() {
+  if (!exportPreviewUrl.value) return;
+  const url = exportPreviewUrl.value;
+
+  // Convert data URL to raw bytes
+  const parts = url.split(",");
+  const mime = (parts[0].match(/:(.*?);/) || [,"image/png"])[1];
+  const raw = atob(parts[1]);
+  const len = raw.length;
+  const arr = new Uint8Array(len);
+  for (let i = 0; i < len; i++) arr[i] = raw.charCodeAt(i);
+
+  // Try Tauri native save dialog + fs write
+  if (window.__TAURI__) {
+    import("@tauri-apps/plugin-dialog").then(async (dialog) => {
+      try {
+        const filePath = await dialog.save({
+          defaultPath: "composite.png",
+          filters: [{ name: "PNG Image", extensions: ["png"] }],
+        });
+        if (!filePath) return; // user cancelled
+        const { writeFile } = await import("@tauri-apps/plugin-fs");
+        await writeFile(filePath, arr);
+        console.log("[overlay:export] Saved via Tauri dialog to:", filePath);
+      } catch (e) {
+        console.error("[overlay:export] Tauri save failed:", e);
+      }
+    }).catch(() => {});
+    return;
+  }
+
+  // Browser fallback: blob URL download
+  try {
+    const blob = new Blob([arr], { type: mime });
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = "composite.png";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    }, 200);
+  } catch (e) {
+    console.error("[overlay:export] Browser download failed:", e);
+  }
+}
+<template>
   <div class="overlay-page">
     <div class="toolbar">
       <div class="toolbar-left">
