@@ -26,3 +26,4 @@ vite.config.js.*
 dist.zip
 .n.vite/
 .n.vite/
+*.tsbuildinfo
