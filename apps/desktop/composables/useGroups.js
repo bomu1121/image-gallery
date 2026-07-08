@@ -16,8 +16,8 @@ export function useGroups() {
   const { groupDeleteConfirm } = useConfirmDelete();
 
   const groups = ref([
-    { id: -1, name: "鍏ㄩ儴", description: "鏄剧ず鎵€鏈夊浘鐗?, imageCount: 0 },
-    { id: 0, name: "鏈垎缁?, description: "榛樿鍒嗙粍", imageCount: 0 },
+    { id: -1, name: "", description: "", imageCount: 0 },
+    { id: 0, name: "", description: "", imageCount: 0 },
   ]);
   const currentGroupId = ref(-1);
   const currentGroupImages = ref([]);
@@ -48,11 +48,11 @@ export function useGroups() {
       // 浠庢暟鎹簱鍔犺浇鍒嗙粍鏁版嵁
       const savedGroups = await getAllGroups();
 
-      // 鍒涘缓"鍏ㄩ儴"鍒嗙粍锛堝缁堝瓨鍦紝涓嶄繚瀛樺埌鏁版嵁搴擄級
+      // 鍒涘缓""鍒嗙粍锛堝缁堝瓨鍦紝涓嶄繚瀛樺埌鏁版嵁搴擄級
       const allGroup = {
         id: -1,
-        name: "鍏ㄩ儴",
-        description: "鏄剧ず鎵€鏈夊浘鐗?,
+        name: "",
+        description: "",
         imageCount: 0,
       };
 
@@ -60,8 +60,8 @@ export function useGroups() {
       if (savedGroups.length === 0) {
         const defaultGroup = {
           id: 0,
-          name: "鏈垎缁?,
-          description: "榛樿鍒嗙粍",
+          name: "",
+          description: "",
           imageCount: 0,
         };
         groups.value = [allGroup, defaultGroup];
@@ -90,7 +90,7 @@ export function useGroups() {
       // 鏇存柊鎵€鏈夊垎缁勭殑鍥剧墖鏁伴噺
       groups.value.forEach((group) => {
         if (group.id === -1) {
-          // "鍏ㄩ儴"鍒嗙粍鐨勬暟閲忔槸鎵€鏈夊浘鐗囩殑鎬绘暟
+          // ""鍒嗙粍鐨勬暟閲忔槸鎵€鏈夊浘鐗囩殑鎬绘暟
           group.imageCount = allImages.length;
         } else {
           group.imageCount = groupCounts[group.id] || 0;
@@ -106,7 +106,7 @@ export function useGroups() {
           const newGroup = {
             id: groupId,
             name: `鍒嗙粍 ${groupId}`,
-            description: "鑷姩鍒涘缓鐨勫垎缁?,
+            description: "",
             imageCount: groupCounts[groupId],
           };
           groups.value.push(newGroup);
@@ -115,11 +115,11 @@ export function useGroups() {
         }
       });
     } catch (error) {
-      console.error("鍒濆鍖栧垎缁勬暟鎹け璐?", error);
-      // 濡傛灉鍑洪敊锛岃嚦灏戜繚璇佹湁"鍏ㄩ儴"鍜岄粯璁ょ殑鏈垎缁?
+      console.error("", error);
+      // 濡傛灉鍑洪敊锛岃嚦灏戜繚璇佹湁""鍜岄粯璁ょ殑鏈垎缁?
       groups.value = [
-        { id: -1, name: "鍏ㄩ儴", description: "鏄剧ず鎵€鏈夊浘鐗?, imageCount: 0 },
-        { id: 0, name: "鏈垎缁?, description: "榛樿鍒嗙粍", imageCount: 0 },
+        { id: -1, name: "", description: "", imageCount: 0 },
+        { id: 0, name: "", description: "", imageCount: 0 },
       ];
     }
   }
@@ -130,7 +130,7 @@ export function useGroups() {
 
       let groupImages;
       if (groupId === -1) {
-        // "鍏ㄩ儴"鍒嗙粍锛氭樉绀烘墍鏈夊浘鐗?
+        // ""鍒嗙粍锛氭樉绀烘墍鏈夊浘鐗?
         groupImages = allImages;
       } else {
         // 鍏朵粬鍒嗙粍锛氳繃婊ゅ嚭鎸囧畾鍒嗙粍鐨勫浘鐗?
@@ -150,21 +150,21 @@ export function useGroups() {
       const group = groups.value.find((g) => g.id === groupId);
       if (group) {
         if (groupId === -1) {
-          // "鍏ㄩ儴"鍒嗙粍鐨勬暟閲忔槸鎵€鏈夊浘鐗囩殑鎬绘暟
+          // ""鍒嗙粍鐨勬暟閲忔槸鎵€鏈夊浘鐗囩殑鎬绘暟
           group.imageCount = allImages.length;
         } else {
           group.imageCount = groupImages.length;
         }
       }
     } catch (error) {
-      console.error("鍔犺浇鍒嗙粍鍥剧墖澶辫触:", error);
+      console.error("", error);
       currentGroupImages.value = [];
     }
   }
 
   async function createGroup() {
     if (!newGroup.value.name.trim()) {
-      warning("璇疯緭鍏ュ垎缁勫悕绉?);
+      warning("");
       return;
     }
 
@@ -184,11 +184,11 @@ export function useGroups() {
       // 娣诲姞鍒版湰鍦扮姸鎬?
       groups.value.push(normalized);
       newGroup.value = { name: "", description: "" };
-      success("鍒嗙粍鍒涘缓鎴愬姛");
+      success("");
       return normalized.id;
     } catch (err) {
-      console.error("鍒涘缓鍒嗙粍澶辫触:", err);
-      error("鍒涘缓鍒嗙粍澶辫触锛岃閲嶈瘯");
+      console.error("", err);
+      error("");
       return null;
     }
   }
@@ -201,7 +201,7 @@ export function useGroups() {
 
   async function updateGroup() {
     if (!editingGroup.value.name.trim()) {
-      warning("璇疯緭鍏ュ垎缁勫悕绉?);
+      warning("");
       return;
     }
 
@@ -218,11 +218,11 @@ export function useGroups() {
       );
       if (index !== -1) {
         groups.value[index] = { ...editingGroup.value };
-        success("鍒嗙粍鏇存柊鎴愬姛");
+        success("");
       }
     } catch (err) {
-      console.error("鏇存柊鍒嗙粍澶辫触:", err);
-      error("鏇存柊鍒嗙粍澶辫触锛岃閲嶈瘯");
+      console.error("", err);
+      error("");
     }
   }
 
@@ -232,8 +232,8 @@ export function useGroups() {
         editingGroup.value.name,
         editingGroup.value.imageCount,
         {
-          confirmButtonText: "纭畾",
-          cancelButtonText: "鍙栨秷",
+          confirmButtonText: "",
+          cancelButtonText: "",
         }
       );
 
@@ -271,9 +271,9 @@ export function useGroups() {
         }
       }
     } catch (err) {
-      if (err.message !== "鐢ㄦ埛鍙栨秷") {
-        console.error("鍒犻櫎鍒嗙粍澶辫触:", err);
-        error("鍒犻櫎鍒嗙粍澶辫触锛岃閲嶈瘯");
+      if (err.message !== "") {
+        console.error("", err);
+        error("");
       }
     }
   }
@@ -310,8 +310,8 @@ export function useGroups() {
         await updateGroupInDB(g.id, { order: g.order });
       }
     } catch (e) {
-      console.error("淇濆瓨鍒嗙粍椤哄簭澶辫触:", e);
-      error("淇濆瓨鍒嗙粍椤哄簭澶辫触锛岃閲嶈瘯");
+      console.error("", e);
+      error("");
     }
   }
 
@@ -322,8 +322,8 @@ export function useGroups() {
       const idx = groups.value.findIndex((g) => g.id === id);
       if (idx !== -1) groups.value[idx].name = name.trim();
     } catch (e) {
-      console.error("閲嶅懡鍚嶅け璐?", e);
-      error("閲嶅懡鍚嶅け璐ワ紝璇烽噸璇?);
+      console.error("", e);
+      error("");
     }
   }
 
@@ -369,8 +369,8 @@ export function useGroups() {
 
       success(`鎵归噺鍒犻櫎鎴愬姛锛?{totalMovedImages} 寮犲浘鐗囧凡绉诲姩鍒版湭鍒嗙粍`);
     } catch (e) {
-      console.error("鎵归噺鍒犻櫎鍒嗙粍澶辫触:", e);
-      error("鎵归噺鍒犻櫎鍒嗙粍澶辫触锛岃閲嶈瘯");
+      console.error("", e);
+      error("");
     }
   }
 
@@ -390,7 +390,7 @@ export function useGroups() {
     const newGroupId = selectedImageGroupId.value;
 
     if (oldGroupId === newGroupId) {
-      warning("鍥剧墖宸插湪褰撳墠鍒嗙粍涓?);
+      warning("");
       return;
     }
 
@@ -412,10 +412,10 @@ export function useGroups() {
         newGroup.imageCount++;
       }
 
-      success("鍥剧墖宸茬Щ鍔ㄥ埌鎸囧畾鍒嗙粍");
+      success("");
     } catch (err) {
-      console.error("绉诲姩鍥剧墖澶辫触:", err);
-      error("绉诲姩鍥剧墖澶辫触锛岃閲嶈瘯");
+      console.error("", err);
+      error("");
     }
   }
 
@@ -427,7 +427,7 @@ export function useGroups() {
       if (!raw) return;
       const arrayBuffer = await raw.arrayBuffer();
       const blob = new Blob([arrayBuffer], { type: raw.type || "image/*" });
-      // 濡傛灉鐩爣鍒嗙粍鏄?鍏ㄩ儴"鍒嗙粍锛屽垯浣跨敤"鏈垎缁?浣滀负瀹為檯瀛樺偍鍒嗙粍
+      // 濡傛灉鐩爣鍒嗙粍鏄?鍏ㄩ儴""鏈垎缁?浣滀负瀹為檯瀛樺偍鍒嗙粍
       const actualGroupId =
         targetGroupId !== null ? targetGroupId : currentGroupId.value;
       const finalGroupId = actualGroupId === -1 ? 0 : actualGroupId;
@@ -449,7 +449,7 @@ export function useGroups() {
         targetGroup.imageCount++;
       }
 
-      // 鏇存柊"鍏ㄩ儴"鍒嗙粍鐨勬暟閲?
+      // 鏇存柊""鍒嗙粍鐨勬暟閲?
       const allGroup = groups.value.find((g) => g.id === -1);
       if (allGroup) {
         allGroup.imageCount++;
@@ -463,10 +463,10 @@ export function useGroups() {
       // 瑙﹀彂鍥剧墖搴撳埛鏂颁簨浠?
       window.dispatchEvent(new CustomEvent("imageAdded"));
 
-      success("鍥剧墖涓婁紶鎴愬姛");
+      success("");
     } catch (e) {
-      console.error("涓婁紶澶辫触:", e);
-      error("涓婁紶澶辫触锛岃閲嶈瘯");
+      console.error("", e);
+      error("");
     }
   }
 
@@ -479,7 +479,7 @@ export function useGroups() {
     try {
       const actualGroupId =
         targetGroupId !== null ? targetGroupId : currentGroupId.value;
-      // 濡傛灉鐩爣鍒嗙粍鏄?鍏ㄩ儴"鍒嗙粍锛屽垯浣跨敤"鏈垎缁?浣滀负瀹為檯瀛樺偍鍒嗙粍
+      // 濡傛灉鐩爣鍒嗙粍鏄?鍏ㄩ儴""鏈垎缁?浣滀负瀹為檯瀛樺偍鍒嗙粍
       const finalGroupId = actualGroupId === -1 ? 0 : actualGroupId;
 
       if (!processedImages || processedImages.length === 0) {
@@ -523,7 +523,7 @@ export function useGroups() {
         targetGroup.imageCount += processedImages.length;
       }
 
-      // 鏇存柊"鍏ㄩ儴"鍒嗙粍鐨勬暟閲?
+      // 鏇存柊""鍒嗙粍鐨勬暟閲?
       const allGroup = groups.value.find((g) => g.id === -1);
       if (allGroup) {
         allGroup.imageCount += processedImages.length;
@@ -539,8 +539,8 @@ export function useGroups() {
 
       // success(`鎴愬姛绮樿创 ${processedImages.length} 寮犲浘鐗嘸);
     } catch (e) {
-      console.error("绮樿创澶辫触:", e);
-      error("绮樿创澶辫触锛岃閲嶈瘯");
+      console.error("", e);
+      error("");
     }
   }
 

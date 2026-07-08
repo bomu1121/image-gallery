@@ -17,7 +17,7 @@
             class="menu-action-item"
             :class="{ active: uploadMode }"
             @click="toggleUploadMode"
-            title="涓婁紶鍥剧墖"
+            title=""
           >
             <el-icon><icon-plus /></el-icon>
           </div>
@@ -25,7 +25,7 @@
             class="menu-action-item"
             :class="{ active: batchDeleteMode }"
             @click="startBatchDelete"
-            title="鎵归噺鍒犻櫎"
+            title=""
           >
             <el-icon><icon-delete /></el-icon>
           </div>
@@ -33,7 +33,7 @@
             class="menu-action-item"
             :class="{ active: showGroupSelector }"
             @click="onToggleGroupSelector"
-            title="閫夋嫨鍒嗙粍"
+            title=""
           >
             <el-icon><icon-folder /></el-icon>
           </div>
@@ -41,7 +41,7 @@
             class="menu-action-item"
             :class="{ active: showSearchArea }"
             @click="onToggleSearchArea"
-            title="鎼滅储鍥剧墖"
+            title=""
           >
             <el-icon><icon-search /></el-icon>
           </div>
@@ -49,11 +49,11 @@
             class="menu-action-item"
             :class="{ active: albumMode }"
             @click="onStartAlbumMode"
-            title="缁勫浘"
+            title=""
           >
             <img
               src="/src/static/images/icons/group.png"
-              alt="缁勫浘"
+              alt=""
               class="album-icon"
             />
           </div>
@@ -71,7 +71,7 @@
             <div
               class="group-tab settings-group-tab"
               @click="showGroupManage"
-              title="鍒嗙粍璁剧疆"
+              title=""
             >
               <el-icon><icon-setting /></el-icon>
             </div>
@@ -157,7 +157,7 @@
             <div class="search-field">
               <el-input
                 v-model="searchName"
-                placeholder="杈撳叆鍥剧墖鍚嶇О"
+                placeholder=""
                 clearable
                 @input="onSearchChange"
                 @clear="onSearchChange"
@@ -204,7 +204,7 @@
                       v-model="newSearchTagInput"
                       ref="searchTagInput"
                       class="tag-input-field"
-                      placeholder="杈撳叆鏍囩"
+                      placeholder=""
                       @keyup.enter="confirmAddSearchTag"
                       @keyup.escape="cancelAddSearchTag"
                       @blur="confirmAddSearchTag"
@@ -323,7 +323,7 @@
     <!-- 棰勮瀵硅瘽妗?-->
     <el-dialog
       v-model="viewerVisible"
-      :title="current?.name || '棰勮'"
+      :title=""
       width="70%"
     >
       <div class="viewer">
@@ -548,7 +548,7 @@ async function load() {
   let filteredData = data;
   if (props.selectedGroupId !== null && props.selectedGroupId !== undefined) {
     if (props.selectedGroupId === -1) {
-      // "鍏ㄩ儴"鍒嗙粍锛氭樉绀烘墍鏈夊浘鐗?
+      // ""鍒嗙粍锛氭樉绀烘墍鏈夊浘鐗?
       filteredData = data;
     } else {
       // 鍏朵粬鍒嗙粍锛氳繃婊ゅ嚭鎸囧畾鍒嗙粍鐨勫浘鐗?
@@ -674,7 +674,7 @@ async function showContextMenu(event, img) {
     const children = await getChildrenImages(img.id);
     isContextMenuImageGroup.value = children.length > 0;
   } catch (err) {
-    console.error("妫€鏌ョ粍鍥剧姸鎬佸け璐?", err);
+    console.error("", err);
     isContextMenuImageGroup.value = false;
   }
 
@@ -739,37 +739,37 @@ async function copyImageToClipboard(img) {
   if (!img) return;
 
   try {
-    console.log("寮€濮嬪鍒跺浘鐗?", img.name);
+    console.log("", img.name);
 
     // 鑾峰彇鍥剧墖鐨刡lob鏁版嵁
     let imageBlob;
     if (img.blob) {
       imageBlob = img.blob;
       console.log(
-        "浣跨敤鍘熷blob鏁版嵁锛屽ぇ灏?",
+        "",
         imageBlob.size,
-        "绫诲瀷:",
+        "",
         imageBlob.type
       );
     } else if (img.objectUrl) {
       // 濡傛灉鍙湁objectUrl锛岄渶瑕佸厛鑾峰彇blob
-      console.log("浠巓bjectUrl鑾峰彇blob鏁版嵁");
+      console.log("");
       const response = await fetch(img.objectUrl);
       imageBlob = await response.blob();
       console.log(
-        "鑾峰彇鍒癰lob鏁版嵁锛屽ぇ灏?",
+        "",
         imageBlob.size,
-        "绫诲瀷:",
+        "",
         imageBlob.type
       );
     } else {
-      error("鏃犳硶鑾峰彇鍥剧墖鏁版嵁");
+      error("");
       return;
     }
 
     // 纭繚blob鏈夋纭殑MIME绫诲瀷
     if (!imageBlob.type || imageBlob.type === "application/octet-stream") {
-      console.log("淇MIME绫诲瀷");
+      console.log("");
       // 鏍规嵁鏂囦欢鎵╁睍鍚嶆帹鏂璏IME绫诲瀷
       const fileName = img.name || "image";
       if (fileName.toLowerCase().includes(".png")) {
@@ -787,30 +787,30 @@ async function copyImageToClipboard(img) {
         // 榛樿涓篜NG
         imageBlob = new Blob([imageBlob], { type: "image/png" });
       }
-      console.log("淇鍚庣殑MIME绫诲瀷:", imageBlob.type);
+      console.log("", imageBlob.type);
     }
 
     // 鍏堝皾璇曟竻绌哄壀璐存澘
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText("");
-        console.log("鍓创鏉垮凡娓呯┖");
+        console.log("");
         // 绛夊緟涓€灏忔鏃堕棿纭繚娓呯┖鎿嶄綔瀹屾垚
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
     } catch (clearError) {
-      console.warn("娓呯┖鍓创鏉垮け璐?", clearError);
+      console.warn("", clearError);
     }
 
     // 鏂规硶1锛氫紭鍏堜娇鐢ㄧ幇浠ｅ壀璐存澘API锛堥渶瑕佽浆鎹负PNG锛?
     if (navigator.clipboard && window.ClipboardItem) {
       try {
-        console.log("灏濊瘯浣跨敤鐜颁唬鍓创鏉緼PI");
+        console.log("");
 
         // 鐜颁唬鍓创鏉緼PI涓昏鏀寔PNG鏍煎紡锛岄渶瑕佽浆鎹?
         let clipboardBlob = imageBlob;
         if (imageBlob.type === "image/jpeg" || imageBlob.type === "image/jpg") {
-          console.log("JPEG鏍煎紡闇€瑕佽浆鎹负PNG");
+          console.log("");
           // 鍒涘缓canvas鏉ヨ浆鎹PEG涓篜NG
           const tempCanvas = document.createElement("canvas");
           const tempCtx = tempCanvas.getContext("2d");
@@ -823,7 +823,7 @@ async function copyImageToClipboard(img) {
           await new Promise((resolve, reject) => {
             tempImg.onload = resolve;
             tempImg.onerror = reject;
-            setTimeout(() => reject(new Error("鍥剧墖鍔犺浇瓒呮椂")), 5000);
+            setTimeout(() => reject(new Error("")), 5000);
           });
 
           tempCanvas.width = tempImg.naturalWidth;
@@ -835,13 +835,13 @@ async function copyImageToClipboard(img) {
               if (blob) {
                 resolve(blob);
               } else {
-                reject(new Error("Canvas杞崲澶辫触"));
+                reject(new Error(""));
               }
             }, "image/png");
           });
 
           URL.revokeObjectURL(tempImg.src);
-          console.log("JPEG杞崲涓篜NG鎴愬姛锛屽ぇ灏?", clipboardBlob.size);
+          console.log("", clipboardBlob.size);
         }
 
         const clipboardItem = new ClipboardItem({
@@ -852,30 +852,30 @@ async function copyImageToClipboard(img) {
         // 楠岃瘉澶嶅埗鏄惁鎴愬姛
         try {
           const clipboardItems = await navigator.clipboard.read();
-          console.log("鍓创鏉块獙璇佹垚鍔燂紝椤圭洰鏁伴噺:", clipboardItems.length);
+          console.log("", clipboardItems.length);
           if (clipboardItems.length > 0) {
             const item = clipboardItems[0];
             const types = item.types;
-            console.log("鍓创鏉夸腑鐨勭被鍨?", types);
-            success("鍥剧墖宸插鍒跺埌鍓创鏉?);
+            console.log("", types);
+            success("");
             hideContextMenu();
             return;
           }
         } catch (verifyError) {
-          console.warn("鍓创鏉块獙璇佸け璐?", verifyError);
+          console.warn("", verifyError);
           // 鍗充娇楠岃瘉澶辫触锛屼篃鍙兘澶嶅埗鎴愬姛浜?
-          success("鍥剧墖宸插鍒跺埌鍓创鏉?);
+          success("");
           hideContextMenu();
           return;
         }
       } catch (clipboardError) {
-        console.warn("鐜颁唬鍓创鏉緼PI澶辫触:", clipboardError);
+        console.warn("", clipboardError);
         // 缁х画灏濊瘯鍏朵粬鏂规硶
       }
     }
 
     // 鏂规硶2锛氫娇鐢–anvas + 鐜颁唬鍓创鏉緼PI
-    console.log("灏濊瘯浣跨敤Canvas鏂规硶");
+    console.log("");
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
@@ -894,13 +894,13 @@ async function copyImageToClipboard(img) {
     await new Promise((resolve, reject) => {
       tempImg.onload = resolve;
       tempImg.onerror = reject;
-      setTimeout(() => reject(new Error("鍥剧墖鍔犺浇瓒呮椂")), 5000);
+      setTimeout(() => reject(new Error("")), 5000);
     });
 
     canvas.width = tempImg.naturalWidth;
     canvas.height = tempImg.naturalHeight;
     ctx.drawImage(tempImg, 0, 0);
-    console.log("Canvas缁樺埗瀹屾垚锛屽昂瀵?", canvas.width, "x", canvas.height);
+    console.log("", canvas.width, "x", canvas.height);
 
     try {
       // 灏哻anvas杞崲涓篵lob锛堝己鍒朵娇鐢≒NG鏍煎紡锛?
@@ -909,37 +909,37 @@ async function copyImageToClipboard(img) {
           if (blob) {
             resolve(blob);
           } else {
-            reject(new Error("Canvas杞崲澶辫触"));
+            reject(new Error(""));
           }
         }, "image/png"); // 寮哄埗浣跨敤PNG鏍煎紡
       });
       console.log(
-        "Canvas杞崲涓篵lob鎴愬姛锛屽ぇ灏?",
+        "",
         canvasBlob.size,
-        "绫诲瀷:",
+        "",
         canvasBlob.type
       );
 
       // 灏濊瘯浣跨敤鐜颁唬鍓创鏉緼PI
       if (navigator.clipboard && navigator.clipboard.write) {
         try {
-          console.log("灏濊瘯浣跨敤Canvas + 鍓创鏉緼PI");
+          console.log("");
           await navigator.clipboard.write([
             new ClipboardItem({ [canvasBlob.type]: canvasBlob }),
           ]);
 
-          success("鍥剧墖宸插鍒跺埌鍓创鏉?);
+          success("");
           hideContextMenu();
           return;
         } catch (error) {
-          console.warn("Canvas鍓创鏉緼PI澶辫触:", error);
+          console.warn("", error);
           // 缁х画灏濊瘯鍏朵粬鏂规硶
         }
       }
 
       // 鏂规硶3锛氫娇鐢╡xecCommand锛堝吋瀹规€ф柟娉曪級
       try {
-        console.log("灏濊瘯浣跨敤execCommand鏂规硶");
+        console.log("");
 
         // 鍒涘缓涓€涓彲閫夋嫨鐨勫厓绱?
         const selectableDiv = document.createElement("div");
@@ -962,27 +962,27 @@ async function copyImageToClipboard(img) {
         selection.addRange(range);
 
         const execSuccess = document.execCommand("copy");
-        console.log("execCommand澶嶅埗缁撴灉:", execSuccess);
+        console.log("", execSuccess);
 
         // 娓呯悊
         document.body.removeChild(selectableDiv);
         selection.removeAllRanges();
 
         if (execSuccess) {
-          success("鍥剧墖宸插鍒跺埌鍓创鏉?);
+          success("");
           hideContextMenu();
           return;
         }
       } catch (execError) {
-        console.warn("execCommand澶辫触:", execError);
+        console.warn("", execError);
       }
 
       // 鏂规硶4锛氭渶鍚庣殑澶囬€夋柟妗?- 鎻愮ず鐢ㄦ埛涓嬭浇
-      warning("澶嶅埗澶辫触锛屾槸鍚﹁涓嬭浇鍥剧墖锛?);
+      warning("");
       hideContextMenu();
     } catch (canvasError) {
-      console.warn("Canvas澶勭悊澶辫触:", canvasError);
-      info("澶嶅埗澶辫触锛岃浣跨敤涓嬭浇鍔熻兘");
+      console.warn("", canvasError);
+      info("");
       hideContextMenu();
     } finally {
       // 娓呯悊涓存椂鍏冪礌
@@ -990,8 +990,8 @@ async function copyImageToClipboard(img) {
       URL.revokeObjectURL(tempImg.src);
     }
   } catch (error) {
-    console.error("澶嶅埗澶辫触:", error);
-    info("澶嶅埗澶辫触锛岃浣跨敤涓嬭浇鍔熻兘");
+    console.error("", error);
+    info("");
     hideContextMenu();
   }
 }
@@ -1009,7 +1009,7 @@ async function downloadImage(img) {
       const response = await fetch(img.objectUrl);
       imageBlob = await response.blob();
     } else {
-      error("鏃犳硶鑾峰彇鍥剧墖鏁版嵁");
+      error("");
       return;
     }
 
@@ -1024,11 +1024,11 @@ async function downloadImage(img) {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    success("鍥剧墖宸蹭笅杞藉埌鏈湴");
+    success("");
     hideContextMenu();
   } catch (error) {
-    console.error("涓嬭浇澶辫触:", error);
-    error("涓嬭浇澶辫触锛岃閲嶈瘯");
+    console.error("", error);
+    error("");
     hideContextMenu();
   }
 }
@@ -1044,13 +1044,13 @@ async function deleteImageFromContext(img) {
     console.time(`delete-image-${img.id}`);
     await withMinDuration(deleteImageToTrash(img.id), MIN_DELETE_MS);
     console.timeEnd(`delete-image-${img.id}`);
-    success("鍥剧墖宸茬Щ鍔ㄥ埌鍥炴敹绔?);
+    success("");
     await load();
 
     // 瑙﹀彂鍒嗙粍鏁伴噺鏇存柊浜嬩欢
     window.dispatchEvent(new CustomEvent("imageAdded"));
   } catch (error) {
-    error("鍒犻櫎澶辫触");
+    error("");
   } finally {
     stopDeleting(img.id);
   }
@@ -1100,7 +1100,7 @@ async function restoreGroupFromContext(img) {
     const childrenCount = children.length;
 
     if (childrenCount === 0) {
-      error("璇ュ浘鐗囨病鏈夐檮鍥撅紝鏃犳硶杩樺師缁勫浘");
+      error("");
       return;
     }
 
@@ -1109,10 +1109,10 @@ async function restoreGroupFromContext(img) {
       `纭畾瑕佸皢缁勫浘 "${img.name}" 杩樺師涓?${
         childrenCount + 1
       } 寮犵嫭绔嬪浘鐗囧悧锛焅n杩樺師鍚庯紝鎵€鏈夊浘鐗囧皢鍙樹负鐙珛鍥剧墖锛岀粍鍥惧叧绯诲皢琚В闄ゃ€俙,
-      "缁勫浘杩樺師纭",
+      "",
       {
-        confirmButtonText: "纭畾杩樺師",
-        cancelButtonText: "鍙栨秷",
+        confirmButtonText: "",
+        cancelButtonText: "",
       }
     );
 
@@ -1127,12 +1127,12 @@ async function restoreGroupFromContext(img) {
     // 瑙﹀彂鍒嗙粍鏁伴噺鏇存柊浜嬩欢
     window.dispatchEvent(new CustomEvent("imageAdded"));
   } catch (err) {
-    if (err.message === "鐢ㄦ埛鍙栨秷") {
+    if (err.message === "") {
       // 鐢ㄦ埛鍙栨秷杩樺師锛屼笉鏄剧ず閿欒淇℃伅
       return;
     }
-    console.error("杩樺師缁勫浘澶辫触:", err);
-    error("杩樺師缁勫浘澶辫触锛岃閲嶈瘯");
+    console.error("", err);
+    error("");
   } finally {
     hideContextMenu();
   }
@@ -1157,7 +1157,7 @@ function exitBatchMode() {
 
 function confirmBatchDelete() {
   if (props.selectedImages.size === 0) {
-    warning("璇峰厛閫夋嫨瑕佸垹闄ょ殑鍥剧墖");
+    warning("");
     return;
   }
 
@@ -1261,7 +1261,7 @@ function confirmAddSearchTag() {
 
   // 妫€鏌ユ爣绛炬槸鍚﹀凡瀛樺湪
   if (searchTags.value.includes(tag)) {
-    error("鏍囩宸插瓨鍦?);
+    error("");
     cancelAddSearchTag();
     return;
   }
@@ -1289,7 +1289,7 @@ function adjustSearchTagInputWidth() {
   context.font =
     '500 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
-  const text = newSearchTagInput.value || "杈撳叆鏍囩";
+  const text = newSearchTagInput.value || "";
   const textWidth = context.measureText(text).width;
 
   // 璁剧疆鏈€灏忓搴?0px锛屾渶澶у搴?00px锛屽苟鍔犱笂涓€浜沺adding
@@ -1515,7 +1515,7 @@ const gridStyle = computed(() => {
 }
 
 .card.is-main-image::before {
-  content: "涓诲浘";
+  content: "";
   position: absolute;
   top: 8px;
   left: 8px;
