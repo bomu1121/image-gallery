@@ -1,9 +1,9 @@
-import AutoImport from "unplugin-auto-import/vite";
+﻿import AutoImport from "unplugin-auto-import/vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import { loadEnv } from "vite";
 import { resolve } from "path";
 
-// 自动引入
+// 鑷姩寮曞叆
 export const autoImportModule = AutoImport({
   dts: false,
   include: [/\.[tj]sx?$/, /\.vue$/],
@@ -40,13 +40,13 @@ export const autoImportModule = AutoImport({
   ],
 });
 
-// 路径快捷访问别名
+// 璺緞蹇嵎璁块棶鍒悕
 export const resolveAliasModule = {
-  "@": resolve(__dirname, "src"),
+  "@": resolve(__dirname, "."),
   "@enum": resolve(__dirname, "src/plugin/enum/index.js"),
 };
 
-// html变量注入
+// html鍙橀噺娉ㄥ叆
 export const htmlPluginModule = (mode) =>
   createHtmlPlugin({
     inject: {
@@ -56,21 +56,21 @@ export const htmlPluginModule = (mode) =>
     },
   });
 
-// 打包压缩混淆配置
+// 鎵撳寘鍘嬬缉娣锋穯閰嶇疆
 export const minifyModule = (mode, type = "esbuild") => {
   if (type === "esbuild") {
-    // esbuild-简单压缩(打包构建更快)
+    // esbuild-绠€鍗曞帇缂?鎵撳寘鏋勫缓鏇村揩)
     return {
-      minify: "esbuild", // 打包压缩，
+      minify: "esbuild", // 鎵撳寘鍘嬬缉锛?
     };
   } else if (type === "terser") {
-    // terser-可更详细配置压缩(可进行terserOptions配置)
+    // terser-鍙洿璇︾粏閰嶇疆鍘嬬缉(鍙繘琛宼erserOptions閰嶇疆)
     return {
-      minify: "terser", // 打包压缩，
+      minify: "terser", // 鎵撳寘鍘嬬缉锛?
       terserOptions: {
         compress: {
-          drop_console: true, // 删除console语句
-          drop_debugger: true, // 删除debugger语句
+          drop_console: true, // 鍒犻櫎console璇彞
+          drop_debugger: true, // 鍒犻櫎debugger璇彞
         },
       },
     };
@@ -78,16 +78,16 @@ export const minifyModule = (mode, type = "esbuild") => {
   return {};
 };
 
-// 分包配置
+// 鍒嗗寘閰嶇疆
 export const manualChunksModule = (id) => {
   if (id.includes("node_modules")) {
-    // 特定依赖单独打包, 其余打包在一起
+    // 鐗瑰畾渚濊禆鍗曠嫭鎵撳寘, 鍏朵綑鎵撳寘鍦ㄤ竴璧?
     const arr = id.toString().split("node_modules/")[1].split("/");
     switch (arr[0]) {
       case "@vue":
       case "axios":
       case "element-plus":
-      case "@element-plus": // 图标
+      case "@element-plus": // 鍥炬爣
         return "_" + arr[0];
       default:
         return "__vendor";
@@ -95,7 +95,7 @@ export const manualChunksModule = (id) => {
   }
 };
 
-// 动态生成的代码块文件的名称和路径
+// 鍔ㄦ€佺敓鎴愮殑浠ｇ爜鍧楁枃浠剁殑鍚嶇О鍜岃矾寰?
 export const chunkFileNamesModule = (chunkInfo) => {
   const facadeModuleId = chunkInfo.facadeModuleId
     ? chunkInfo.facadeModuleId.split("/")
