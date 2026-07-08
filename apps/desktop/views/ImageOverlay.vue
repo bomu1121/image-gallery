@@ -92,17 +92,17 @@
     <div v-if="exportPreviewUrl" class="export-preview-overlay" @click.self="exportPreviewUrl = null">
       <div class="export-preview-card">
         <div class="export-preview-header">
-          <span>????</span>
+          <span>导出预览</span>
           <el-button size="small" circle @click="exportPreviewUrl = null">
             <el-icon><icon-close /></el-icon>
           </el-button>
         </div>
         <div class="export-preview-body">
-          <img :src="exportPreviewUrl" alt="????" />
+          <img :src="exportPreviewUrl" alt="导出预览" />
         </div>
         <div class="export-preview-actions">
-          <el-button size="small" @click="doDownloadPreview">????</el-button>
-          <el-button size="small" plain @click="exportPreviewUrl = null">??</el-button>
+          <el-button size="small" @click="doDownloadPreview">下载图片</el-button>
+          <el-button size="small" plain @click="exportPreviewUrl = null">关闭</el-button>
         </div>
       </div>
     </div>
