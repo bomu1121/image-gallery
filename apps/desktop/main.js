@@ -31,6 +31,28 @@ app.use(i18n);
 app.use(ElementPlus);
 app.use(router);
 app.use(createPinia());
+
+
+// === Global drag-and-drop support ===
+(function() {
+  document.addEventListener("dragover", function(e) {
+    e.preventDefault();
+  });
+  
+  document.addEventListener("drop", function(e) {
+    e.preventDefault();
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length > 0) {
+      console.log("[drag:main] drop received", files.length, "files");
+      // Dispatch custom event for Vue components to handle
+      document.dispatchEvent(new CustomEvent("globalImageDrop", { detail: files }));
+    }
+  });
+  
+  console.log("[drag:main] global drag-drop listeners installed");
+})();
+
+
 app.mount("#app");
 
 // 注册全局 element ui 图标
