@@ -15,6 +15,12 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['packages/*/src/**/*.test.ts', 'packages/*/src/**/*.spec.ts'],
+    include: [
+      'packages/db/src/**/*.test.ts',
+      'packages/ai/src/**/*.test.ts',
+      'packages/sync/src/**/*.test.ts',
+      'packages/image-processor/src/**/*.test.ts',
+      'packages/shared/src/**/*.test.ts',
+    ],
   },
 });

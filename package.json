@@ -1,32 +1,32 @@
-{
-  "name": "gallery-app",
-  "private": true,
-  "scripts": {
-    "dev": "pnpm --filter @gallery/desktop dev",
-    "build": "pnpm --filter @gallery/desktop build",
-    "start": "pnpm --filter @gallery/desktop start",
-    "preview": "pnpm --filter @gallery/desktop preview",
-    "lint": "eslint . --cache",
-    "lint:fix": "eslint . --cache --fix",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "typecheck": "pnpm -r typecheck",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "prepare": "lefthook install"
-  },
-  "devDependencies": {
-    "@antfu/eslint-config": "^2.0.0",
-    "@types/node": "^20.0.0",
-    "eslint": "^9.0.0",
-    "jsdom": "^29.1.1",
-    "lefthook": "^1.7.0",
-    "prettier": "^3.3.0",
-    "typescript": "^5.5.0",
-    "vitest": "^2.0.0"
-  },
-  "engines": {
-    "node": ">=18",
-    "pnpm": ">=9"
-  }
+﻿{
+    "name":  "gallery-app",
+    "private":  true,
+    "scripts":  {
+                    "dev":  "pnpm --filter @gallery/desktop dev",
+                    "build":  "pnpm --filter @gallery/desktop build",
+                    "start":  "pnpm --filter @gallery/desktop start",
+                    "preview":  "pnpm --filter @gallery/desktop preview",
+                    "lint":  "eslint . --cache",
+                    "lint:fix":  "eslint . --cache --fix",
+                    "format":  "prettier --write .",
+                    "format:check":  "prettier --check .",
+                    "typecheck":  "pnpm -r typecheck",
+                    "test":  "vitest \u0026\u0026 pnpm --filter @gallery/ui test",
+                    "test:run":  "vitest run \u0026\u0026 pnpm --filter @gallery/ui test",
+                    "prepare":  "lefthook install"
+                },
+    "devDependencies":  {
+                            "@antfu/eslint-config":  "^2.0.0",
+                            "@types/node":  "^20.0.0",
+                            "eslint":  "^9.0.0",
+                            "jsdom":  "^29.1.1",
+                            "lefthook":  "^1.7.0",
+                            "prettier":  "^3.3.0",
+                            "typescript":  "^5.5.0",
+                            "vitest":  "^2.0.0"
+                        },
+    "engines":  {
+                    "node":  "\u003e=18",
+                    "pnpm":  "\u003e=9"
+                }
 }

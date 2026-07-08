@@ -14,11 +14,12 @@
   },
   "dependencies": {
     "@gallery/shared": "workspace:*",
-    "element-plus": "^2.8.4",
     "vue": "^3.5.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",
+    "@vue/test-utils": "^2.4.0",
+    "jsdom": "^29.0.0",
     "typescript": "~5.5.0",
     "vitest": "^2.0.0"
   }
