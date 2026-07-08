@@ -1,4 +1,4 @@
-﻿import { defineConfig, loadEnv } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import {
   autoImportModule,
   resolveAliasModule,
@@ -17,7 +17,10 @@ export default ({ mode }) => {
     resolve: {
       alias: resolveAliasModule,
     },
-    server: {
+    optimizeDeps: {
+    exclude: ['@/utils/idb.js'],
+  },
+  server: {
       hmr: true,
       host: "0.0.0.0",
       port: 5173,
@@ -43,3 +46,4 @@ export default ({ mode }) => {
     },
   });
 };
+

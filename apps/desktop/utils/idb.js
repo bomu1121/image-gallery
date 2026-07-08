@@ -1,4 +1,4 @@
-﻿// A tiny IndexedDB helper tailored for storing image binaries and metadata
+// A tiny IndexedDB helper tailored for storing image binaries and metadata
 // API: openDB, putImage, getAllImages, getImageById, updateImage, deleteImage, clearAll
 
 const DB_NAME = "image_gallery_db";
@@ -348,7 +348,7 @@ export async function createAlbum(album) {
     const store = tx.objectStore(ALBUMS_STORE_NAME);
     const now = Date.now();
     const data = {
-      name: album.name?.trim() || "鏈懡鍚嶇浉鍐?,
+      name: album.name?.trim() || "",
       description: album.description || "",
       coverImageId: album.coverImageId ?? null,
       groupId: album.groupId ?? null,
@@ -985,13 +985,13 @@ export async function removeImageFromGroup(imageId) {
     getReq.onsuccess = () => {
       const image = getReq.result;
       if (!image) {
-        reject(new Error("鍥剧墖涓嶅瓨鍦?));
+        reject(new Error(""));
         return;
       }
 
       // 妫€鏌ユ槸鍚︿负闄勫浘
       if (image.parentImageId === null || image.parentImageId === undefined) {
-        reject(new Error("璇ュ浘鐗囦笉鏄粍鍥剧殑闄勫浘锛屾棤娉曠Щ闄?));
+        reject(new Error(""));
         return;
       }
 
@@ -1023,7 +1023,7 @@ export async function restoreGroupToIndividualImages(parentImageId) {
     getParentReq.onsuccess = () => {
       const parentImage = getParentReq.result;
       if (!parentImage) {
-        reject(new Error("涓诲浘涓嶅瓨鍦?));
+        reject(new Error(""));
         return;
       }
 
@@ -1267,11 +1267,11 @@ export async function putAnalysisLog(analysisLog) {
  * @returns {Promise<Array>} 杩斿洖淇濆瓨鐨勬棩蹇桰D鏁扮粍
  */
 export async function putAnalysisLogs(analysisLogs) {
-  console.log(`馃摑 putAnalysisLogs: 鍑嗗淇濆瓨 ${analysisLogs.length} 鏉℃棩蹇梎);
+  console.log("");
 
   // 纭繚analysis_logs琛ㄥ瓨鍦?
   await ensureAnalysisLogsStoreExists();
-  console.log(`鉁?纭繚analysis_logs琛ㄥ瓨鍦╜);
+  console.log("");
 
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -1288,7 +1288,7 @@ export async function putAnalysisLogs(analysisLogs) {
         savedAt: new Date(),
       };
 
-      console.log(`馃摑 淇濆瓨鏃ュ織 ${index + 1}:`, {
+      console.log("", {
         id: logToSave.id,
         imageName: logToSave.imageName,
         status: logToSave.status,
@@ -1298,11 +1298,11 @@ export async function putAnalysisLogs(analysisLogs) {
       return new Promise((resolveItem, rejectItem) => {
         const req = store.put(logToSave);
         req.onsuccess = () => {
-          console.log(`鉁?鏃ュ織 ${index + 1} 淇濆瓨鎴愬姛锛孖D: ${req.result}`);
+          console.log("");
           resolveItem(req.result);
         };
         req.onerror = () => {
-          console.error(`鉂?鏃ュ織 ${index + 1} 淇濆瓨澶辫触:`, req.error);
+          console.error("", req.error);
           rejectItem(req.error);
         };
       });
@@ -1310,11 +1310,11 @@ export async function putAnalysisLogs(analysisLogs) {
 
     Promise.all(promises)
       .then((results) => {
-        console.log(`鉁?鎵€鏈?${analysisLogs.length} 鏉℃棩蹇椾繚瀛樻垚鍔焋);
+        console.log("");
         resolve(results);
       })
       .catch((error) => {
-        console.error(`鉂?鎵归噺淇濆瓨鏃ュ織澶辫触:`, error);
+        console.error("", error);
         reject(error);
       });
   });
@@ -1325,11 +1325,11 @@ export async function putAnalysisLogs(analysisLogs) {
  * @returns {Promise<Array>} 杩斿洖鎵€鏈夊垎鏋愭棩蹇?
  */
 export async function getAllAnalysisLogs() {
-  console.log(`馃摉 getAllAnalysisLogs: 寮€濮嬩粠IndexedDB鑾峰彇鎵€鏈堿I鍒嗘瀽鏃ュ織`);
+  console.log("");
 
   // 纭繚analysis_logs琛ㄥ瓨鍦?
   await ensureAnalysisLogsStoreExists();
-  console.log(`鉁?纭繚analysis_logs琛ㄥ瓨鍦╜);
+  console.log("");
 
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -1345,10 +1345,10 @@ export async function getAllAnalysisLogs() {
       logs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
       console.log(
-        `馃摉 getAllAnalysisLogs: 浠嶪ndexedDB鑾峰彇鍒?${logs.length} 鏉℃棩蹇梎
+        ""
       );
       if (logs.length > 0) {
-        console.log(`馃摉 鏈€鏂扮殑鏃ュ織:`, {
+        console.log("", {
           id: logs[0].id,
           imageName: logs[0].imageName,
           status: logs[0].status,
@@ -1359,7 +1359,7 @@ export async function getAllAnalysisLogs() {
       resolve(logs);
     };
     req.onerror = () => {
-      console.error(`鉂?getAllAnalysisLogs澶辫触:`, req.error);
+      console.error("", req.error);
       reject(req.error);
     };
   });
@@ -1752,7 +1752,7 @@ export async function restoreImagesFromTrash(trashIds) {
       const imageId = await restoreImageFromTrash(trashId);
       results.push(imageId);
     } catch (error) {
-      console.error(`鎭㈠鍥剧墖澶辫触 (trashId: ${trashId}):`, error);
+      console.error("", error);
     }
   }
   return results;
