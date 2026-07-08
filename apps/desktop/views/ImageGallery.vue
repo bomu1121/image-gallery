@@ -1416,10 +1416,13 @@ if (typeof document !== "undefined" && !document.__dragHandlerInstalled) {
     const items = e.detail;
     for (const item of items) {
       console.log("[drag:global] processing", item.name, item.blob?.size);
-      // Construct a file-like object for onFileChange
+      // Set name on blob so onFileChange gets raw.name correctly
+      if (item.blob) {
+        Object.defineProperty(item.blob, 'name', { value: item.name, writable: false });
+      }
       const fileObj = {
         name: item.name,
-        raw: item.blob || item,  // Tauri provides {name, blob, path}, browser provides File
+        raw: item.blob || item,
       };
       if (document.__fileChangeHandler) {
         document.__fileChangeHandler(fileObj);
