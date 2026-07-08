@@ -195,14 +195,28 @@ function onTouchEnd() { dragging = false; clamp(); document.removeEventListener(
 const exporting = ref(false);
 
 async function doExport() {
-  if (!backgroundSrc.value || !overlaySrc.value) return;
+  console.log("[overlay:export] START");
+  if (!backgroundSrc.value || !overlaySrc.value) {
+    console.log("[overlay:export] Missing source images, aborting");
+    return;
+  }
   exporting.value = true;
   try {
-    const [bg, ov] = await Promise.all([
-      new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = backgroundSrc.value; }),
-      new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = overlaySrc.value; }),
-    ]);
+    console.log("[overlay:export] Loading images...");
+    const bg = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => { console.log("[overlay:export] Background loaded:", img.naturalWidth, "x", img.naturalHeight); resolve(img); };
+      img.onerror = (e) => { console.error("[overlay:export] Background failed to load"); reject(e); };
+      img.src = backgroundSrc.value;
+    });
+    const ov = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => { console.log("[overlay:export] Overlay loaded:", img.naturalWidth, "x", img.naturalHeight); resolve(img); };
+      img.onerror = (e) => { console.error("[overlay:export] Overlay failed to load"); reject(e); };
+      img.src = overlaySrc.value;
+    });
 
+    console.log("[overlay:export] Creating canvas...");
     const c = document.createElement("canvas");
     c.width = bg.naturalWidth;
     c.height = bg.naturalHeight;
@@ -210,28 +224,48 @@ async function doExport() {
     ctx.drawImage(bg, 0, 0);
 
     const el = canvasRef.value;
-    if (!el) throw new Error("no editor");
+    if (!el) { console.error("[overlay:export] No editor ref!"); throw new Error("no editor"); }
     const r = el.getBoundingClientRect();
+    console.log("[overlay:export] Editor:", r.width, "x", r.height);
+
     const bgA = bg.naturalWidth / bg.naturalHeight;
     const elA = r.width / r.height;
     let dW, dH;
     if (bgA > elA) { dW = r.width; dH = r.width / bgA; }
     else { dH = r.height; dW = r.height * bgA; }
     const ratio = bg.naturalWidth / dW;
+    console.log("[overlay:export] Display:", dW, "x", dH, "ratio:", ratio);
 
     ctx.globalAlpha = overlayOpacity.value;
-    ctx.drawImage(ov, overlayX.value * ratio, overlayY.value * ratio, ov.naturalWidth * overlayScale.value * ratio, ov.naturalHeight * overlayScale.value * ratio);
+    const ox = overlayX.value * ratio;
+    const oy = overlayY.value * ratio;
+    const ow = ov.naturalWidth * overlayScale.value * ratio;
+    const oh = ov.naturalHeight * overlayScale.value * ratio;
+    console.log("[overlay:export] Drawing overlay at", ox, oy, ow, "x", oh);
+    ctx.drawImage(ov, ox, oy, ow, oh);
     ctx.globalAlpha = 1;
 
+    console.log("[overlay:export] Generating data URL...");
     const url = c.toDataURL("image/png");
+    console.log("[overlay:export] Data URL length:", url.length);
+
+    // Try multiple download approaches
     const a = document.createElement("a");
     a.href = url;
     a.download = "composite.png";
+    a.style.display = "none";
     document.body.appendChild(a);
+    console.log("[overlay:export] Clicking download link...");
     a.click();
-    document.body.removeChild(a);
-  } catch (err) { console.error("Export failed:", err); }
-  finally { exporting.value = false; }
+    console.log("[overlay:export] Download triggered");
+    // Remove after a moment to ensure download starts
+    setTimeout(() => { document.body.removeChild(a); console.log("[overlay:export] Cleanup done"); }, 200);
+  } catch (err) {
+    console.error("[overlay:export] FAILED:", err);
+  } finally {
+    exporting.value = false;
+    console.log("[overlay:export] END");
+  }
 }
 
 onMounted(async () => { await loadGallery(); });
